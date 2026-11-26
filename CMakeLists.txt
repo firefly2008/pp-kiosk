@@ -34,6 +34,8 @@ qt_add_executable(ppkiosk WIN32
     src/agenda.h
     src/adminserver.cpp
     src/adminserver.h
+    src/presentations.cpp
+    src/presentations.h
     src/thirdparty/qrcodegen.cpp
     src/thirdparty/qrcodegen.hpp
     src/paths.h
@@ -45,6 +47,7 @@ target_compile_definitions(ppkiosk PRIVATE PPKIOSK_VERSION="${PPKIOSK_VERSION}")
 qt_add_resources(ppkiosk "icons" PREFIX "/" FILES assets/ppkiosk-256.png assets/web-192.png assets/web-512.png assets/web-maskable-512.png assets/logos/nlziet.png assets/logos/simone-fm.png)
 qt_add_resources(ppkiosk "releasenotes" PREFIX "/" FILES releasenotes.json)
 qt_add_resources(ppkiosk "admin" PREFIX "/" FILES admin/index.html)
+qt_add_resources(ppkiosk "demo" PREFIX "/" FILES demo/diner-van-de-dag.jpg)
 
 if(WIN32)
     target_sources(ppkiosk PRIVATE
@@ -61,7 +64,7 @@ else()
 endif()
 
 # Zonder alias komt het bestand in de resources onder .../qml/Main.qml terecht
-set(PPKIOSK_QML_FILES qml/Main.qml qml/FocusButton.qml qml/OnScreenKeyboard.qml)
+set(PPKIOSK_QML_FILES qml/Main.qml qml/StreamScreen.qml qml/PresentationScreen.qml qml/FocusButton.qml qml/OnScreenKeyboard.qml)
 foreach(qml_file IN LISTS PPKIOSK_QML_FILES)
     get_filename_component(qml_name ${qml_file} NAME)
     set_source_files_properties(${qml_file} PROPERTIES QT_RESOURCE_ALIAS ${qml_name})
