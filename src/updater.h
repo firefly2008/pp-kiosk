@@ -1,5 +1,5 @@
-// Kijkluister werkt zichzelf bij: kijkt wekelijks bij de GitHub-releases of er een nieuwere
-// versie is, haalt op verzoek de installer op en start die stil (daarna start Kijkluister opnieuw).
+// PP Kiosk werkt zichzelf bij: kijkt wekelijks bij de GitHub-releases of er een nieuwere
+// versie is, haalt op verzoek de installer op en start die stil (daarna start PP Kiosk opnieuw).
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 
@@ -40,7 +40,7 @@ public:
     bool silent() const { return m_silent; }
     // Start de regelmatige controle (elke 6 uur, de eerste keer na een minuut)
     Q_INVOKABLE void startAutomatic();
-    // Er speelt niets: geplande taak mag installeren (Kijkluister sluit en start daarna opnieuw)
+    // Er speelt niets: geplande taak mag installeren (PP Kiosk sluit en start daarna opnieuw)
     Q_INVOKABLE void installNow();
 
     // Automatisch: hooguit eens per week. manual = altijd, met melding als er niets nieuws is.

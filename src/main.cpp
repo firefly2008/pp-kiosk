@@ -21,7 +21,6 @@
 #include <QIcon>
 #include <QLocale>
 #include <QSettings>
-#include <QTranslator>
 #include <QQuickView>
 #include <QQuickWindow>
 #include <QScreen>
@@ -30,29 +29,13 @@
 
 #include "appiconprovider.h"
 #include "appmodel.h"
-#include "gamepadnavigator.h"
-#include "medialibrary.h"
-#include "artframe.h"
 #include "paths.h"
-#include "apikeys.h"
-#include "recorder.h"
-#include "streamrelay.h"
-#include "components.h"
 #include "radiomodel.h"
-#include "parental.h"
 #include "weather.h"
 #include "updater.h"
-#include "cec.h"
 #include "homebridge.h"
 #include "systemtools.h"
 #include "remoteserver.h"
-#include "nowtvmodel.h"
-#include "photosearch.h"
-#include "profiles.h"
-#include "usagemodel.h"
-#include "resumemodel.h"
-#include "mpcplayer.h"
-#include "iptvmodel.h"
 
 #include <QNetworkAccessManager>
 #include <QNetworkDiskCache>
@@ -94,7 +77,7 @@ public:
             QNetworkRequest request(original);
             if (!request.hasRawHeader("User-Agent")) {
                 request.setRawHeader("User-Agent",
-                                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Kijkluister/3.8 (+https://github.com/firefly2008/bigscreen-host-windows)");
+                                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) PPKiosk/1.0");
             }
             return QNetworkAccessManager::createRequest(op, request, data);
         }
@@ -124,14 +107,7 @@ QString appDataDir()
             base = QDir::tempPath();
         }
         base = QDir::fromNativeSeparators(base);
-        const QString oldDir = base + QStringLiteral("/BigscreenHost");
-        const QString newDir = base + QStringLiteral("/Kijkluister");
-        // Oude map (tot en met 3.8.1) meenemen: instellingen, bibliotheek, zenders en cache
-        if (QDir(oldDir).exists() && !QDir(newDir).exists()) {
-            if (!QDir().rename(oldDir, newDir)) {
-                return oldDir; // in gebruik of geen rechten: dan de oude map blijven gebruiken
-            }
-        }
+        const QString newDir = base + QStringLiteral("/PPKiosk");
         QDir().mkpath(newDir);
         return newDir;
     }();
@@ -141,7 +117,7 @@ QString appDataDir()
 namespace {
 
 // De app is een GUI-programma zonder console: zonder logbestand verdwijnen alle
-// foutmeldingen. Log staat in %LOCALAPPDATA%\\Kijkluister\\kijkluister.log
+// foutmeldingen. Log staat in %LOCALAPPDATA%\\PPKiosk\\ppkiosk.log
 QString g_logPath;
 QMutex g_logMutex;
 
@@ -176,7 +152,7 @@ void showFatal(const QString &text)
     qCritical().noquote() << text;
 #ifdef Q_OS_WIN
     const QString full = text + QStringLiteral("\n\nLog: ") + g_logPath;
-    MessageBoxW(nullptr, reinterpret_cast<LPCWSTR>(full.utf16()), L"Kijkluister", MB_OK | MB_ICONERROR);
+    MessageBoxW(nullptr, reinterpret_cast<LPCWSTR>(full.utf16()), L"PP Kiosk", MB_OK | MB_ICONERROR);
 #endif
 }
 
@@ -227,11 +203,10 @@ int main(int argc, char *argv[])
     // mislukte start van Qt zelf (platform-plugin, grafische backend) in het log komt.
     {
         const QString logDir = appDataDir();
-        g_logPath = logDir + QStringLiteral("/kijkluister.log");
+        g_logPath = logDir + QStringLiteral("/ppkiosk.log");
         // Vorig log bewaren (voor "Logbestand delen")
-        QFile::remove(logDir + QStringLiteral("/kijkluister-vorige.log"));
-        QFile::rename(g_logPath, logDir + QStringLiteral("/kijkluister-vorige.log"));
-        QFile::remove(logDir + QStringLiteral("/bigscreen-host.log")); // oude naam
+        QFile::remove(logDir + QStringLiteral("/ppkiosk-vorige.log"));
+        QFile::rename(g_logPath, logDir + QStringLiteral("/ppkiosk-vorige.log"));
         qInstallMessageHandler(logHandler);
         qInfo() << "main() reached; Qt" << qVersion() << "data" << logDir;
     }
@@ -240,30 +215,19 @@ int main(int argc, char *argv[])
         Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
 
     QGuiApplication app(argc, argv);
-    QGuiApplication::setApplicationName(QStringLiteral("Kijkluister"));
-    QGuiApplication::setWindowIcon(QIcon(QStringLiteral(":/assets/kijkluister-256.png")));
-    QGuiApplication::setOrganizationName(QStringLiteral("KDE"));
+    QGuiApplication::setApplicationName(QStringLiteral("PP Kiosk"));
+    QGuiApplication::setWindowIcon(QIcon(QStringLiteral(":/assets/ppkiosk-256.png")));
+    QGuiApplication::setOrganizationName(QStringLiteral("PP Kiosk"));
 
-    // Taal: Nederlands (standaard) of Engels (Instellingen → Meer instellingen → Taal / Language)
-    // (BIGSCREEN_LANGUAGE: voor de rooktest)
-    const QString uiLanguage = qEnvironmentVariableIsSet("BIGSCREEN_LANGUAGE")
-                                   ? qEnvironmentVariable("BIGSCREEN_LANGUAGE")
-                                   : QSettings(appSettingsFile(), QSettings::IniFormat)
-                                         .value(QStringLiteral("global/language"), QStringLiteral("nl")).toString();
-    static QTranslator translator;
-    if (uiLanguage == QLatin1String("en") && translator.load(QStringLiteral(":/i18n/kijkluister_en.qm"))) {
-        QCoreApplication::installTranslator(&translator);
-        qInfo() << "Translator loaded: en";
-        QLocale::setDefault(QLocale(QLocale::English, QLocale::UnitedKingdom));
-    } else {
-        QLocale::setDefault(QLocale(QLocale::Dutch, QLocale::Netherlands));
-    }
+    // Alleen Nederlands
+    const QString uiLanguage = QStringLiteral("nl");
+    QLocale::setDefault(QLocale(QLocale::Dutch, QLocale::Netherlands));
 
     qInfo() << "QGuiApplication created; platform" << QGuiApplication::platformName();
 
     QCommandLineParser parser;
     parser.setApplicationDescription(
-        QStringLiteral("Kijkluister: tv, films, series, muziek en podcasts op een groot scherm"));
+        QStringLiteral("PP Kiosk: dagstructuur, presentaties en media op een groot touchscreen"));
     parser.addHelpOption();
     QCommandLineOption screenOption(
         QStringList{QStringLiteral("screen")},
@@ -271,30 +235,19 @@ int main(int argc, char *argv[])
         QStringLiteral("index"),
         QStringLiteral("-1"));
     parser.addOption(screenOption);
-    // Gebruikt door "Starten met Windows" en het wisselen van profiel (zonder deze stopte Kijkluister met
-    // "Unknown option" in 4.4.0)
+    // Gebruikt door "Starten met Windows"
     parser.addOption(QCommandLineOption(QStringLiteral("autostart"), QStringLiteral("Gestart door Windows bij het aanmelden.")));
-    parser.addOption(QCommandLineOption(QStringLiteral("profile-chosen"), QStringLiteral("Profiel is al gekozen; niet opnieuw vragen.")));
     parser.process(app);
 
-    // Gamepad-navigatie (SDL3) en de lijst met toepassingen voor de startpagina
-    GamepadNavigator gamepad;
+    // Snelkoppelingen naar websites (mediaproviders) en de radiozenders
     AppModel appModel(AppModel::Apps);
     AppModel webVideo(AppModel::Web, QStringLiteral("video"));
     AppModel webMusic(AppModel::Web, QStringLiteral("muziek"));
     AppModel webPodcasts(AppModel::Web, QStringLiteral("podcasts"));
     AppModel webNews(AppModel::Web, QStringLiteral("nieuws"));
-    MediaLibrary library(appDataDir());
-    IptvModel iptv(appDataDir());
-    ArtFrame frame(appDataDir());
-    Recorder recorder(appDataDir());
-    StreamRelay streamRelay;
-    ApiKeys apiKeys(appDataDir());
-    Components components(appDataDir());
-    MpcPlayer mpc(appDataDir());
 
     auto inputSystem = createInputSystem();
-    Q_UNUSED(inputSystem); // in dit skeleton nog niet aan QML-signalen gekoppeld
+    Q_UNUSED(inputSystem);
 
     const int screenIndex = parser.value(screenOption).toInt();
     const auto screens = QGuiApplication::screens();
@@ -303,109 +256,47 @@ int main(int argc, char *argv[])
         : QGuiApplication::primaryScreen();
 
     QQuickView view;
-    view.setFlags(Qt::FramelessWindowHint); // StaysOnTop bewust uit tijdens de PoC-fase
+    view.setFlags(Qt::FramelessWindowHint);
     view.setResizeMode(QQuickView::SizeRootObjectToView);
     view.setScreen(targetScreen);
     view.setGeometry(targetScreen->geometry());
-    view.setColor(Qt::black);
+    view.setColor(Qt::white);
     QObject::connect(view.engine(), &QQmlEngine::quit, &app, &QCoreApplication::quit);
     view.engine()->addImageProvider(QStringLiteral("appicon"), new AppIconProvider);
-    view.rootContext()->setContextProperty(QStringLiteral("appModel"), &appModel);
-    view.rootContext()->setContextProperty(QStringLiteral("webVideo"), &webVideo);
-    view.rootContext()->setContextProperty(QStringLiteral("webMusic"), &webMusic);
-    view.rootContext()->setContextProperty(QStringLiteral("webPodcasts"), &webPodcasts);
-    view.rootContext()->setContextProperty(QStringLiteral("webNews"), &webNews);
-    view.rootContext()->setContextProperty(QStringLiteral("library"), &library);
-    view.rootContext()->setContextProperty(QStringLiteral("iptv"), &iptv);
-    view.rootContext()->setContextProperty(QStringLiteral("frame"), &frame);
-    view.rootContext()->setContextProperty(QStringLiteral("recorder"), &recorder);
-    view.rootContext()->setContextProperty(QStringLiteral("streamRelay"), &streamRelay);
-    view.rootContext()->setContextProperty(QStringLiteral("apiKeys"), &apiKeys);
-    view.rootContext()->setContextProperty(QStringLiteral("mpc"), &mpc);
-    view.rootContext()->setContextProperty(QStringLiteral("components"), &components);
+    auto *ctx = view.rootContext();
+    ctx->setContextProperty(QStringLiteral("appModel"), &appModel);
+    ctx->setContextProperty(QStringLiteral("webVideo"), &webVideo);
+    ctx->setContextProperty(QStringLiteral("webMusic"), &webMusic);
+    ctx->setContextProperty(QStringLiteral("webPodcasts"), &webPodcasts);
+    ctx->setContextProperty(QStringLiteral("webNews"), &webNews);
     RadioModel radio(appDataDir());
-    view.rootContext()->setContextProperty(QStringLiteral("radio"), &radio);
-    ResumeModel resume(appDataDir(), &library);
-    view.rootContext()->setContextProperty(QStringLiteral("resume"), &resume);
-    Parental parental;
-    view.rootContext()->setContextProperty(QStringLiteral("parental"), &parental);
+    ctx->setContextProperty(QStringLiteral("radio"), &radio);
     Weather weather;
-    view.rootContext()->setContextProperty(QStringLiteral("weather"), &weather);
+    ctx->setContextProperty(QStringLiteral("weather"), &weather);
     Updater updater;
-    view.rootContext()->setContextProperty(QStringLiteral("updater"), &updater);
-    Cec cec;
-    view.rootContext()->setContextProperty(QStringLiteral("cec"), &cec);
-    QObject::connect(&cec, &Cec::button, &gamepad, &GamepadNavigator::handleButton);
-    if (qEnvironmentVariable("BIGSCREEN_SELFTEST").isEmpty()) {
+    ctx->setContextProperty(QStringLiteral("updater"), &updater);
+    const QString selfTestMode = qEnvironmentVariable("BIGSCREEN_SELFTEST");
+    if (selfTestMode.isEmpty()) {
         QTimer::singleShot(4000, &weather, &Weather::refresh);
         updater.startAutomatic();
-        QTimer::singleShot(2000, &cec, &Cec::start);
     }
-    // MPC-HC en ffmpeg op de achtergrond ophalen of bijwerken (niet tijdens de tests)
-    if (qEnvironmentVariable("BIGSCREEN_SELFTEST").isEmpty()) {
-        QTimer::singleShot(20000, &components, &Components::startBackground);
-    }
-    // Na de film of serie terug naar Kijkluister
-    QObject::connect(&mpc, &MpcPlayer::finished, &view, [&view] {
-        view.raise();
-        view.requestActivate();
-    });
     view.engine()->setNetworkAccessManagerFactory(new CachingNetworkFactory(appDataDir() + QStringLiteral("/imagecache")));
-    view.rootContext()->setContextProperty(QStringLiteral("gamepad"), &gamepad);
-    // Alleen voor de geautomatiseerde test: opent bij het starten een menu
-    view.rootContext()->setContextProperty(QStringLiteral("uiLanguage"), uiLanguage == QLatin1String("en") ? QStringLiteral("en") : QStringLiteral("nl"));
-    view.rootContext()->setContextProperty(QStringLiteral("selfTest"), qEnvironmentVariable("BIGSCREEN_SELFTEST"));
-    view.rootContext()->setContextProperty(QStringLiteral("selfTestM3u"), qEnvironmentVariable("BIGSCREEN_TEST_M3U"));
-    view.rootContext()->setContextProperty(QStringLiteral("selfTestRecordDir"), qEnvironmentVariable("BIGSCREEN_TEST_RECORD_DIR"));
-    // Gratis zenders klaarzetten (de tests gebruiken hun eigen lijst)
-    const QString selfTestMode = qEnvironmentVariable("BIGSCREEN_SELFTEST");
-    if (selfTestMode.isEmpty() || selfTestMode == QLatin1String("iptvfree")) {
-        iptv.addFreeSourcesOnce();
-    }
-    Profiles profiles;
-    view.rootContext()->setContextProperty(QStringLiteral("profiles"), &profiles);
-    parental.setKids(profiles.kids());
-    UsageModel usage;
-    usage.addSource(QStringLiteral("media"), &appModel);
-    usage.addSource(QStringLiteral("video"), &webVideo);
-    usage.addSource(QStringLiteral("muziek"), &webMusic);
-    usage.addSource(QStringLiteral("podcasts"), &webPodcasts);
-    usage.addSource(QStringLiteral("nieuws"), &webNews);
-    usage.addSource(QStringLiteral("radio"), &radio);
-    view.rootContext()->setContextProperty(QStringLiteral("usage"), &usage);
+    ctx->setContextProperty(QStringLiteral("uiLanguage"), uiLanguage == QLatin1String("en") ? QStringLiteral("en") : QStringLiteral("nl"));
+    ctx->setContextProperty(QStringLiteral("selfTest"), selfTestMode);
     RemoteServer remote(appDataDir());
-    view.rootContext()->setContextProperty(QStringLiteral("remote"), &remote);
-    // Serie opnemen: elke gevonden uitzending inplannen (dubbele slaat de recorder over)
-    QObject::connect(&iptv, &IptvModel::seriesEpisode, &recorder,
-                     [&recorder](const QString &channel, const QString &url, const QString &title, qint64 start, qint64 stop) {
-                         if (!recorder.isScheduled(url, start)) {
-                             recorder.addToSchedule(channel, url, title, start, stop);
-                         }
-                     });
-    NowTvModel nowTv(&iptv);
-    view.rootContext()->setContextProperty(QStringLiteral("nowTv"), &nowTv);
+    ctx->setContextProperty(QStringLiteral("remote"), &remote);
     SystemTools systemTools;
-    view.rootContext()->setContextProperty(QStringLiteral("systemTools"), &systemTools);
-    PhotoSearch photos(appDataDir());
-    view.rootContext()->setContextProperty(QStringLiteral("photos"), &photos);
+    ctx->setContextProperty(QStringLiteral("systemTools"), &systemTools);
     HomeBridge home(&view);
-    view.rootContext()->setContextProperty(QStringLiteral("homeBridge"), &home);
-    home.setEscMode(QSettings(appDataDir() + QStringLiteral("/settings.ini"), QSettings::IniFormat).value(QStringLiteral("global/escMode")).toString());
-    QObject::connect(&home, &HomeBridge::homeRequested, &gamepad, &GamepadNavigator::homeRequested);
-    QObject::connect(&gamepad, &GamepadNavigator::guidePressed, &home, &HomeBridge::goHome);
-    QObject::connect(&cec, &Cec::homeRequested, &home, &HomeBridge::goHome);
-    QObject::connect(&mpc, &MpcPlayer::runningChanged, &home, [&mpc, &home] {
-        if (mpc.running()) {
-            home.externalLaunched();
-        }
-    });
-    QObject::connect(&gamepad, &GamepadNavigator::homeRequested, &view, [&view] {
+    ctx->setContextProperty(QStringLiteral("homeBridge"), &home);
+    home.setEscMode(QSettings(appSettingsFile(), QSettings::IniFormat).value(QStringLiteral("global/escMode")).toString());
+    QObject::connect(&home, &HomeBridge::homeRequested, &view, [&view] {
         view.showFullScreen();
         view.raise();
         view.requestActivate();
     });
     qInfo() << "Target screen" << targetScreen->name() << targetScreen->geometry();
-    view.setSource(QUrl(QStringLiteral("qrc:/qt/qml/org/kde/plasma/bigscreen/host/Main.qml")));
+    view.setSource(QUrl(QStringLiteral("qrc:/qt/qml/nl/ppkiosk/Main.qml")));
 
     if (view.status() != QQuickView::Ready) {
         QString details = QStringLiteral("Main.qml kon niet geladen worden.");

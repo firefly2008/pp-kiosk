@@ -27,18 +27,15 @@ public:
 
     // Na het openen van een app/website/film aanroepen
     Q_INVOKABLE void externalLaunched();
-    // Home-knop of Home-toets: app sluiten/minimaliseren en Kijkluister naar voren
+    // Home-knop of Home-toets: app sluiten/minimaliseren en PP Kiosk naar voren
     Q_INVOKABLE void goHome();
     // Esc in een externe app: "hold" (1 s vasthouden), "double" (twee keer snel) of "direct"
     Q_INVOKABLE void setEscMode(const QString &mode);
-    // Kijkluister naar voren halen zonder iets te sluiten (bv. bij een herinnering)
+    // PP Kiosk naar voren halen zonder iets te sluiten (bv. bij een herinnering)
     Q_INVOKABLE void raiseWindow();
 
-    // Controller/CEC terwijl een browservenster voorop staat: pijltjes, OK, Terug = vorige pagina,
-    // Terug lang vasthouden = startscherm. Geeft true als de knop is afgehandeld.
-    bool handleBrowserButton(int sdlButton, bool pressed);
     static HomeBridge *instance();
-    // Alle browservensters die Kijkluister opende (eigen profielmap) sluiten; geeft het aantal
+    // Alle browservensters die PP Kiosk opende (eigen profielmap) sluiten; geeft het aantal
     static int closeOwnBrowserWindows();
     // Spraak: Windows-dicteren (Win+H) openen; de tekst komt in het veld met de focus
     Q_INVOKABLE void startDictation();

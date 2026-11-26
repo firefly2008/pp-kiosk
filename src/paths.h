@@ -1,5 +1,4 @@
-// Map met instellingen, log, bibliotheek en cache: %LOCALAPPDATA%\\Kijkluister
-// (tot en met 3.8.1 heette die map BigscreenHost; hij wordt bij de eerste start hernoemd).
+// Map met instellingen, log en cache: %LOCALAPPDATA%\\PPKiosk
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 
@@ -8,7 +7,7 @@
 QString appDataDir();
 
 #include <QSettings>
-// Alle instellingen in één bestand: %LOCALAPPDATA%\Kijkluister\settings.ini
+// Alle instellingen in één bestand: %LOCALAPPDATA%\PPKiosk\settings.ini
 inline QString appSettingsFile() { return appDataDir() + QStringLiteral("/settings.ini"); }
 
 // Profielen (4.3): instellingen per profiel onder "profiles/<id>/". Het hoofdprofiel (id leeg)

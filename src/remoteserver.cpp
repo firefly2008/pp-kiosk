@@ -33,11 +33,11 @@ const char page[] = R"HTML(<!doctype html>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Kijkluister">
+<meta name="apple-mobile-web-app-title" content="PP Kiosk">
 <link rel="manifest" href="/manifest.webmanifest?c=__CODE__">
 <link rel="icon" href="/icon-192.png">
 <link rel="apple-touch-icon" href="/icon-192.png">
-<title>Kijkluister</title>
+<title>PP Kiosk</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 html,body{height:100%}
@@ -62,8 +62,8 @@ input{flex:1;border:0;border-radius:14px;background:#22262e;color:#fff;font-size
 #hint{display:none;width:284px;background:#1d2026;border:1px solid #3d6fb4;border-radius:14px;padding:12px 38px 12px 14px;margin-bottom:14px;font-size:14px;line-height:1.4;color:#d4d7dc;position:relative}
 #hint button{position:absolute;right:6px;top:6px;width:28px;height:28px;font-size:16px;background:none}
 </style></head><body>
-<header><img src="/icon-192.png" alt=""><b>Kijkluister</b><span id="dot" title=""></span><button id="fs" aria-label="Volledig scherm">⛶</button></header>
-<div id="hint"><span id="hintText">Zet Kijkluister als app op je telefoon: tik in Chrome op ⋮ en kies <b>Toevoegen aan startscherm</b>.</span><button id="hx" aria-label="Sluiten">✕</button></div>
+<header><img src="/icon-192.png" alt=""><b>PP Kiosk</b><span id="dot" title=""></span><button id="fs" aria-label="Volledig scherm">⛶</button></header>
+<div id="hint"><span id="hintText">Zet PP Kiosk als app op je telefoon: tik in Chrome op ⋮ en kies <b>Toevoegen aan startscherm</b>.</span><button id="hx" aria-label="Sluiten">✕</button></div>
 <div class="pad">
 <span></span><button data-k="up">▲</button><span></span>
 <button data-k="left">◀</button><button class="ok" data-k="ok">OK</button><button data-k="right">▶</button>
@@ -79,7 +79,7 @@ input{flex:1;border:0;border-radius:14px;background:#22262e;color:#fff;font-size
 const q=new URLSearchParams(location.search).get('c');
 let c=q||'';try{if(q)localStorage.setItem('kl-code',q);else c=localStorage.getItem('kl-code')||''}catch(e){}
 const s=document.getElementById('s'),dot=document.getElementById('dot');
-const T={wrong:'Code klopt niet: scan de QR-code opnieuw',off:'Geen verbinding met Kijkluister. Staat de pc aan en zit je op dezelfde wifi?',on:'Verbonden'};
+const T={wrong:'Code klopt niet: scan de QR-code opnieuw',off:'Geen verbinding met PP Kiosk. Staat de pc aan en zit je op dezelfde wifi?',on:'Verbonden'};
 function state(ok,msg){dot.className=ok?'on':'off';dot.title=ok?T.on:T.off;s.textContent=msg||''}
 function send(path,body){fetch(path+'?c='+encodeURIComponent(c),{method:'POST',body:body||''})
 .then(r=>state(r.status!==403,r.status===403?T.wrong:'')).catch(()=>state(false,T.off))}
@@ -97,7 +97,7 @@ const hint=document.getElementById('hint');let seen='';try{seen=localStorage.get
 if(!standalone&&!seen)hint.style.display='block';
 document.getElementById('hx').onclick=e=>{e.stopPropagation();hint.style.display='none';try{localStorage.setItem('kl-hint','1')}catch(x){}};
 let deferred=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;
-document.getElementById('hintText').innerHTML='Zet Kijkluister als app op je telefoon: <b>tik hier</b>.';
+document.getElementById('hintText').innerHTML='Zet PP Kiosk als app op je telefoon: <b>tik hier</b>.';
 hint.onclick=()=>{deferred.prompt();deferred=null;hint.style.display='none'}});
 document.querySelectorAll('[data-k]').forEach(b=>{let t=null;const k=b.dataset.k;
 b.addEventListener('pointerdown',e=>{e.preventDefault();navigator.vibrate&&navigator.vibrate(12);send('/k',k);
@@ -435,12 +435,12 @@ void RemoteServer::handle(QTcpSocket *socket)
                 {"lang=\"nl\"", "lang=\"en\""}, {"↩ Terug", "↩ Back"}, {"🔍 Zoek", "🔍 Search"},
                 {"Typen…", "Type…"}, {">Stuur<", ">Send<"}, {"Volledig scherm", "Full screen"}, {"\"Sluiten\"", "\"Close\""},
                 {"Code klopt niet: scan de QR-code opnieuw", "Wrong code: scan the QR code again"},
-                {"Geen verbinding met Kijkluister. Staat de pc aan en zit je op dezelfde wifi?",
-                 "No connection to Kijkluister. Is the PC on and are you on the same Wi-Fi?"},
+                {"Geen verbinding met PP Kiosk. Staat de pc aan en zit je op dezelfde wifi?",
+                 "No connection to PP Kiosk. Is the PC on and are you on the same Wi-Fi?"},
                 {"on:'Verbonden'", "on:'Connected'"},
-                {"Zet Kijkluister als app op je telefoon: tik in Chrome op ⋮ en kies <b>Toevoegen aan startscherm</b>.",
-                 "Put Kijkluister on your phone as an app: tap ⋮ in Chrome and choose <b>Add to Home screen</b>."},
-                {"Zet Kijkluister als app op je telefoon: <b>tik hier</b>.", "Put Kijkluister on your phone as an app: <b>tap here</b>."}};
+                {"Zet PP Kiosk als app op je telefoon: tik in Chrome op ⋮ en kies <b>Toevoegen aan startscherm</b>.",
+                 "Put PP Kiosk on your phone as an app: tap ⋮ in Chrome and choose <b>Add to Home screen</b>."},
+                {"Zet PP Kiosk als app op je telefoon: <b>tik hier</b>.", "Put PP Kiosk on your phone as an app: <b>tap here</b>."}};
             for (const auto &pair : en) {
                 html.replace(pair.first, pair.second);
             }
@@ -452,8 +452,8 @@ void RemoteServer::handle(QTcpSocket *socket)
     if (method == "GET" && path == QLatin1String("/manifest.webmanifest")) {
         const QString start = code.isEmpty() ? QStringLiteral("/") : QStringLiteral("/?c=") + code;
         const QByteArray manifest = QStringLiteral(R"({
-  "name": "Kijkluister",
-  "short_name": "Kijkluister",
+  "name": "PP Kiosk",
+  "short_name": "PP Kiosk",
   "description": "%1",
   "lang": "%2",
   "start_url": "%3",
@@ -467,7 +467,7 @@ void RemoteServer::handle(QTcpSocket *socket)
     {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png"},
     {"src": "/icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
   ]
-})").arg(english ? QStringLiteral("Remote control for Kijkluister") : QStringLiteral("Afstandsbediening voor Kijkluister"),
+})").arg(english ? QStringLiteral("Remote control for PP Kiosk") : QStringLiteral("Afstandsbediening voor PP Kiosk"),
          english ? QStringLiteral("en") : QStringLiteral("nl"), start).toUtf8();
         respond(socket, 200, "application/manifest+json", manifest);
         return;
@@ -529,7 +529,7 @@ bool RemoteServer::command(const QString &key)
     else if (key == QLatin1String("right")) sendKeys({VK_RIGHT});
     else if (key == QLatin1String("ok")) sendKeys({VK_RETURN});
     else if (key == QLatin1String("back")) {
-        // In een website: vorige pagina; in Kijkluister en spelers: Esc
+        // In een website: vorige pagina; in PP Kiosk en spelers: Esc
         if (browserInFront()) sendKeys({VK_MENU, VK_LEFT});
         else sendKeys({VK_ESCAPE});
     } else if (key == QLatin1String("home")) {

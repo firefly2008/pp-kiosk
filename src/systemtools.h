@@ -29,12 +29,12 @@ public:
     Q_INVOKABLE QVariant globalSetting(const QString &name, const QVariant &fallback) const;
     Q_INVOKABLE void setGlobalSetting(const QString &name, const QVariant &value);
 
-    // Kijkluister opnieuw starten (na het wisselen van taal)
+    // PP Kiosk opnieuw starten (na het wisselen van taal)
     Q_INVOKABLE void restart();
 
     // Seconden sinds de laatste toets, muisbeweging of controllerknop (voor de sfeerstand)
     Q_INVOKABLE int idleSeconds() const;
-    // Kijkluister is gestart door Windows (starten met Windows) of na het wisselen van profiel
+    // PP Kiosk is gestart door Windows (starten met Windows) of na het wisselen van profiel
     Q_INVOKABLE bool hasArgument(const QString &arg) const;
 
     // Logbestand (+ vorig log en systeeminfo) als tekstbestand op het bureaublad; geeft de bestandsnaam
@@ -44,7 +44,7 @@ public:
     Q_INVOKABLE QString makeBackup() const;
     // Back-ups op het bureaublad, nieuwste eerst (alleen bestandsnamen)
     Q_INVOKABLE QStringList backups() const;
-    // Terugzetten en Kijkluister opnieuw starten
+    // Terugzetten en PP Kiosk opnieuw starten
     Q_INVOKABLE bool restoreBackup(const QString &fileName);
 
 Q_SIGNALS:

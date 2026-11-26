@@ -19,7 +19,7 @@ QByteArray protect(const QByteArray &plain)
 #ifdef Q_OS_WIN
     DATA_BLOB in{DWORD(plain.size()), reinterpret_cast<BYTE *>(const_cast<char *>(plain.constData()))};
     DATA_BLOB out{};
-    if (!CryptProtectData(&in, L"Kijkluister", nullptr, nullptr, nullptr, CRYPTPROTECT_UI_FORBIDDEN, &out)) {
+    if (!CryptProtectData(&in, L"PP Kiosk", nullptr, nullptr, nullptr, CRYPTPROTECT_UI_FORBIDDEN, &out)) {
         return {};
     }
     QByteArray result(reinterpret_cast<const char *>(out.pbData), int(out.cbData));

@@ -1,4 +1,4 @@
-# Pictogram Kijkluister: afspeelknop (kijken) met geluidsgolven (luisteren)
+# Pictogram PP Kiosk: afspeelknop (kijken) met geluidsgolven (luisteren)
 # op een afgeronde vierkant met verloop. Getekend op 1024 px, daarna verkleind.
 import math, sys
 from PIL import Image, ImageDraw, ImageFilter
@@ -66,9 +66,9 @@ icon = Image.alpha_composite(icon, fg)
 
 icon.save("kijkluister-1024.png")
 icon.resize((512, 512), Image.LANCZOS).save("kijkluister-512.png")
-icon.resize((256, 256), Image.LANCZOS).save("kijkluister-256.png")
+icon.resize((256, 256), Image.LANCZOS).save("ppkiosk-256.png")
 sizes = [(16, 16), (20, 20), (24, 24), (32, 32), (40, 40), (48, 48), (64, 64), (128, 128), (256, 256)]
-icon.save("kijkluister.ico", sizes=sizes)
+icon.save("ppkiosk.ico", sizes=sizes)
 # voorbeeld van kleine formaten naast elkaar
 prev = Image.new("RGBA", (16 + 24 + 32 + 48 + 64 + 128 + 256 + 8 * 20, 276), (40, 40, 44, 255))
 x = 10

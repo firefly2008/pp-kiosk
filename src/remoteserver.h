@@ -1,5 +1,5 @@
 // Telefoon als afstandsbediening (4.4): kleine webserver op het thuisnetwerk.
-// De telefoon opent http://<pc>:8642/?c=<code> (QR-code in Kijkluister) en krijgt een pagina met
+// De telefoon opent http://<pc>:8642/?c=<code> (QR-code in PP Kiosk) en krijgt een pagina met
 // pijltjes, OK, Terug, Home, Menu, afspelen/pauze, volume en typen. Zonder de juiste code doet de pc niets.
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
