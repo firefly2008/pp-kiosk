@@ -1,8 +1,26 @@
 [
   {
+    "version": "0.2.0",
+    "date": "2026-11-26",
+    "notes": [
+      "Dagstructuur op het startscherm: wat nu, wat straks en de hele dag met pictogrammen.",
+      "Mededelingen bovenaan het scherm.",
+      "Beheerpagina in de browser (localhost:8642, of met code vanaf een andere pc of telefoon)."
+    ],
+    "notes_en": [
+      "Day structure on the home screen.",
+      "Announcements.",
+      "Admin page in the browser."
+    ]
+  },
+  {
     "version": "0.1.0",
     "date": "2026-11-26",
-    "notes": ["Eerste opzet van PP Kiosk op basis van Kijkluister: startscherm met klok, datum en vier grote tegels."],
-    "notes_en": ["First PP Kiosk setup based on Kijkluister: home screen with clock, date and four large tiles."]
+    "notes": [
+      "Eerste opzet van PP Kiosk op basis van Kijkluister: startscherm met klok, datum en vier grote tegels."
+    ],
+    "notes_en": [
+      "First PP Kiosk setup based on Kijkluister: home screen with clock, date and four large tiles."
+    ]
   }
 ]

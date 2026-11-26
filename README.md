@@ -12,7 +12,7 @@ Gebaseerd op [Kijkluister](https://github.com/firefly2008/kijkluister) (Qt 6.8, 
 | Stap | Inhoud | Status |
 |---|---|---|
 | 1 | Kijkluister kopiëren en opschonen, naam PP Kiosk | klaar |
-| 2 | Startscherm + dagstructuur-agenda + beheerpagina | gepland |
+| 2 | Startscherm + dagstructuur-agenda + beheerpagina | klaar |
 | 3 | Media: PowerPoint (origineel bewaard), foto's, snelkoppelingen, speler | gepland |
 | 4 | Testen op het touchscreen + release | gepland |
 
@@ -32,3 +32,10 @@ powershell -File scripts\build-installer.ps1 -QtDir C:\Qt\6.8.3\msvc2022_64 -Ver
 ## Gegevens
 
 Alles staat in `%LOCALAPPDATA%\PPKiosk`: `settings.ini`, `ppkiosk.log` en de cache.
+
+## Beheerpagina
+
+- Op de kiosk-pc zelf: open de browser en ga naar `http://localhost:8642` (geen code nodig).
+- Vanaf een andere pc, tablet of telefoon op hetzelfde netwerk: houd op het kioskscherm de klok
+  1,5 seconde vast. Dan staan het adres, de code en een QR-code in beeld.
+- De dagplanning staat in `%LOCALAPPDATA%\PPKiosk\agenda.json`.

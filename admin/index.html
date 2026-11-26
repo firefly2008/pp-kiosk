@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PP Kiosk beheer</title>
+<link rel="icon" href="/icon.png">
+<style>
+:root{--groen:#2E8B57;--groen-licht:#E6F3EC;--tekst:#1F2A44;--grijs:#5B6478;--lijn:#D9DDE5;--rood:#C0392B;--bg:#F7F4EE}
+*{box-sizing:border-box}
+body{margin:0;font:18px/1.4 "Segoe UI",system-ui,sans-serif;color:var(--tekst);background:var(--bg)}
+header{background:var(--groen);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:12px}
+header img{width:36px;height:36px;border-radius:8px}
+header h1{font-size:22px;margin:0;flex:1}
+main{max-width:1100px;margin:0 auto;padding:20px 16px 120px}
+h2{font-size:20px;margin:28px 0 10px}
+.card{background:#fff;border:1px solid var(--lijn);border-radius:14px;padding:16px;margin-bottom:12px}
+.row{display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:start}
+.pict{width:56px;height:56px;border-radius:12px;font-size:32px;display:flex;align-items:center;justify-content:center;border:0;cursor:pointer}
+.fields{display:grid;grid-template-columns:110px 110px 1fr;gap:8px}
+.fields .wide{grid-column:1/-1}
+label{font-size:14px;color:var(--grijs);display:block}
+input[type=text],input[type=time],textarea{width:100%;font:inherit;padding:8px 10px;border:1px solid var(--lijn);border-radius:8px}
+.days{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.days label{display:inline-flex;align-items:center;gap:4px;font-size:15px;color:var(--tekst);background:var(--groen-licht);padding:4px 10px;border-radius:999px;cursor:pointer}
+.tools{display:flex;flex-direction:column;gap:6px}
+button{font:inherit;border-radius:10px;border:1px solid var(--lijn);background:#fff;padding:8px 14px;cursor:pointer;min-height:44px}
+button.primary{background:var(--groen);color:#fff;border-color:var(--groen);font-weight:600}
+button.danger{color:var(--rood)}
+.bar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--lijn);padding:12px 16px;display:flex;gap:12px;justify-content:center;align-items:center}
+#status{min-width:200px;color:var(--grijs)}
+#status.err{color:var(--rood)}
+#login{max-width:420px;margin:60px auto;text-align:center}
+#login input{font-size:28px;text-align:center;letter-spacing:6px;max-width:220px}
+.colors{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.colors button{width:32px;height:32px;min-height:0;padding:0;border-radius:50%}
+.colors button.on{outline:3px solid var(--tekst);outline-offset:2px}
+dialog{border:0;border-radius:16px;max-width:560px;width:calc(100% - 32px)}
+.picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:6px;margin:12px 0}
+.picker button{font-size:30px;padding:4px}
+.hint{color:var(--grijs);font-size:15px}
+@media (max-width:700px){.fields{grid-template-columns:1fr 1fr}.fields>div:nth-child(3){grid-column:1/-1}.row{grid-template-columns:48px 1fr}.tools{grid-column:1/-1;flex-direction:row;flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<header><img src="/icon.png" alt=""><h1>PP Kiosk beheer</h1></header>
+
+<div id="login" hidden>
+  <h2>Code invoeren</h2>
+  <p class="hint">Tik op de klok op het kioskscherm en houd vast: de code staat dan in beeld.</p>
+  <input id="code" inputmode="numeric" maxlength="6" autocomplete="off">
+  <p><button class="primary" id="go">Verder</button></p>
+  <p id="loginErr" class="hint"></p>
+</div>
+
+<main id="app" hidden>
+  <h2>Mededelingen</h2>
+  <div class="card">
+    <label for="messages">Eén mededeling per regel (bovenaan het scherm)</label>
+    <textarea id="messages" rows="3"></textarea>
+  </div>
+
+  <h2>Dagplanning</h2>
+  <p class="hint">Activiteiten staan op het scherm op volgorde van begintijd. Vink aan op welke dagen ze gelden.</p>
+  <div id="items"></div>
+  <button id="add">+ Activiteit toevoegen</button>
+</main>
+
+<div class="bar" id="bar" hidden>
+  <span id="status"></span>
+  <button class="primary" id="save">Opslaan</button>
+</div>
+
+<dialog id="pickDlg">
+  <h3>Kies een pictogram</h3>
+  <div class="picker" id="picker"></div>
+  <label for="ownIcon">Of typ/plak zelf een emoji</label>
+  <input type="text" id="ownIcon" maxlength="8">
+  <p><button class="primary" id="pickOk">Klaar</button></p>
+</dialog>
+
+<script>
+const ICONS = ['🛏️','🚿','🪥','👕','🍞','🥣','☕','🥪','🍽️','🍎','💊','🛠️','🎨','📚','🧩','🎵','📺','🎮','🚶','🚲','🚌','🚗','⚽','🏊','🧘','🛋️','😴','🛒','🧺','🧹','🍳','👨‍⚕️','🏥','💇','👪','🎉','☎️','💻','🌳','🐕','⛪','🎂'];
+const COLORS = ['#A7D8F0','#F6C85F','#8CC084','#C3B1E1','#F4A6A0','#F7B267','#B8E0D2','#D5D5D5'];
+const DAYS = ['ma','di','wo','do','vr','za','zo'];
+let code = '';
+let data = {items: [], messages: []};
+let dirty = false;
+const $ = id => document.getElementById(id);
+
+function esc(s){return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+async function api(method, body){
+  const r = await fetch('/api/agenda', {method, headers: {'X-Code': code, 'Content-Type': 'application/json'}, body: body ? JSON.stringify(body) : undefined});
+  if (r.status === 403) throw Object.assign(new Error('Code klopt niet'), {login: true});
+  if (r.status === 429) throw Object.assign(new Error('Te veel pogingen. Probeer het over 10 minuten.'), {login: true});
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'Opslaan mislukt');
+  return j;
+}
+
+async function start(){
+  try {
+    data = await api('GET');
+    $('login').hidden = true; $('app').hidden = false; $('bar').hidden = false;
+    render();
+  } catch (e) {
+    $('login').hidden = false; $('app').hidden = true; $('bar').hidden = true;
+    $('loginErr').textContent = code ? e.message : '';
+  }
+}
+
+function render(){
+  $('messages').value = (data.messages || []).join('\n');
+  data.items.sort((a, b) => a.start.localeCompare(b.start));
+  $('items').innerHTML = data.items.map((it, i) => `
+    <div class="card row" data-i="${i}">
+      <button class="pict" data-act="pick" style="background:${esc(it.color)}" aria-label="Pictogram kiezen">${esc(it.icon) || '＋'}</button>
+      <div>
+        <div class="fields">
+          <div><label>Begin</label><input type="time" data-f="start" value="${esc(it.start)}"></div>
+          <div><label>Eind</label><input type="time" data-f="end" value="${esc(it.end)}"></div>
+          <div><label>Wat</label><input type="text" data-f="title" maxlength="80" value="${esc(it.title)}"></div>
+          <div class="wide"><label>Toelichting (klein onder de titel)</label><input type="text" data-f="note" maxlength="200" value="${esc(it.note)}"></div>
+        </div>
+        <div class="days">${DAYS.map((d, k) => `<label><input type="checkbox" data-day="${k + 1}" ${(it.days || []).includes(k + 1) ? 'checked' : ''}>${d}</label>`).join('')}</div>
+        <div class="colors">${COLORS.map(c => `<button data-color="${c}" class="${c === it.color ? 'on' : ''}" style="background:${c}" aria-label="Kleur ${c}"></button>`).join('')}</div>
+      </div>
+      <div class="tools">
+        <button data-act="copy">Dupliceren</button>
+        <button class="danger" data-act="del">Verwijderen</button>
+      </div>
+    </div>`).join('');
+}
+
+function changed(){ dirty = true; $('status').textContent = 'Niet opgeslagen'; $('status').className = ''; }
+
+$('items').addEventListener('input', e => {
+  const row = e.target.closest('[data-i]'); if (!row) return;
+  const it = data.items[row.dataset.i];
+  if (e.target.dataset.f) it[e.target.dataset.f] = e.target.value;
+  if (e.target.dataset.day) {
+    const d = +e.target.dataset.day;
+    it.days = e.target.checked ? [...new Set([...(it.days || []), d])].sort() : (it.days || []).filter(x => x !== d);
+  }
+  changed();
+});
+$('items').addEventListener('change', e => { if (e.target.dataset.f === 'start') { render(); } });
+
+let picking = null;
+$('items').addEventListener('click', e => {
+  const btn = e.target.closest('button'); if (!btn) return;
+  const row = btn.closest('[data-i]'); const i = +row.dataset.i; const it = data.items[i];
+  if (btn.dataset.color) { it.color = btn.dataset.color; changed(); render(); return; }
+  if (btn.dataset.act === 'del') { if (confirm('"' + it.title + '" verwijderen?')) { data.items.splice(i, 1); changed(); render(); } return; }
+  if (btn.dataset.act === 'copy') { data.items.splice(i + 1, 0, {...it, id: '', days: [...(it.days || [])]}); changed(); render(); return; }
+  if (btn.dataset.act === 'pick') { picking = it; $('ownIcon').value = it.icon || ''; $('pickDlg').showModal(); }
+});
+$('picker').innerHTML = ICONS.map(c => `<button>${c}</button>`).join('');
+$('picker').addEventListener('click', e => { if (e.target.tagName === 'BUTTON') { $('ownIcon').value = e.target.textContent; } });
+$('pickOk').onclick = () => { if (picking) { picking.icon = $('ownIcon').value.trim(); changed(); render(); } $('pickDlg').close(); };
+
+$('add').onclick = () => {
+  const last = data.items[data.items.length - 1];
+  data.items.push({id: '', start: last ? (last.end || last.start) : '09:00', end: '', title: 'Nieuwe activiteit', icon: '', note: '', color: COLORS[0], days: [1,2,3,4,5,6,7]});
+  changed(); render();
+  window.scrollTo(0, document.body.scrollHeight);
+};
+$('messages').addEventListener('input', changed);
+
+$('save').onclick = async () => {
+  data.messages = $('messages').value.split('\n').map(s => s.trim()).filter(Boolean);
+  try {
+    await api('PUT', data);
+    data = await api('GET'); render();
+    dirty = false; $('status').textContent = 'Opgeslagen, staat op het scherm'; $('status').className = '';
+  } catch (e) { $('status').textContent = e.message; $('status').className = 'err'; }
+};
+
+$('go').onclick = () => { code = $('code').value.trim(); try { sessionStorage.setItem('ppcode', code); } catch (e) {} start(); };
+$('code').addEventListener('keydown', e => { if (e.key === 'Enter') $('go').click(); });
+window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+// Code uit de QR-code (#c=123456) of van eerder in deze sessie
+const m = location.hash.match(/c=(\d{6})/);
+try { code = m ? m[1] : (sessionStorage.getItem('ppcode') || ''); if (m) sessionStorage.setItem('ppcode', code); } catch (e) { code = m ? m[1] : ''; }
+if (m) history.replaceState(null, '', '/');
+start();
+</script>
+</body>
+</html>

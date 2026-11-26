@@ -35,7 +35,8 @@
 #include "updater.h"
 #include "homebridge.h"
 #include "systemtools.h"
-#include "remoteserver.h"
+#include "adminserver.h"
+#include "agenda.h"
 
 #include <QNetworkAccessManager>
 #include <QNetworkDiskCache>
@@ -283,8 +284,10 @@ int main(int argc, char *argv[])
     view.engine()->setNetworkAccessManagerFactory(new CachingNetworkFactory(appDataDir() + QStringLiteral("/imagecache")));
     ctx->setContextProperty(QStringLiteral("uiLanguage"), uiLanguage == QLatin1String("en") ? QStringLiteral("en") : QStringLiteral("nl"));
     ctx->setContextProperty(QStringLiteral("selfTest"), selfTestMode);
-    RemoteServer remote(appDataDir());
-    ctx->setContextProperty(QStringLiteral("remote"), &remote);
+    Agenda agenda(appDataDir());
+    ctx->setContextProperty(QStringLiteral("agenda"), &agenda);
+    AdminServer admin(appDataDir(), &agenda);
+    ctx->setContextProperty(QStringLiteral("admin"), &admin);
     SystemTools systemTools;
     ctx->setContextProperty(QStringLiteral("systemTools"), &systemTools);
     HomeBridge home(&view);
@@ -311,6 +314,12 @@ int main(int argc, char *argv[])
     view.showFullScreen();
     view.raise();
     view.requestActivate();
+    // Rooktest: schermafbeelding van het eigen venster (PPKIOSK_SHOT=pad.png)
+    if (const QString shot = qEnvironmentVariable("PPKIOSK_SHOT"); !shot.isEmpty()) {
+        QTimer::singleShot(6000, &view, [&view, shot] {
+            qInfo() << "Screenshot" << shot << view.grabWindow().save(shot);
+        });
+    }
     qInfo() << "Window shown" << view.geometry() << "visible" << view.isVisible();
     QObject::connect(view.engine(), &QQmlEngine::warnings, &view, [](const QList<QQmlError> &warnings) {
         for (const QQmlError &w : warnings) {
