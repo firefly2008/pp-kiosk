@@ -1,0 +1,358 @@
+[
+  {
+    "version": "4.13.0",
+    "date": "2026-11-25",
+    "notes": [
+      "Films & Series: kies je een serie, dan zie je per aflevering de beschrijving, de uitzenddatum, de duur en het cijfer, met een afbeelding van de aflevering op de achtergrond",
+      "Mappen kiezen: het scherm scrolt nu mee wanneer je meer mappen toevoegt dan er op het scherm passen",
+      "Afleveringsplots komen uit TMDB (met Engelse terugval als het Nederlands ontbreekt) of TVmaze; bestaande series vullen zich bij de eerstvolgende scan aan"
+    ],
+    "notes_en": [
+      "Movies & Series: when you pick a series you now see each episode's description, air date, duration and rating, with a still of the episode in the background",
+      "Choose folders: the screen now scrolls when you add more folders than fit on screen",
+      "Episode plots come from TMDB (with an English fallback when Dutch is missing) or TVmaze; existing series fill in on the next scan"
+    ]
+  },
+  {
+    "version": "4.12.0",
+    "date": "2026-11-22",
+    "notes": [
+      "Live tv: nieuwe groep \"NPO & RTL\" met NPO 1, 2, 3 (en de extra zenders) en RTL 4, 5, 7, 8 en Z, met tv-gids (nu, straks en omschrijving). Live kijken opent de site van de omroep, want hun streams zijn beveiligd",
+      "Radio: bij NPO Radio 1, 2, 3FM, Klassiek, 5 en FunX zie je het programma en de presentator, met wat er straks komt",
+      "Onder de motorkap: de oude NPO Backstage-API voor radio bestaat niet meer; we gebruiken de open gegevens van de zender-sites"
+    ],
+    "notes_en": [
+      "Live tv: new group \"NPO & RTL\" with NPO 1, 2, 3 (and the extra channels) and RTL 4, 5, 7, 8 and Z, with a TV guide (now, next and description). Watching live opens the broadcaster's site, because their streams are protected",
+      "Radio: NPO Radio 1, 2, 3FM, Klassiek, 5 and FunX show the programme and presenter, plus what is on next",
+      "Under the hood: the old NPO Backstage API for radio no longer exists; we use the open data from the station sites"
+    ]
+  },
+  {
+    "version": "4.11.0",
+    "date": "2026-11-21",
+    "notes": [
+      "Kleurrijke tegels: Films & Series is nu paars en Live tv blauw, zodat je ze op het startscherm meteen vindt",
+      "Radio: na een minuut zonder bediening zweeft de tegel rustig over het scherm en wordt de rest vaag. Een toets of de muis haalt alles terug",
+      "Release-info toont de laatste wijzigingen weer (het scherm was leeg)",
+      "Onder de motorkap: opnemen en kijken via de doorgifte delen nu dezelfde code voor ffmpeg. Verder geen veranderingen te zien",
+      "Nieuw in de documentatie: een overzicht van hoe Kijkluister in elkaar zit"
+    ],
+    "notes_en": [
+      "Colourful tiles: Films & Series is now purple and Live tv is blue, so you spot them right away on the home screen",
+      "Radio: after a minute without input the tile floats slowly across the screen and the rest fades. Any key or mouse move brings it back",
+      "Release info shows the latest changes again (the screen was empty)",
+      "Under the hood: recording and watching via the relay now share the same ffmpeg code. Nothing else changes visibly",
+      "New in the documentation: an overview of how Kijkluister is put together"
+    ]
+  },
+  {
+    "version": "4.10.1",
+    "date": "2026-11-21",
+    "notes": [
+      "Sleutels-scherm: de knoppen overlappen elkaar niet meer"
+    ],
+    "notes_en": [
+      "Keys screen: the buttons no longer overlap"
+    ]
+  },
+  {
+    "version": "4.10.0",
+    "date": "2026-11-21",
+    "notes": [
+      "Instellingen opnieuw ingedeeld in zes onderwerpen: Startpagina, Uiterlijk, Gezin en veiligheid, Geluid en apparaten, Opnames en sleutels, Onderhoud en hulp. Overal 'Naam: waarde' en 'Terug'. Je vindt alles op dezelfde plek als voorheen terug onder het juiste onderwerp",
+      "Eigen sleutels: Kijkluister bevat geen sleutels meer voor TMDB (films) en Unsplash (foto's). Vul je eigen gratis sleutel in via Instellingen → Opnames en sleutels → Sleutels, met uitleg, QR-code en een testknop. Zonder sleutel werkt alles nog steeds, alleen met minder plaatjes en gegevens bij films",
+      "Kinderslot beter beschermd: pincode, vergrendelde tegels en kijktijd staan versleuteld en zijn niet meer te lezen of aan te passen in Kladblok. Met kinderslot aan vragen de Instellingen de pincode",
+      "Esc terug naar de startpagina is instelbaar (Instellingen → Geluid en apparaten): vasthouden (kortere tijd), twee keer snel indrukken of direct",
+      "Let op: kijktijd van het kinderprofiel wordt bij de update overgenomen. Controleer hem even"
+    ],
+    "notes_en": [
+      "Settings reorganised into six topics: Home page, Appearance, Family and safety, Sound and devices, Recordings and keys, Maintenance and help. 'Name: value' and 'Back' everywhere. Everything is where you expect it under the right topic",
+      "Your own keys: Kijkluister no longer contains keys for TMDB (movies) and Unsplash (photos). Enter your own free key under Settings → Recordings and keys → Keys, with instructions, a QR code and a test button. Without a key everything still works, with fewer pictures and movie details",
+      "Parental lock better protected: PIN, locked tiles and viewing time are stored encrypted and can no longer be read or changed in Notepad. With the parental lock on, Settings asks for the PIN",
+      "Esc back to the home page is adjustable (Settings → Sound and devices): hold (shorter), press twice quickly or immediately",
+      "Note: the kids profile viewing time is carried over by the update. Please check it"
+    ]
+  },
+  {
+    "version": "4.9.0",
+    "date": "2026-11-21",
+    "notes": [
+      "Live tv: bij zappen wordt de vorige zender eerst echt losgelaten, zodat aanbieders met één verbinding minder vaak 'geweigerd' zeggen",
+      "Weigert de aanbieder een zender (403), dan probeert Kijkluister het zelf nog een keer en daarna via een doorgifte die zich als VLC meldt",
+      "Duidelijke meldingen: 'Je aanbieder weigert deze zender' en 'Zender reageert niet' in plaats van technische tekst (die staat klein eronder)",
+      "Zenderlogo's die niet laden worden onthouden en niet steeds opnieuw geprobeerd",
+      "Eigen logo's voor NLZIET en Simone FM als de site er zelf geen levert"
+    ],
+    "notes_en": [
+      "Live TV: when zapping, the previous channel is fully released first, so single-connection providers refuse less often",
+      "If the provider refuses a channel (403), Kijkluister retries once by itself and then via a relay that identifies as VLC",
+      "Clear messages: 'Your provider refuses this channel' and 'The channel is not responding' instead of technical text (which is shown small underneath)",
+      "Channel logos that fail to load are remembered and not retried over and over",
+      "Own logos for NLZIET and Simone FM when the site provides none"
+    ]
+  },
+  {
+    "version": "4.8.0",
+    "date": "2026-11-21",
+    "notes": [
+      "Nieuw, optioneel: layout met tabbladen (Voor jou, TV & Gids, Apps, Luisteren, Nieuws), een groot vlak met de gekozen tegel en rijen die zijwaarts scrollen met plaatjes. Standaard blijft alles zoals het was",
+      "Aanzetten: Instellingen → Layout (kies nogmaals om terug te gaan naar klassiek). De keuze geldt per profiel",
+      "Tabblad TV & Gids: knoppen voor Live tv en de Tv-gids, met daaronder Nu op tv",
+      "Tabblad Voor jou: Verder kijken, Nu op tv en Vaak gebruikt bij elkaar",
+      "Nog niet in deze layout: een klein live beeld in het grote vlak"
+    ],
+    "notes_en": [
+      "New, optional: a layout with tabs (For you, TV & Guide, Apps, Listen, News), a large panel showing the selected tile and rows that scroll sideways with pictures. Everything stays as it was by default",
+      "Turn it on: Settings → Layout (choose again to go back to classic). The choice is per profile",
+      "TV & Guide tab: buttons for Live TV and the TV guide, with Now on TV below",
+      "For you tab: Continue watching, Now on TV and Frequently used together",
+      "Not in this layout yet: a small live picture in the large panel"
+    ]
+  },
+  {
+    "version": "4.7.0",
+    "date": "2026-11-17",
+    "notes": [
+      "Beveiliging: inloggegevens van je tv-aanbieder staan versleuteld op de pc (alleen jouw Windows-account kan ze lezen) en komen niet meer in het logbestand",
+      "Telefoon als afstandsbediening: code van zes cijfers (één keer opnieuw scannen), na vijf foute codes tien minuten geblokkeerd, alleen apparaten op je eigen netwerk",
+      "Telefoon als afstandsbediening: het Kijkluister-pictogram komt nu wel mee (verwijder de oude snelkoppeling en voeg hem opnieuw toe)",
+      "Kinderslot: na vijf foute pincodes eerst even wachten",
+      "Updates, ffmpeg, MPC-HC en libCEC worden pas gebruikt als het controlegetal van GitHub klopt",
+      "Teksten uit zenderlijsten en gidsen worden altijd als gewone tekst getoond",
+      "Afsluiten zonder foutmeldingen in het logbestand"
+    ],
+    "notes_en": [
+      "Security: your TV provider's login details are stored encrypted on the PC (only your Windows account can read them) and no longer end up in the log file",
+      "Phone as remote control: six-digit code (scan once more), blocked for ten minutes after five wrong codes, only devices on your own network",
+      "Phone as remote control: the Kijkluister icon now comes along (remove the old shortcut and add it again)",
+      "Parental lock: after five wrong PINs you have to wait a moment",
+      "Updates, ffmpeg, MPC-HC and libCEC are only used when GitHub's checksum matches",
+      "Text from channel lists and guides is always shown as plain text",
+      "Closing without error messages in the log file"
+    ]
+  },
+  {
+    "version": "4.6.0",
+    "date": "2026-11-16",
+    "notes": [
+      "Telefoon als afstandsbediening is nu ook een app: in Chrome ⋮ → Toevoegen aan startscherm zet Kijkluister met eigen pictogram tussen je apps",
+      "De app onthoudt de code, toont rechtsboven of hij verbonden is en kan schermvullend (knop ⛶)",
+      "Engels: ook “Geluid via… (default)” is vertaald"
+    ],
+    "notes_en": [
+      "Phone as remote control is now also an app: in Chrome ⋮ → Add to Home screen puts Kijkluister with its own icon among your apps",
+      "The app remembers the code, shows at the top right whether it is connected and can go full screen (⛶ button)",
+      "English: “Sound through… (default)” is now translated too"
+    ]
+  },
+  {
+    "version": "4.5.0",
+    "date": "2026-11-16",
+    "notes": [
+      "Taal: Kijkluister kan nu ook in het Engels (Instellingen → Meer instellingen → Taal / Language)",
+      "Starten met Windows en wisselen van profiel werken weer (in 4.4.0 startte Kijkluister dan niet)",
+      "Verder kijken: bij series staat de resterende tijd nu echt op een eigen regel"
+    ],
+    "notes_en": [
+      "Language: Kijkluister is now also available in English (Settings → More settings → Taal / Language)",
+      "Starting with Windows and switching profiles work again (in 4.4.0 Kijkluister then did not start)",
+      "Continue watching: for series the remaining time is now really on its own line"
+    ]
+  },
+  {
+    "version": "4.4.0",
+    "date": "2026-11-15",
+    "notes": [
+      "Live tv: gids van alle zenders in één overzicht (knop Gids of G): zenders onder elkaar, programma's op een tijdlijn",
+      "Live tv: vorige zender met 0 of Backspace; zappen met Pagina omhoog/omlaag (P+ / P−)",
+      "Tv-gids: herinnering (H of 🔔 Herinner me): twee minuten van tevoren een melding met de knop Kijken, ook als je iets anders kijkt",
+      "Tv-gids: serie opnemen (S): elke uitzending met dezelfde titel op die zender wordt opgenomen",
+      "Startscherm: rij Nu op tv met je favoriete zenders en wat er nu speelt",
+      "Bij opstarten: Wie kijkt er? (als er meer profielen zijn; uit te zetten)",
+      "Sfeerstand: na 10 minuten niets doen gaat Kijkluister vanzelf naar Schilderij (instelbaar)",
+      "Knop Geluid in de bovenbalk: kies tv, soundbar of koptelefoon",
+      "Telefoon als afstandsbediening: QR-code scannen, dan pijltjes, OK, Terug, Home, volume en typen op je telefoon",
+      "Kinderprofiel: kijktijd per dag, daarna is de pincode nodig",
+      "Back-up maken en terugzetten van al je instellingen, en Logbestand delen (op het bureaublad)",
+      "Instelling: Kijkluister starten bij opstarten van Windows",
+      "Verder kijken: tegels netjes in een raster, niets meer buiten beeld; bij series de resterende tijd op een eigen regel",
+      "Films & Series: Esc gaat altijd een stap terug, tot het startscherm",
+      "Schermtoetsenbord: OK-knop om te bevestigen",
+      "Films afspelen: de speler (MPC-HC) wordt ook opgehaald als GitHub tijdelijk weigert"
+    ],
+    "notes_en": [
+      "Live TV: guide of all channels in one overview (Guide button or G): channels below each other, programmes on a timeline",
+      "Live TV: previous channel with 0 or Backspace; zap with Page up/down (P+ / P−)",
+      "TV guide: reminder (H or 🔔 Remind me): a notification two minutes before with a Watch button, even if you are watching something else",
+      "TV guide: record series (S): every broadcast with the same title on that channel is recorded",
+      "Home screen: Now on TV row with your favourite channels and what is on now",
+      "At start-up: Who is watching? (when there are several profiles; can be turned off)",
+      "Ambient mode: after 10 minutes of doing nothing, Kijkluister goes to the art frame by itself (adjustable)",
+      "Sound button in the top bar: choose TV, soundbar or headphones",
+      "Phone as remote control: scan the QR code, then arrows, OK, Back, Home, volume and typing on your phone",
+      "Child profile: screen time per day, after which the PIN is needed",
+      "Make and restore a backup of all your settings, and Share log file (on the desktop)",
+      "Setting: start Kijkluister when Windows starts",
+      "Continue watching: tiles neatly in a grid, nothing off screen any more; for series the remaining time on its own line",
+      "Movies & Series: Esc always goes one step back, to the home screen",
+      "On-screen keyboard: OK button to confirm",
+      "Playing movies: the player (MPC-HC) is also downloaded when GitHub temporarily refuses"
+    ]
+  },
+  {
+    "version": "4.3.1",
+    "date": "2026-11-15",
+    "notes": [
+      "Diensten (Ziggo, YouTube, Netflix…) blijven niet meer op de achtergrond openstaan: bij Home en bij het openen van een andere dienst worden ze gesloten",
+      "Live tv: tv-gids werkt nu ook met een eigen lijst via een link van je aanbieder (Xtream-paneel, get.php)",
+      "Geen onterechte melding “opent nog niet” meer bij Live tv, Schilderij en andere eigen schermen"
+    ],
+    "notes_en": [
+      "Services (Ziggo, YouTube, Netflix…) no longer stay open in the background: they are closed on Home and when you open another service",
+      "Live TV: the TV guide now also works with your own list via a link from your provider (Xtream panel, get.php)",
+      "No more wrong “has not opened yet” message for Live TV, Art frame and other built-in screens"
+    ]
+  },
+  {
+    "version": "4.3.0",
+    "date": "15 november 2026",
+    "notes": [
+      "Rij Vaak gebruikt bovenaan: de tegels die je het meest opent",
+      "Rijen die je twee weken niet gebruikt klappen in tot één regel (Menu op een tegel: Rij in- of uitklappen; uit te zetten in Meer instellingen)",
+      "De gekozen tegel heeft een gloed in de kleur van de dienst",
+      "Opstarten waar je was: het kader staat op de laatst geopende tegel; radio hervatten bij opstarten kan aan in Meer instellingen",
+      "Cijfertoetsen 1–9 openen een tegel van de bovenste rij; in Live tv kies je een zender op nummer",
+      "Zoeken met je stem: microfoonknop of Y (Windows-dicteren)",
+      "Profielen, ook een kinderprofiel met kinderslot (Meer instellingen → Profielen)",
+      "Knop Hulp in de bovenbalk: welke knop doet wat",
+      "Achtergrond beweegt mee met het logo van de gekozen tegel",
+      "Nachtmodus (22–7 uur): warmer en gedimd beeld, radio zachter, slaaptimer in de bovenbalk",
+      "Achtergrond wijzigen → Gratis foto: foto's van Unsplash (anders Openverse)",
+      "Opnemen: ffmpeg wordt ook opgehaald als GitHub tijdelijk weigert",
+      "Schilderij: natuurfoto's van Unsplash, zonder eigen sleutel"
+    ],
+    "notes_en": [
+      "Frequently used row at the top: the tiles you open most",
+      "Rows you haven't used for two weeks collapse to one line (Menu on a tile: Expand or collapse row; can be turned off in More settings)",
+      "The chosen tile glows in the colour of the service",
+      "Start where you left off: the frame is on the last opened tile; resuming the radio at start-up can be turned on in More settings",
+      "Number keys 1–9 open a tile in the top row; in Live TV you choose a channel by number",
+      "Search with your voice: microphone button or Y (Windows dictation)",
+      "Profiles, including a child profile with parental lock (More settings → Profiles)",
+      "Help button in the top bar: which button does what",
+      "The background moves with the logo of the chosen tile",
+      "Night mode (10 pm–7 am): warmer, dimmed picture, quieter radio, sleep timer in the top bar",
+      "Change background → Free photo: photos from Unsplash (otherwise Openverse)",
+      "Recording: ffmpeg is also downloaded when GitHub temporarily refuses",
+      "Art frame: nature photos from Unsplash, without your own key"
+    ]
+  },
+  {
+    "version": "4.2.0",
+    "date": "15 november 2026",
+    "notes": [
+      "Nieuwe rij Nieuws: NOS, NU.nl, AD, De Telegraaf, NRC, de Volkskrant, RTL Nieuws en Het Financieele Dagblad, met grotere tekst",
+      "Websites met de afstandsbediening of controller: pijltjes springen tussen links en knoppen, OK opent, Terug gaat een pagina terug, Terug vasthouden brengt je naar de tegels",
+      "Verder kijken is nu een tegel naast Schilderij in de rij Media",
+      "Live tv: knop Opnames bij Bronnen, en linksboven een stopknop (vierkantje) naast het opname-teken: muis erop toont 'Opname stoppen'",
+      "Aanpassen heet nu Instellingen (tandwiel); Release-info staat onderaan, net boven Sluiten",
+      "Diensten kiezen is ingedeeld in Streaming, Muziek, Podcasts, Nieuws en Radio",
+      "Achtergrond wijzigen: kies een gratis foto (zoeken met het schermtoetsenbord) of een eigen afbeelding",
+      "Radiozender toevoegen staat niet meer in het menu Instellingen (wel via Menu op een zender)"
+    ],
+    "notes_en": [
+      "New News row: NOS, NU.nl, AD, De Telegraaf, NRC, de Volkskrant, RTL Nieuws and Het Financieele Dagblad, with larger text",
+      "Websites with the remote or controller: arrows jump between links and buttons, OK opens, Back goes back a page, holding Back takes you to the tiles",
+      "Continue watching is now a tile next to Art frame in the Media row",
+      "Live TV: Recordings button next to Sources, and a stop button (square) at the top left next to the recording sign: hovering shows 'Stop recording'",
+      "Customise is now called Settings (gear); Release info is at the bottom, just above Close",
+      "Choose services is divided into Streaming, Music, Podcasts, News and Radio",
+      "Change background: choose a free photo (search with the on-screen keyboard) or your own image",
+      "Add radio station is no longer in the Settings menu (it is via Menu on a station)"
+    ]
+  },
+  {
+    "version": "4.1.0",
+    "date": "15 november 2026",
+    "notes": [
+      "Diensten kiezen: alle Nederlandse radiozenders (NPO, commercieel, themazenders en de regionale omroepen) zijn aan of uit te zetten",
+      "Diensten kiezen: meer op Nederland gerichte diensten, zoals NOS, NPO Zapp, Schooltv, Ziggo Sport, DAZN, BVN en Human",
+      "Radiozender toevoegen gaat nu via Aanpassen (de losse tegel is weg)",
+      "Websites (Netflix, YouTube en andere) openen zonder schuifbalk rechts; scrollen werkt nog gewoon",
+      "Het kader op de gekozen tegel is altijd zichtbaar, ook direct na het opstarten",
+      "Aanpassen → Release-info: wat er nieuw is en welke versie je hebt",
+      "Kijkluister werkt zichzelf stil bij: de nieuwe versie wordt op de achtergrond opgehaald en geïnstalleerd zodra er niets speelt"
+    ],
+    "notes_en": [
+      "Choose services: all Dutch radio stations (NPO, commercial, theme stations and regional broadcasters) can be turned on or off",
+      "Choose services: more services aimed at the Netherlands, such as NOS, NPO Zapp, Schooltv, Ziggo Sport, DAZN, BVN and Human",
+      "Add radio station now goes via Customise (the separate tile is gone)",
+      "Websites (Netflix, YouTube and others) open without a scroll bar on the right; scrolling still works",
+      "The frame on the chosen tile is always visible, also right after start-up",
+      "Customise → Release info: what's new and which version you have",
+      "Kijkluister updates itself silently: the new version is downloaded in the background and installed as soon as nothing is playing"
+    ]
+  },
+  {
+    "version": "4.0.0",
+    "date": "15 november 2026",
+    "notes": [
+      "Home-knop linksboven boven websites en apps; de Home-toets van een (Bluetooth-)afstandsbediening en Esc een seconde vasthouden brengen je terug naar de tegels",
+      "Nieuwe tegel Regionale tv met alle regionale omroepen van Nederland",
+      "Tegel Films & Series vervangt de losse tegels Films en Series",
+      "Rijen zijn te verplaatsen (Menu op een tegel: Rij omhoog/omlaag); Verder kijken staat standaard onder Media",
+      "Speelt de radio op de achtergrond, dan staat 'Nu op de radio' vooraan in de rij Media",
+      "De bovenbalk is rustiger: Zoeken, Aanpassen en Sluiten; Windows-instellingen staan onder Meer instellingen"
+    ],
+    "notes_en": [
+      "Home button at the top left above websites and apps; the Home key of a (Bluetooth) remote and holding Esc for a second take you back to the tiles",
+      "New Regional TV tile with all regional broadcasters in the Netherlands",
+      "Movies & Series tile replaces the separate Movies and Series tiles",
+      "Rows can be moved (Menu on a tile: Row up/down); Continue watching is under Media by default",
+      "When the radio plays in the background, 'Now on the radio' is first in the Media row",
+      "The top bar is calmer: Search, Customise and Close; Windows settings are under More settings"
+    ]
+  },
+  {
+    "version": "3.9.7",
+    "date": "15 november 2026",
+    "notes": [
+      "Radio speelt door op de achtergrond; slaaptimer voor radio, tv en films",
+      "Zoeken in apps, zenders, tv-gids, films en radio, met schermtoetsenbord",
+      "Kinderslot met eigen pincode",
+      "Opnames opruimen (bewaartermijn en vrije ruimte), altijd eerst gevraagd",
+      "Bediening met de tv-afstandsbediening via HDMI-CEC",
+      "Weer naast de klok"
+    ],
+    "notes_en": [
+      "Radio keeps playing in the background; sleep timer for radio, TV and movies",
+      "Search in apps, channels, TV guide, movies and radio, with on-screen keyboard",
+      "Parental lock with your own PIN",
+      "Clean up recordings (retention period and free space), always asked first",
+      "Control with the TV remote via HDMI-CEC",
+      "Weather next to the clock"
+    ]
+  },
+  {
+    "version": "3.9.6",
+    "date": "14 november 2026",
+    "notes": [
+      "Rij Radio met de zeven populairste Nederlandse zenders, in Kijkluister zelf te beluisteren"
+    ],
+    "notes_en": [
+      "Radio row with the seven most popular Dutch stations, playable in Kijkluister itself"
+    ]
+  },
+  {
+    "version": "3.9.5",
+    "date": "14 november 2026",
+    "notes": [
+      "Rij Verder kijken, opnemen vanuit de tv-gids, grotere tekst en welkomststap",
+      "Gegevens bij films en series met een ingebouwde, vergrendelde sleutel"
+    ],
+    "notes_en": [
+      "Continue watching row, recording from the TV guide, larger text and welcome step",
+      "Movie and series data with a built-in, locked key"
+    ]
+  }
+]

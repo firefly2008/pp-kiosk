@@ -1,0 +1,314 @@
+# Bouwt de installer in de cloud (geen lokale toolchain nodig).
+# Zet deze map in een GitHub-repo -> Actions -> "Windows installer" -> download het artifact.
+name: Windows installer
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+# Nodig om bij een versie-branch (release/x.y.z) de installer als Release te bewaren
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Qt installeren
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.8.3"
+          arch: win64_msvc2022_64
+          modules: qtmultimedia qtimageformats
+          cache: true
+      - name: Inno Setup
+        run: choco install innosetup -y --no-progress
+      - name: Bouwen + installer maken
+        shell: pwsh
+        run: |
+          # Branch release/2.0.0 bepaalt het versienummer; gewone pushes heten "dev"
+          $version = if ($env:GITHUB_REF_NAME -like 'release/*') { $env:GITHUB_REF_NAME.Substring(8) } else { 'dev' }
+          "BIGSCREEN_VERSION=$version" >> $env:GITHUB_ENV
+          $env:GITHUB_TOKEN = "${{ github.token }}"
+          .\scripts\build-installer.ps1 -QtDir "$env:QT_ROOT_DIR" -VcpkgRoot "$env:VCPKG_INSTALLATION_ROOT" -Version $version
+      - name: Rooktest (start de app op de runner)
+        shell: pwsh
+        env:
+          BIGSCREEN_TEST_UNSPLASH: ${{ secrets.UNSPLASH_TOKEN }}
+          BIGSCREEN_TEST_TMDB: ${{ secrets.TMDB_TOKEN }}
+        run: |
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          $log = "$env:LOCALAPPDATA\Kijkluister\kijkluister.log"
+          $films = "$env:RUNNER_TEMP\media\Films"; $series = "$env:RUNNER_TEMP\media\Series"
+          New-Item -ItemType Directory -Force "$films\The.Matrix.1999.1080p.BluRay.x264", "$series\Westworld (2016)\Season 1", "$series\Breaking Bad\Seizoen 2" | Out-Null
+          foreach ($f in "$films\The.Matrix.1999.1080p.BluRay.x264\The.Matrix.1999.1080p.BluRay.x264.mkv", "$films\Inception (2010).mkv",
+                         "$films\Amelie.2001.DVDRip.XviD.avi", "$series\Westworld (2016)\Season 1\Westworld.S01E01.720p.mkv",
+                         "$series\Westworld (2016)\Season 1\Westworld.S01E02.720p.mkv", "$series\Breaking Bad\Seizoen 2\Breaking.Bad.2x03.mp4") {
+            New-Item -ItemType File -Force $f | Out-Null
+          }
+          & build\ffmpeg\ffmpeg.exe -v error -y -f lavfi -i "testsrc2=size=1280x720:rate=25" -f lavfi -i "sine=frequency=440" -t 20 -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest "$series\Breaking Bad\Seizoen 2\Breaking.Bad.2x03.mp4"
+          & build\ffmpeg\ffmpeg.exe -v error -y -f lavfi -i "smptebars=size=320x180:rate=5" -f lavfi -i "sine=frequency=660" -t 300 -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest "$series\Breaking Bad\Seizoen 2\Breaking.Bad.2x04.mp4"
+          New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\BigscreenHost" | Out-Null
+          $films2 = "$env:RUNNER_TEMP\media2\Meer films"; New-Item -ItemType Directory -Force $films2 | Out-Null
+          New-Item -ItemType File -Force "$films2\Blade.Runner.1982.Final.Cut.mkv" | Out-Null
+          "[library]`r`nmoviesFolder=$($films -replace '\\','/')`r`nshowsFolder=$($series -replace '\\','/')`r`nmoviesFolders=$($films -replace '\\','/'), $($films2 -replace '\\','/')`r`n" | Set-Content "$env:LOCALAPPDATA\BigscreenHost\settings.ini"
+          $tv = "$env:RUNNER_TEMP\tv"; New-Item -ItemType Directory -Force $tv | Out-Null
+          Invoke-WebRequest -UseBasicParsing https://iptv-org.github.io/iptv/countries/nl.m3u -OutFile "$tv\nl.m3u"
+          $lines = @(Get-Content -Encoding UTF8 "$tv\nl.m3u" | ForEach-Object { $_.Trim() })
+          $guideUrl = "file:///" + ("$tv\guide.xml.gz" -replace '\\','/')
+          $m3u = @("#EXTM3U url-tvg=`"$guideUrl`""); $n = 0
+          for ($i = 0; $i -lt $lines.Count -and $n -lt 40; $i++) {
+            if ($lines[$i] -like '#EXTINF*') {
+              $url = ($lines[($i+1)..($i+4)] | Where-Object { $_ -and -not $_.StartsWith('#') } | Select-Object -First 1)
+              $n++; $m3u += ($lines[$i] -replace ' tvg-id="[^"]*"', '') -replace '^#EXTINF:-1', "#EXTINF:-1 tvg-id=`"ch$n`""; $m3u += $url
+            }
+          }
+          $m3u -join "`r`n" | Set-Content -Encoding UTF8 "$tv\test.m3u"
+          $now = [DateTime]::UtcNow; $start = $now.Date.AddHours($now.Hour - 1)
+          $titles = 'Journaal', 'Het Weer', 'Natuur in Nederland', 'Koken met Kim', 'De Avondshow', 'Documentaire: De Noordzee', 'Sportnieuws', 'Filmavond'
+          $descs = @{
+            'Journaal' = 'Het laatste nieuws uit binnen- en buitenland, met achtergronden en reportages van onze correspondenten.'
+            'Het Weer' = 'De weersverwachting voor vandaag en de komende dagen, met uitleg over de buien en de temperatuur.'
+            'Natuur in Nederland' = 'Een boswachter neemt je mee door de Veluwe in de herfst: edelherten in de bronst, paddenstoelen en trekvogels.'
+            'Koken met Kim' = 'Kim maakt een stevige stamppot met boerenkool en een snelle appeltaart. Met tips om vooruit te koken.'
+            'De Avondshow' = 'Talkshow met gasten uit de muziek, sport en cultuur, en een live optreden van een Nederlandse band.'
+            'Documentaire: De Noordzee' = 'Onder water bij de Noordzee: van zeehonden bij de Waddeneilanden tot scheepswrakken vol leven.'
+            'Sportnieuws' = 'Samenvattingen van de wedstrijden van vandaag, met reacties van spelers en trainers.'
+            'Filmavond' = 'Een Nederlandse speelfilm over een familie die samen een oude boerderij opknapt, met alle verwikkelingen van dien.'
+          }
+          $x = @('<?xml version="1.0" encoding="UTF-8"?>', '<tv>')
+          for ($c = 1; $c -le $n; $c++) {
+            $x += "<channel id=`"ch$c`"><display-name>Zender $c</display-name></channel>"
+            for ($k = 0; $k -lt 16; $k++) {
+              $s = $start.AddMinutes(30 * $k); $e = $s.AddMinutes(30); $t = $titles[($k + $c) % $titles.Count]
+              $x += "<programme start=`"$($s.ToString('yyyyMMddHHmmss')) +0000`" stop=`"$($e.ToString('yyyyMMddHHmmss')) +0000`" channel=`"ch$c`"><title>$t</title><desc>$($descs[$t])</desc><category>Informatief</category></programme>"
+            }
+          }
+          $x += '</tv>'
+          $bytes = [Text.Encoding]::UTF8.GetBytes($x -join "`n")
+          $fs = [IO.File]::Create("$tv\guide.xml.gz"); $gz = New-Object IO.Compression.GZipStream($fs, [IO.Compression.CompressionMode]::Compress)
+          $gz.Write($bytes, 0, $bytes.Length); $gz.Close(); $fs.Close()
+          $env:BIGSCREEN_TEST_M3U = "$tv\test.m3u"
+          $env:BIGSCREEN_TEST_RECORD_DIR = "$env:RUNNER_TEMP\opnames"
+          Get-Content "$tv\test.m3u"
+          $modes = 'home', 'podcasts', 'moveask', 'library', 'iptvbar', 'iptvepg', 'addtile', 'iptvfree', 'frame-chicago', 'frame-met', 'frame-nature', 'frame-unsplash', 'frame-lijst', 'frame-settings', 'frame-esc', 'frame-mouseesc', 'record', 'recordpanel', 'librarysetup', 'iptvsources', 'iptvfreeguide', 'mpcplay', 'resume', 'epgrecord', 'welcome', 'radio', 'radiohome', 'search', 'radioadd', 'sleep', 'weather', 'update', 'cec', 'radiobg', 'regional', 'nowplaying', 'sections', 'homekey', 'releaseinfo', 'news', 'photo', 'settingsmenu', 'usage', 'help', 'night', 'collapse', 'libraryesc', 'nowtv', 'guidegrid', 'reminder', 'series', 'prevchannel', 'ambient', 'audio', 'remote', 'backup', 'kidslimit', 'profiles', 'okkey', 'whoswatching', 'english', 'security', 'cleanup', 'parental', 'tabs', 'tabs-apps', 'tabs-tv', 'keys', 'settingsgroups', 'radiodrift', 'radioprogramme', 'nlchannels', 'libraryepisodes'
+          $manual = '${{ github.ref }}' -like 'refs/heads/screenshots/*'
+          if ($manual) {
+            $modes = 'm-home', 'm-channels', 'm-search', 'm-favorites', 'm-sources', 'm-xtream', 'm-bar', 'm-guide', 'm-guide2', 'm-guidelist'
+            if ('${{ github.ref }}' -like 'refs/heads/screenshots/verbeteringen*') {
+              $modes = 'u-library', 'u-home', 'u-header', 'u-quit', 'u-personalize', 'u-bigtext', 'u-welcome', 'u-sources', 'u-error', 'u-guiderecord', 'u-badge', 'u-recordpanel', 'u-libsetup'
+            }
+            Add-Type @"
+          using System; using System.Runtime.InteropServices;
+          public class Disp {
+            [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Ansi)] public struct DEVMODE {
+              [MarshalAs(UnmanagedType.ByValTStr, SizeConst=32)] public string dmDeviceName; public short dmSpecVersion, dmDriverVersion, dmSize, dmDriverExtra; public int dmFields, dmPositionX, dmPositionY, dmDisplayOrientation, dmDisplayFixedOutput; public short dmColor, dmDuplex, dmYResolution, dmTTOption, dmCollate;
+              [MarshalAs(UnmanagedType.ByValTStr, SizeConst=32)] public string dmFormName; public short dmLogPixels; public int dmBitsPerPel, dmPelsWidth, dmPelsHeight, dmDisplayFlags, dmDisplayFrequency, dmICMMethod, dmICMIntent, dmMediaType, dmDitherType, dmReserved1, dmReserved2, dmPanningWidth, dmPanningHeight; }
+            [DllImport("user32.dll")] public static extern bool EnumDisplaySettings(string d, int m, ref DEVMODE dm);
+            [DllImport("user32.dll")] public static extern int ChangeDisplaySettings(ref DEVMODE dm, int f);
+            public static int Set(int w, int h) { var dm = new DEVMODE(); dm.dmSize = (short)Marshal.SizeOf(dm); EnumDisplaySettings(null, -1, ref dm); dm.dmPelsWidth = w; dm.dmPelsHeight = h; dm.dmFields = 0x80000 | 0x100000; return ChangeDisplaySettings(ref dm, 0); }
+          }
+          "@
+            "Resolutie: " + [Disp]::Set(1920, 1080)
+            New-Item -ItemType Directory -Force shots | Out-Null
+          }
+          foreach ($mode in $modes) {
+            $env:BIGSCREEN_SELFTEST = $mode
+            if ($mode -eq 'english') { $env:BIGSCREEN_LANGUAGE = 'en' } else { Remove-Item Env:BIGSCREEN_LANGUAGE -ErrorAction SilentlyContinue }
+            if ($mode -eq 'u-home' -or $mode -eq 'u-bigtext' -or $mode -like 'tabs*') {
+              $ep = "$series\Breaking Bad\Seizoen 2\Breaking.Bad.2x04.mp4"
+              New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\Kijkluister\mpc-hc" | Out-Null
+              "[MediaHistory\TESTRESUME]`r`nFilename=$ep`r`nFilePosition=120000`r`nLastOpened=2099-01-01T00:00:00`r`n" | Set-Content -Encoding UTF8 "$env:LOCALAPPDATA\Kijkluister\mpc-hc\mpc-hc64.ini"
+              @{ $ep = 300000 } | ConvertTo-Json -Compress | Set-Content -Encoding UTF8 "$env:LOCALAPPDATA\Kijkluister\resume-durations.json"
+            }
+            if ($mode -eq 'resume') {
+              $ini = "$env:LOCALAPPDATA\Kijkluister\mpc-hc\mpc-hc64.ini"
+              "`r`n[MediaHistory\TESTRESUME]`r`nFilename=$series\Breaking Bad\Seizoen 2\Breaking.Bad.2x04.mp4`r`nFilePosition=120000`r`nLastOpened=2099-01-01T00:00:00`r`n" | Add-Content -Encoding UTF8 $ini
+            }
+            if ($mode -eq 'cleanup') {
+              New-Item -ItemType Directory -Force $env:BIGSCREEN_TEST_RECORD_DIR | Out-Null
+              foreach ($d in 40, 50, 1) {
+                $f = "$env:BIGSCREEN_TEST_RECORD_DIR\NPO 1 - Journaal ($d dagen).mp4"
+                [IO.File]::WriteAllBytes($f, (New-Object byte[] 2048))
+                (Get-Item $f).LastWriteTime = (Get-Date).AddDays(-$d)
+              }
+            }
+            if ($mode -eq 'english') { $p = Start-Process dist\Kijkluister.exe -ArgumentList '--autostart', '--profile-chosen' -PassThru }
+            else { $p = Start-Process dist\Kijkluister.exe -PassThru }
+            Start-Sleep $(if ($mode -eq 'u-guiderecord') { 13 } elseif ($mode -eq 'u-library') { 30 } elseif ($manual -or $mode -like 'frame*') { 20 } elseif ($mode -eq 'record') { 75 } elseif ($mode -eq 'iptvfreeguide' -or $mode -eq 'mpcplay' -or $mode -eq 'nlchannels' -or $mode -eq 'libraryepisodes') { 45 } elseif ($mode -eq 'epgrecord') { 30 } elseif ($mode -eq 'radio') { 75 } elseif ($mode -eq 'radioadd' -or $mode -eq 'sleep') { 22 } elseif ($mode -eq 'weather' -or $mode -eq 'search') { 16 } elseif ($mode -eq 'regional') { 25 } elseif ($mode -eq 'photo') { 18 } elseif ($mode -like 'tabs*') { 28 } else { 14 })
+            if ($mode -like 'frame*esc' -or $mode -eq 'libraryesc') {
+              Add-Type -ErrorAction SilentlyContinue @"
+          using System; using System.Runtime.InteropServices;
+          public class Inp {
+            [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+            [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+            [DllImport("user32.dll")] public static extern void keybd_event(byte k, byte s, int f, IntPtr e);
+          }
+          "@
+              $p.Refresh(); [Inp]::SetForegroundWindow($p.MainWindowHandle) | Out-Null; Start-Sleep 1
+              if ($mode -eq 'frame-mouseesc') {
+                for ($k = 0; $k -lt 12; $k++) { [Inp]::SetCursorPos(200 + 60 * $k, 300 + 20 * $k) | Out-Null; Start-Sleep -Milliseconds 120 }
+              }
+              [Inp]::keybd_event(0x1B, 0, 0, [IntPtr]::Zero); Start-Sleep -Milliseconds 80; [Inp]::keybd_event(0x1B, 0, 2, [IntPtr]::Zero)
+              Start-Sleep 3
+            }
+            $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+            $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+            [System.Drawing.Graphics]::FromImage($bmp).CopyFromScreen(0, 0, 0, 0, $bmp.Size)
+            $bmp.Save("$env:RUNNER_TEMP\shot.png", [System.Drawing.Imaging.ImageFormat]::Png)
+            $bmp.Save("$env:RUNNER_TEMP\shot.jpg", [System.Drawing.Imaging.ImageFormat]::Jpeg)
+            "SHOT-BEGIN-$mode"; [Convert]::ToBase64String([IO.File]::ReadAllBytes($(if ($manual) { "$env:RUNNER_TEMP\shot.png" } else { "$env:RUNNER_TEMP\shot.jpg" })), 'InsertLineBreaks'); "SHOT-END"
+            if ($manual) { Copy-Item "$env:RUNNER_TEMP\shot.png" "shots\$mode.png"; if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }; Start-Sleep 2; continue }
+            if ($p.HasExited) { "RESULT: EXITED code {0} (0x{0:X8})" -f $p.ExitCode } else { "RESULT: RUNNING"; Stop-Process -Id $p.Id -Force }
+            if (Test-Path $log) { "--- log ---"; Get-Content $log } else { "NO LOG FILE" }
+            if (-not (Test-Path $log) -or -not (Select-String -Path $log -Pattern "Window shown" -Quiet)) { throw "Rooktest mislukt: venster niet getoond" }
+            if ($mode -like 'frame*esc' -and -not (Select-String -Path $log -Pattern "Frame closed" -Quiet)) { throw "Rooktest mislukt: Esc stopt het schilderij niet ($mode)" }
+            Get-Process ffmpeg -ErrorAction SilentlyContinue | Stop-Process -Force
+            if ($mode -eq 'epgrecord') {
+              Select-String -Path $log -Pattern "Recorder: (scheduled|start)" | ForEach-Object { $_.Line }
+              if (-not (Select-String -Path $log -Pattern "Recorder: scheduled start" -Quiet)) { throw "Rooktest mislukt: opname vanuit de gids start niet" }
+            }
+            $checks = @{
+              'search' = 'Search results'; 'radioadd' = 'Radio added'; 'sleep' = 'Sleep timer fired'; 'weather' = 'Weather:';
+              'update' = 'Update check'; 'cec' = 'CEC key'; 'radiobg' = 'Radio in background'; 'radiodrift' = 'Radio drift true'; 'radioprogramme' = 'Radio programme ok'; 'nlchannels' = 'NL guide ok'; 'libraryepisodes' = 'Episode info ok'; 'cleanup' = 'Cleanup suggested';
+              'parental' = 'Parental: unlocked'; 'regional' = 'IPTV playing:'; 'nowplaying' = 'Media first tile: Nu op de radio';
+              'sections' = 'Section order moved:'; 'homekey' = 'Home screen'; 'releaseinfo' = 'Release info: '; 'photo' = 'Photo search';  'frame-unsplash' = 'Frame: Unsplash gave'; 'usage' = 'Usage count'; 'help' = 'Help opened'; 'night' = 'Night mode true';
+              'collapse' = 'Collapsed Podcasts: true'; 'profiles' = 'Profiles count 2'; 'resume' = 'Resume screen: 1';
+              'libraryesc' = 'Library back; visible false'; 'nowtv' = 'Now tv count ok true'; 'guidegrid' = 'Guide grid opened'; 'reminder' = 'Reminder due';
+              'series' = 'Series: checked'; 'prevchannel' = 'Previous channel 0'; 'ambient' = 'Ambient mode'; 'audio' = 'Audio outputs';
+              'remote' = 'Remote test down right code 200'; 'backup' = 'Autostart off: false'; 'kidslimit' = 'Kids lock shown true';
+              'okkey' = 'Keyboard OK: Opslaan als'; 'whoswatching' = 'Who is watching:'; 'english' = 'English check: Settings / Now on TV'; 'security' = 'Remote test blocked 429'; 'tabs' = 'Tabs focus tabs-again ok true'; 'tabs-apps' = 'Tabs focus tabs-apps ok true'; 'keys' = 'Keys overlay opened true'; 'settingsgroups' = 'Settings group system'; 'tabs-tv' = 'Tabs focus tabs-tv ok true'
+            }
+            if ($checks.ContainsKey($mode)) {
+              Select-String -Path $log -Pattern "Search|Radio|Sleep|Weather|Update|CEC|Cleanup|Parental|Regional|IPTV play|Media first|Section order|Home|Usage|Help|Night|Collapsed|Profile|Library|Now tv|Guide|Reminder|Series|Previous|Ambient|Audio|Remote|Backup|Autostart|Kids|Keyboard|Who is|English|Translator|Security|SecureStore|blocked|Tabs|TypeError|ReferenceError" | ForEach-Object { $_.Line }
+              if (-not (Select-String -Path $log -Pattern $checks[$mode] -SimpleMatch -Quiet)) { throw "Rooktest mislukt: $mode ($($checks[$mode]) niet in het log)" }
+              if ($mode -eq 'releaseinfo' -and (Select-String -Path $log -Pattern "Release info: 0 versions" -SimpleMatch -Quiet)) { throw "Rooktest mislukt: Release-info is leeg" }
+              if ($mode -like 'tabs*' -and (Select-String -Path $log -Pattern "Tabs focus .* ok false" -Quiet)) { throw "Rooktest mislukt: focus op een onzichtbaar item in de tabbladen-layout ($mode)" }
+              if ($mode -eq 'tabs') {
+                foreach ($w in 'content', 'after-menu', 'classic', 'tabs-again') {
+                  if (-not (Select-String -Path $log -Pattern "Tabs focus $w ok true" -Quiet)) { throw "Rooktest mislukt: tabbladen-layout, focus-controle '$w' ontbreekt of mislukt" }
+                }
+                if (-not (Select-String -Path $log -Pattern "Tabs focus after-menu ok true grid true" -SimpleMatch -Quiet)) { throw "Rooktest mislukt: na een menu staat de focus niet terug op de tegel (tabbladen)" }
+                if (-not (Select-String -Path $log -Pattern "Tabs focus classic ok true grid true tabs false" -SimpleMatch -Quiet) -and -not (Select-String -Path $log -Pattern "Tabs focus classic ok true" -SimpleMatch -Quiet)) { throw "Rooktest mislukt: na terug naar klassiek geen focus" }
+              }
+              if ($mode -eq 'parental' -and -not (Select-String -Path $log -Pattern "Parental: wrong pin" -Quiet)) { throw "Rooktest mislukt: verkeerde pincode werd geaccepteerd" }
+              if ($mode -eq 'remote' -and -not (Select-String -Path $log -Pattern "Remote test up wrong code 403" -SimpleMatch -Quiet)) { throw "Rooktest mislukt: telefoon met verkeerde code werd geaccepteerd" }
+              if ($mode -eq 'remote' -and -not (Select-String -Path $log -Pattern "Remote manifest 200 standalone" -SimpleMatch -Quiet)) { throw "Rooktest mislukt: app-manifest voor de telefoon ontbreekt" }
+              if ($mode -eq 'security') {
+                if (Select-String -Path $log -Pattern "geheimwachtwoord" -SimpleMatch -Quiet) { throw "Rooktest mislukt: wachtwoord staat in het logbestand" }
+                if (-not (Select-String -Path $log -Pattern "8080/***/***/1332" -SimpleMatch -Quiet)) { throw "Rooktest mislukt: adres niet afgeschermd in het log" }
+                $ini = Join-Path $env:LOCALAPPDATA 'Kijkluister\settings.ini'
+                if (-not (Select-String -Path $ini -Pattern "sources_dpapi" -SimpleMatch -Quiet)) { throw "Rooktest mislukt: zenderbronnen niet versleuteld" }
+                if (Select-String -Path $ini -Pattern "^sources=" -Quiet) { throw "Rooktest mislukt: zenderbronnen staan nog onversleuteld" }
+              }
+              if ($mode -eq 'remote' -and -not (Select-String -Path $log -Pattern "Remote icon 200 \d{4,}" -Quiet)) { throw "Rooktest mislukt: app-pictogram is leeg" }
+              if ($mode -eq 'remote' -and -not (Select-String -Path $log -Pattern "Remote icon 200" -SimpleMatch -Quiet)) { throw "Rooktest mislukt: app-pictogram voor de telefoon ontbreekt" }
+              if ($mode -eq 'backup' -and -not (Select-String -Path $log -Pattern "Autostart on: true" -SimpleMatch -Quiet)) { throw "Rooktest mislukt: starten met Windows gaat niet aan" }
+              if ($mode -eq 'backup' -and -not (Select-String -Path $log -Pattern "Backup made: Kijkluister-backup" -SimpleMatch -Quiet)) { throw "Rooktest mislukt: back-up niet gemaakt" }
+            }
+            if ($mode -eq 'radio') {
+              Select-String -Path $log -Pattern "Radio (playing|stream failed|closed)" | ForEach-Object { $_.Line }
+              $ok = @(Select-String -Path $log -Pattern "Radio playing (.+?) http" | ForEach-Object { $_.Matches[0].Groups[1].Value } | Sort-Object -Unique)
+              "Radiozenders die spelen: $($ok.Count) ($($ok -join ', '))"
+              if ($ok.Count -lt 7) { "::warning::Niet alle 7 radiozenders speelden in de test ($($ok.Count))" }
+              if ($ok.Count -lt 6) { throw "Rooktest mislukt: minder dan 6 radiozenders spelen" }
+            }
+            if ($mode -eq 'resume') {
+              Select-String -Path $log -Pattern "Resume:" | ForEach-Object { $_.Line }
+              if (-not (Select-String -Path $log -Pattern "Resume: [1-9]" -Quiet)) { throw "Rooktest mislukt: Verder kijken is leeg" }
+            }
+            if ($mode -eq 'record' -or $mode -eq 'mpcplay') {
+              Select-String -Path $log -Pattern "Components:" | ForEach-Object { $_.Line }
+            }
+            if ($mode -eq 'mpcplay') {
+              $m = Get-Process mpc-hc64 -ErrorAction SilentlyContinue
+              "MPC-HC processen: $(@($m).Count)"
+              $ini = "$env:LOCALAPPDATA\Kijkluister\mpc-hc\mpc-hc64.ini"
+              if (Test-Path $ini) { Get-Content $ini | Select-Object -First 12 }
+              $m | Stop-Process -Force -ErrorAction SilentlyContinue
+              if (-not (Select-String -Path $log -Pattern "MPC-HC: playing 2 file" -Quiet)) { throw "Rooktest mislukt: MPC-HC speelt de afleveringen niet" }
+            }
+            if ($mode -eq 'record') {
+              $rec = Get-ChildItem "$env:RUNNER_TEMP\opnames" -Filter *.mp4 -ErrorAction SilentlyContinue
+              "Opnames: " + (($rec | ForEach-Object { "$($_.Name) $($_.Length) bytes" }) -join ', ')
+              if (-not $rec -or ($rec | Measure-Object Length -Sum).Sum -lt 200000) { throw "Rooktest mislukt: geen opname van formaat" }
+              & build\ffmpeg\ffmpeg.exe -v error -i $rec[0].FullName -f null - 2>&1 | Select-Object -First 5
+              if (-not (Select-String -Path $log -Pattern "IPTV playing: .*\(relay\)" -Quiet)) { throw "Rooktest mislukt: speler speelt niet via de doorgifte tijdens opnemen" }
+            }
+          }
+      - uses: actions/upload-artifact@v4
+        if: startsWith(github.ref, 'refs/heads/screenshots/')
+        with:
+          name: schermafbeeldingen
+          path: shots/*.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Kijkluister-setup
+          path: out/*.exe
+      # Een branch release/x.y.z wordt Release vx.y.z: die blijft bewaard naast de andere versies
+      - name: Installer testen (stil installeren, taak voor bijwerken)
+        shell: pwsh
+        run: |
+          $setup = (Get-ChildItem out/*.exe | Select-Object -First 1).FullName
+          $p = Start-Process $setup -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait -PassThru
+          "Installer exit: $($p.ExitCode)"
+          if ($p.ExitCode -ne 0) { throw "Installer mislukt" }
+          schtasks /Query /TN "Kijkluister bijwerken" /V /FO LIST | Select-String "TaskName|Run As|Task To Run|Status"
+          if ($LASTEXITCODE -ne 0) { throw "Taak 'Kijkluister bijwerken' ontbreekt" }
+          # Taak eenmaal laten lopen (er is mogelijk nog geen openbare versie: dan staat er een fout in het log)
+          schtasks /Run /TN "Kijkluister bijwerken" | Out-Null
+          Start-Sleep 25
+          $app = "$env:ProgramFiles\Kijkluister"
+          if (Test-Path "$app\update\update.log") { Get-Content "$app\update\update.log" }
+          if (Test-Path "$env:LOCALAPPDATA\Kijkluister\update-status.txt") { "Status: " + (Get-Content "$env:LOCALAPPDATA\Kijkluister\update-status.txt") }
+          Get-Process Kijkluister -ErrorAction SilentlyContinue | Stop-Process -Force
+          exit 0
+      - name: Oude release van dezelfde versie opruimen (opnieuw gepushte release-branch)
+        if: startsWith(github.ref, 'refs/heads/release/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "v$env:BIGSCREEN_VERSION"
+          gh release delete $tag -R $env:GITHUB_REPOSITORY --yes --cleanup-tag 2>$null
+          "Opgeruimd (indien aanwezig): $tag"
+          exit 0   # geen bestaande release is ook goed
+      - name: Release maken
+        if: startsWith(github.ref, 'refs/heads/release/')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.BIGSCREEN_VERSION }}
+          name: Kijkluister ${{ env.BIGSCREEN_VERSION }}
+          target_commitish: ${{ github.sha }}
+          files: out/*.exe
+          generate_release_notes: true
+      # Openbare downloadplek voor "Zelf bijwerken" (de broncode blijft privé).
+      # Nodig: openbare repo firefly2008/kijkluister-releases en geheim RELEASES_TOKEN
+      # (fine-grained token met Contents: Read and write op alleen die repo).
+      - name: Installer in openbare repo zetten
+        if: startsWith(github.ref, 'refs/heads/release/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+        run: |
+          if (-not $env:GH_TOKEN) { "::warning::Geen RELEASES_TOKEN: installer niet in firefly2008/kijkluister-releases gezet"; exit 0 }
+          $tag = "v$env:BIGSCREEN_VERSION"
+          $entry = (Get-Content releasenotes.json -Raw | ConvertFrom-Json) | Where-Object { $_.version -eq $env:BIGSCREEN_VERSION } | Select-Object -First 1
+          $notes = "Kijkluister $env:BIGSCREEN_VERSION voor Windows 10/11 (x64).`n`n"
+          if ($entry) { $notes += (($entry.notes | ForEach-Object { "- $_" }) -join "`n") + "`n`n" }
+          $notes += "Download de installer hieronder; Kijkluister werkt zichzelf daarna stil bij."
+          # Lege repo: eerst een README, anders kan er geen release komen
+          gh api repos/firefly2008/kijkluister-releases/contents/README.md 2>$null | Out-Null
+          if ($LASTEXITCODE -ne 0) {
+            $readme = "# Kijkluister`n`nKijkluister voor Windows 10/11: tv-startscherm met apps, live tv, radio, films en series.`n`nDownload de nieuwste installer bij [Releases](https://github.com/firefly2008/kijkluister-releases/releases/latest).`n"
+            $b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($readme))
+            gh api -X PUT repos/firefly2008/kijkluister-releases/contents/README.md -f message="README" -f content=$b64 | Out-Null
+          }
+          gh release delete $tag -R firefly2008/kijkluister-releases --yes --cleanup-tag 2>$null
+          gh release create $tag (Get-ChildItem out/*.exe).FullName -R firefly2008/kijkluister-releases --title "Kijkluister $env:BIGSCREEN_VERSION" --notes $notes --latest
+          if ($LASTEXITCODE -ne 0) { "::warning::Publiceren in firefly2008/kijkluister-releases mislukt"; exit 0 }
+          "Gepubliceerd: https://github.com/firefly2008/kijkluister-releases/releases/tag/$tag"

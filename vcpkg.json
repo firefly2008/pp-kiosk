@@ -1,0 +1,6 @@
+{
+  "name": "plasma-bigscreen-windows",
+  "version": "6.8.2",
+  "description": "Windows-port van Plasma Bigscreen (Optie A). Qt komt uit de officiele Qt-installer, niet uit vcpkg (bouwtijd).",
+  "dependencies": ["sdl3", "zlib"]
+}
