@@ -17,12 +17,12 @@
 #include <QTimer>
 #include <QVersionNumber>
 
-#ifndef KIJKLUISTER_VERSION
-#define KIJKLUISTER_VERSION "0.0.0"
+#ifndef PPKIOSK_VERSION
+#define PPKIOSK_VERSION "0.0.0"
 #endif
 
 namespace {
-const QString taskName = QStringLiteral("Kijkluister bijwerken");
+const QString taskName = QStringLiteral("PP Kiosk bijwerken");
 QString dataFile(const QString &name)
 {
     return appDataDir() + QLatin1Char('/') + name;
@@ -49,7 +49,7 @@ void Updater::startAutomatic()
     connect(m_checkTimer, &QTimer::timeout, this, [this] { check(false); });
     m_checkTimer->start();
     QTimer::singleShot(60 * 1000, this, [this] { check(false); });
-    // Was er al een download klaar (bv. Kijkluister was even dicht)? Dan die oppakken
+    // Was er al een download klaar (bv. PP Kiosk was even dicht)? Dan die oppakken
     readTaskStatus();
 }
 
@@ -117,7 +117,7 @@ void Updater::installNow()
         flag.close();
     }
     setPhase(QStringLiteral("installing"));
-    setStatus(tr("Kijkluister %1 wordt geïnstalleerd en start zo opnieuw…").arg(m_latest), true);
+    setStatus(tr("PP Kiosk %1 wordt geïnstalleerd en start zo opnieuw…").arg(m_latest), true);
     qInfo() << "Update: install now" << m_latest;
     QTimer::singleShot(2500, qApp, &QCoreApplication::quit);
 }
@@ -134,12 +134,12 @@ QString Updater::releaseNotesJson() const
 
 QString Updater::current() const
 {
-    return QStringLiteral(KIJKLUISTER_VERSION);
+    return QStringLiteral(PPKIOSK_VERSION);
 }
 
 QString Updater::repo() const
 {
-    return m_settings.value(QStringLiteral("update/repo"), QStringLiteral("firefly2008/kijkluister-releases")).toString();
+    return m_settings.value(QStringLiteral("update/repo"), QStringLiteral("firefly2008/pp-kiosk-releases")).toString();
 }
 
 int Updater::compare(const QString &a, const QString &b)
@@ -178,7 +178,7 @@ void Updater::check(bool manual)
     setStatus(tr("Zoeken naar een nieuwe versie…"), true);
     QNetworkRequest request(QUrl(QStringLiteral("https://api.github.com/repos/%1/releases/latest").arg(repo())));
     request.setRawHeader("Accept", "application/vnd.github+json");
-    request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("Kijkluister/") + current());
+    request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("PPKiosk/") + current());
     QNetworkReply *reply = m_network.get(request);
     connect(reply, &QNetworkReply::finished, this, [this, reply, manual, now] {
         reply->deleteLater();
@@ -186,7 +186,7 @@ void Updater::check(bool manual)
         const QJsonObject o = QJsonDocument::fromJson(reply->readAll()).object();
         if (reply->error() != QNetworkReply::NoError || o.isEmpty()) {
             qInfo() << "Update check failed" << http << reply->errorString();
-            setStatus(http == 404 ? tr("Nog geen versie gevonden op de downloadplek (github.com/firefly2008/kijkluister-releases).")
+            setStatus(http == 404 ? tr("Nog geen versie gevonden op de downloadplek (github.com/firefly2008/pp-kiosk-releases).")
                                   : tr("Zoeken naar een nieuwe versie lukte niet. Is er internet?"), false);
             Q_EMIT checked(manual);
             return;
@@ -211,7 +211,7 @@ void Updater::check(bool manual)
         m_settings.setValue(QStringLiteral("update/digest"), m_digest);
         m_settings.setValue(QStringLiteral("update/notes"), m_notes);
         qInfo() << "Update check: current" << current() << "latest" << m_latest;
-        setStatus(updateAvailable() ? tr("Kijkluister %1 is er.").arg(m_latest)
+        setStatus(updateAvailable() ? tr("PP Kiosk %1 is er.").arg(m_latest)
                                     : tr("Je hebt de nieuwste versie (%1).").arg(current()), false);
         if (updateAvailable() && m_silent) {
             startSilentDownload();   // geen vraag: op de achtergrond ophalen en installeren
@@ -226,9 +226,9 @@ void Updater::install()
         return;
     }
     const QString dir = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
-    const QString file = QDir(dir).filePath(QStringLiteral("Kijkluister-%1-x64-setup.exe").arg(m_latest));
+    const QString file = QDir(dir).filePath(QStringLiteral("PPKiosk-%1-x64-setup.exe").arg(m_latest));
     m_progress = 0;
-    setStatus(tr("Kijkluister %1 ophalen…").arg(m_latest), true);
+    setStatus(tr("PP Kiosk %1 ophalen…").arg(m_latest), true);
     QNetworkRequest request(m_asset);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     QNetworkReply *reply = m_network.get(request);
@@ -268,8 +268,8 @@ void Updater::install()
             }
         }
         qInfo() << "Update downloaded" << file;
-        setStatus(tr("Bijwerken… Kijkluister start zo opnieuw."), true);
-        // Installer stil laten lopen; /relaunch=1 start Kijkluister daarna weer (zie bigscreen-host.iss)
+        setStatus(tr("Bijwerken… PP Kiosk start zo opnieuw."), true);
+        // Installer stil laten lopen; /relaunch=1 start PP Kiosk daarna weer (zie bigscreen-host.iss)
         if (QProcess::startDetached(file, {QStringLiteral("/SILENT"), QStringLiteral("/SUPPRESSMSGBOXES"),
                                            QStringLiteral("/NORESTART"), QStringLiteral("/relaunch=1")})) {
             QTimer::singleShot(800, qApp, &QCoreApplication::quit);

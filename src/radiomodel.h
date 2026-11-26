@@ -1,6 +1,6 @@
 // Radio: de zeven populairste Nederlandse radiozenders (NMO luisteronderzoek, 1e helft 2026).
 // Zelfde rollen en functies als AppModel, zodat de rij op het startscherm gewoon werkt.
-// Afspelen gebeurt in Kijkluister zelf (RadioPlayer.qml, Qt Multimedia).
+// Afspelen gebeurt in PP Kiosk zelf (RadioPlayer.qml, Qt Multimedia).
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 

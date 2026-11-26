@@ -323,7 +323,7 @@ void RadioModel::searchStations(const QString &query)
     params.addQueryItem(QStringLiteral("reverse"), QStringLiteral("true"));
     url.setQuery(params);
     QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("Kijkluister"));
+    request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("PP Kiosk"));
     m_searching = true;
     Q_EMIT resultsChanged();
     QNetworkReply *reply = m_network.get(request);
@@ -596,7 +596,7 @@ void RadioModel::requestProgramme(int row)
         return;
     }
     QNetworkRequest request(QUrl(QStringLiteral("https://%1/api/broadcasts").arg(host)));
-    request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("Kijkluister"));
+    request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("PP Kiosk"));
     request.setTransferTimeout(15000);
     QNetworkReply *reply = m_network.get(request);
     connect(reply, &QNetworkReply::finished, this, [this, reply, token, name] {

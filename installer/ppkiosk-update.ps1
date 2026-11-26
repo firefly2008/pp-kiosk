@@ -1,15 +1,15 @@
-# Kijkluister automatisch bijwerken (draait via de geplande taak "Kijkluister bijwerken",
+# PP Kiosk automatisch bijwerken (draait via de geplande taak "PP Kiosk bijwerken",
 # met hoogste rechten, zodat er geen Windows-melding (UAC) komt).
-# 1. Haalt de nieuwste installer op uit de openbare repo firefly2008/kijkluister-releases
+# 1. Haalt de nieuwste installer op uit de openbare repo firefly2008/pp-kiosk-releases
 #    (vaste bron; niets van buitenaf bepaalt wat hier wordt uitgevoerd).
-# 2. Meldt Kijkluister "ready" (update-status.txt in %LOCALAPPDATA%\Kijkluister).
-# 3. Wacht tot Kijkluister zegt "nu" (update-now) en afgesloten is, installeert stil
-#    en start Kijkluister weer als gewone gebruiker.
+# 2. Meldt PP Kiosk "ready" (update-status.txt in %LOCALAPPDATA%\PPKiosk).
+# 3. Wacht tot PP Kiosk zegt "nu" (update-now) en afgesloten is, installeert stil
+#    en start PP Kiosk weer als gewone gebruiker.
 # SPDX-License-Identifier: GPL-2.0-or-later
 $ErrorActionPreference = 'Stop'
 $app = Split-Path -Parent $MyInvocation.MyCommand.Path
 $work = Join-Path $app 'update'
-$data = Join-Path $env:LOCALAPPDATA 'Kijkluister'
+$data = Join-Path $env:LOCALAPPDATA 'PPKiosk'
 $status = Join-Path $data 'update-status.txt'
 $now = Join-Path $data 'update-now'
 $log = Join-Path $work 'update.log'
@@ -35,8 +35,8 @@ try {
     $key = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{6B0D5C1E-8E0B-4D53-9A61-B16C5C3EE2A7}_is1'
     $installed = (Get-ItemProperty $key -ErrorAction SilentlyContinue).DisplayVersion
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    $release = Invoke-RestMethod -Uri 'https://api.github.com/repos/firefly2008/kijkluister-releases/releases/latest' `
-        -Headers @{ 'User-Agent' = 'Kijkluister-updater' } -TimeoutSec 60
+    $release = Invoke-RestMethod -Uri 'https://api.github.com/repos/firefly2008/pp-kiosk-releases/releases/latest' `
+        -Headers @{ 'User-Agent' = 'PPKiosk-updater' } -TimeoutSec 60
     $latest = $release.tag_name.TrimStart('v')
     Log "Installed $installed, latest $latest"
     if ($installed -and ([version]$latest -le [version]$installed)) {
@@ -45,7 +45,7 @@ try {
     }
     $asset = $release.assets | Where-Object { $_.name -like '*-x64-setup.exe' } | Select-Object -First 1
     if (-not $asset) { throw 'Geen installer in de release' }
-    $setup = Join-Path $work 'Kijkluister-setup.exe'
+    $setup = Join-Path $work 'PPKiosk-setup.exe'
     Status "downloading $latest"
     Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $setup -UseBasicParsing -TimeoutSec 1800
     if ((Get-Item $setup).Length -lt 1MB) { throw 'Download te klein' }
@@ -56,15 +56,15 @@ try {
     Log "Downloaded $latest"
     Status "ready $latest"
 
-    # Wachten (maximaal 12 uur) tot Kijkluister zegt dat er niets speelt en afsluit
+    # Wachten (maximaal 12 uur) tot PP Kiosk zegt dat er niets speelt en afsluit
     $deadline = (Get-Date).AddHours(12)
     while (-not (Test-Path $now)) {
         if ((Get-Date) -gt $deadline) { Log 'Timeout, later opnieuw'; exit 0 }
         Start-Sleep -Seconds 5
     }
     Status "installing $latest"
-    for ($i = 0; $i -lt 30 -and (Get-Process Kijkluister -ErrorAction SilentlyContinue); $i++) { Start-Sleep -Seconds 1 }
-    Get-Process Kijkluister -ErrorAction SilentlyContinue | Stop-Process -Force
+    for ($i = 0; $i -lt 30 -and (Get-Process PPKiosk -ErrorAction SilentlyContinue); $i++) { Start-Sleep -Seconds 1 }
+    Get-Process PPKiosk -ErrorAction SilentlyContinue | Stop-Process -Force
     # Vlak voor het installeren nog een keer controleren (het bestand heeft uren kunnen wachten)
     if ((Get-FileHash $setup -Algorithm SHA256).Hash.ToLower() -ne $expected) { Remove-Item $setup -Force; throw 'Installer gewijzigd na download' }
     Log "Installing $latest"
@@ -74,7 +74,7 @@ try {
     Remove-Item $setup -ErrorAction SilentlyContinue
     Status "installed $latest"
     # Weer starten als gewone gebruiker (via Verkenner, niet met hoogste rechten)
-    Start-Process explorer.exe -ArgumentList "`"$(Join-Path $app 'Kijkluister.exe')`""
+    Start-Process explorer.exe -ArgumentList "`"$(Join-Path $app 'PPKiosk.exe')`""
 } catch {
     Log "Fout: $_"
     Status "error $_"

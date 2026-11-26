@@ -27,12 +27,12 @@
 
 namespace {
 const QString runKey = QStringLiteral("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run");
-const QString runName = QStringLiteral("Kijkluister");
+const QString runName = QStringLiteral("PP Kiosk");
 
 QString startupShortcut()
 {
     // Snelkoppeling die de installer bij "automatisch starten" in de map Opstarten zet
-    return QStandardPaths::writableLocation(QStandardPaths::ApplicationsLocation) + QStringLiteral("/Startup/Kijkluister.lnk");
+    return QStandardPaths::writableLocation(QStandardPaths::ApplicationsLocation) + QStringLiteral("/Startup/PP Kiosk.lnk");
 }
 
 QString desktopDir()
@@ -256,13 +256,13 @@ bool SystemTools::setAudioOutput(const QString &id)
 QString SystemTools::shareLog() const
 {
     const QString stamp = QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd HH.mm"));
-    const QString target = desktopDir() + QStringLiteral("/Kijkluister-log ") + stamp + QStringLiteral(".txt");
+    const QString target = desktopDir() + QStringLiteral("/PP Kiosk-log ") + stamp + QStringLiteral(".txt");
     QFile out(target);
     if (!out.open(QIODevice::WriteOnly | QIODevice::Text)) {
         return {};
     }
     QString info;
-    info += QStringLiteral("Kijkluister %1\n").arg(QStringLiteral(KIJKLUISTER_VERSION));
+    info += QStringLiteral("PP Kiosk %1\n").arg(QStringLiteral(PPKIOSK_VERSION));
     info += QStringLiteral("Windows: %1 (%2)\n").arg(QSysInfo::prettyProductName(), QSysInfo::currentCpuArchitecture());
     info += QStringLiteral("Qt: %1\n").arg(QString::fromLatin1(qVersion()));
     for (QScreen *s : QGuiApplication::screens()) {
@@ -276,7 +276,7 @@ QString SystemTools::shareLog() const
     // Wachtwoorden en sleutels uit links halen (lijsten van aanbieders bevatten ze in de url)
     static const QRegularExpression secrets(QStringLiteral(R"((password|passwd|pwd|username|user|token|api_key|apikey|key|access_token|auth)=[^&\s"']+)"),
                                             QRegularExpression::CaseInsensitiveOption);
-    for (const QString &name : {QStringLiteral("kijkluister-vorige.log"), QStringLiteral("kijkluister.log")}) {
+    for (const QString &name : {QStringLiteral("ppkiosk-vorige.log"), QStringLiteral("ppkiosk.log")}) {
         QFile log(appDataDir() + QLatin1Char('/') + name);
         if (log.open(QIODevice::ReadOnly)) {
             out.write(QStringLiteral("===== %1 =====\n").arg(name).toUtf8());
@@ -299,7 +299,7 @@ QString SystemTools::makeBackup() const
 {
     QSettings(appSettingsFile(), QSettings::IniFormat).sync();
     const QString stamp = QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd HH.mm"));
-    const QString target = desktopDir() + QStringLiteral("/Kijkluister-backup ") + stamp + QStringLiteral(".ini");
+    const QString target = desktopDir() + QStringLiteral("/PP Kiosk-backup ") + stamp + QStringLiteral(".ini");
     QFile::remove(target);
     if (!QFile::copy(appSettingsFile(), target)) {
         qWarning() << "Backup failed" << target;
@@ -315,7 +315,7 @@ QString SystemTools::makeBackup() const
 QStringList SystemTools::backups() const
 {
     QDir dir(desktopDir());
-    return dir.entryList({QStringLiteral("Kijkluister-backup*.ini")}, QDir::Files, QDir::Time);
+    return dir.entryList({QStringLiteral("PP Kiosk-backup*.ini")}, QDir::Files, QDir::Time);
 }
 
 bool SystemTools::restoreBackup(const QString &fileName)
@@ -347,7 +347,7 @@ void SystemTools::restart()
     if (!args.contains(QStringLiteral("--profile-chosen"))) {
         args << QStringLiteral("--profile-chosen");
     }
-    qInfo() << "Restarting Kijkluister";
+    qInfo() << "Restarting PP Kiosk";
     QProcess::startDetached(QCoreApplication::applicationFilePath(), args);
     QTimer::singleShot(300, qApp, &QCoreApplication::quit);
 }

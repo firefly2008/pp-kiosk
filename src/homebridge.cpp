@@ -8,7 +8,6 @@
 #include <QScreen>
 #include <QWindow>
 
-#include <SDL3/SDL_gamepad.h>
 
 #ifdef Q_OS_WIN
 #include <qt_windows.h>
@@ -91,8 +90,8 @@ BOOL CALLBACK collectOwnBrowser(HWND hwnd, LPARAM param)
     }
     DWORD pid = 0;
     GetWindowThreadProcessId(hwnd, &pid);
-    // Onze profielmappen: %LOCALAPPDATA%\Kijkluister\browser en \browser-nieuws
-    if (commandLineOf(pid).contains(QLatin1String("\\Kijkluister\\browser"), Qt::CaseInsensitive)) {
+    // Onze profielmappen: %LOCALAPPDATA%\PP Kiosk\browser en \browser-nieuws
+    if (commandLineOf(pid).contains(QLatin1String("\\PP Kiosk\\browser"), Qt::CaseInsensitive)) {
         reinterpret_cast<QList<HWND> *>(param)->append(hwnd);
     }
     return TRUE;
@@ -209,7 +208,7 @@ void HomeBridge::keyEvent(unsigned long vk, bool down, bool &swallow)
 {
 #ifdef Q_OS_WIN
     if (vk == VK_BROWSER_HOME) {
-        // Home-toets van afstandsbediening/toetsenbord: altijd naar Kijkluister (niet de startpagina van de browser)
+        // Home-toets van afstandsbediening/toetsenbord: altijd naar PP Kiosk (niet de startpagina van de browser)
         swallow = true;
         if (down) {
             qInfo() << "Home: home key";
@@ -300,77 +299,7 @@ void HomeBridge::goHome()
     Q_EMIT homeRequested();
 }
 
-#ifdef Q_OS_WIN
-namespace {
-void tapVirtualKey(WORD vk, bool down, bool withAlt = false)
-{
-    INPUT inputs[2] = {};
-    int n = 0;
-    if (withAlt && down) {
-        inputs[n].type = INPUT_KEYBOARD;
-        inputs[n].ki.wVk = VK_MENU;
-        ++n;
-    }
-    inputs[n].type = INPUT_KEYBOARD;
-    inputs[n].ki.wVk = vk;
-    if (!down) {
-        inputs[n].ki.dwFlags = KEYEVENTF_KEYUP;
-    }
-    if (vk == VK_UP || vk == VK_DOWN || vk == VK_LEFT || vk == VK_RIGHT) {
-        inputs[n].ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
-    }
-    ++n;
-    SendInput(n, inputs, sizeof(INPUT));
-    if (withAlt && !down) {
-        INPUT up = {};
-        up.type = INPUT_KEYBOARD;
-        up.ki.wVk = VK_MENU;
-        up.ki.dwFlags = KEYEVENTF_KEYUP;
-        SendInput(1, &up, sizeof(INPUT));
-    }
-}
-}
-#endif
 
-bool HomeBridge::handleBrowserButton(int button, bool pressed)
-{
-#ifdef Q_OS_WIN
-    if (!m_external) {
-        return false;
-    }
-    const QString exe = processNameOf(GetForegroundWindow());
-    if (exe != QLatin1String("msedge.exe") && exe != QLatin1String("chrome.exe")) {
-        return false;
-    }
-    switch (button) {
-    case SDL_GAMEPAD_BUTTON_DPAD_UP: tapVirtualKey(VK_UP, pressed); return true;
-    case SDL_GAMEPAD_BUTTON_DPAD_DOWN: tapVirtualKey(VK_DOWN, pressed); return true;
-    case SDL_GAMEPAD_BUTTON_DPAD_LEFT: tapVirtualKey(VK_LEFT, pressed); return true;
-    case SDL_GAMEPAD_BUTTON_DPAD_RIGHT: tapVirtualKey(VK_RIGHT, pressed); return true;
-    case SDL_GAMEPAD_BUTTON_SOUTH: tapVirtualKey(VK_RETURN, pressed); return true;
-    case SDL_GAMEPAD_BUTTON_EAST:
-        // Kort: vorige pagina (Alt+Links). Vasthouden: terug naar de tegels
-        if (pressed) {
-            m_backFired = false;
-            m_backHold.start();
-        } else if (!m_backFired) {
-            m_backHold.stop();
-            tapVirtualKey(VK_LEFT, true, true);
-            tapVirtualKey(VK_LEFT, false, true);
-        }
-        return true;
-    case SDL_GAMEPAD_BUTTON_LEFT_SHOULDER: tapVirtualKey(VK_PRIOR, pressed); return true;   // pagina omhoog
-    case SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER: tapVirtualKey(VK_NEXT, pressed); return true;  // pagina omlaag
-    case SDL_GAMEPAD_BUTTON_NORTH: tapVirtualKey(VK_SPACE, pressed); return true;          // pauze/afspelen
-    default:
-        return false;
-    }
-#else
-    Q_UNUSED(button)
-    Q_UNUSED(pressed)
-    return false;
-#endif
-}
 
 void HomeBridge::startDictation()
 {

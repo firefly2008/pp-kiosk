@@ -1,14 +1,14 @@
 # Door de installer uitgevoerd (met beheerdersrechten): maakt de geplande taak
-# "Kijkluister bijwerken" die kijkluister-update.ps1 met hoogste rechten draait.
-# Kijkluister zelf (gewone rechten) mag de taak alleen starten, niet wijzigen.
+# "PP Kiosk bijwerken" die ppkiosk-update.ps1 met hoogste rechten draait.
+# PP Kiosk zelf (gewone rechten) mag de taak alleen starten, niet wijzigen.
 # SPDX-License-Identifier: GPL-2.0-or-later
 param([string]$AppDir, [switch]$Remove)
-$name = 'Kijkluister bijwerken'
+$name = 'PP Kiosk bijwerken'
 if ($Remove) {
     Unregister-ScheduledTask -TaskName $name -Confirm:$false -ErrorAction SilentlyContinue
     exit 0
 }
-$script = Join-Path $AppDir 'kijkluister-update.ps1'
+$script = Join-Path $AppDir 'ppkiosk-update.ps1'
 $user = [Security.Principal.WindowsIdentity]::GetCurrent()
 $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$script`""
 $principal = New-ScheduledTaskPrincipal -UserId $user.Name -LogonType Interactive -RunLevel Highest
