@@ -57,4 +57,14 @@ d.line([(220, 170), (400, 140)], fill=C, width=W)
 d.ellipse([130, 320, 230, 410], fill=C)
 d.ellipse([310, 290, 410, 380], fill=C)
 save(im, "muziek")
+# Mijn week: kalender
+im, d = new()
+d.rounded_rectangle([70, 100, 442, 430], radius=26, outline=C, width=W)
+d.line([(70, 190), (442, 190)], fill=C, width=W)
+d.line([(170, 60), (170, 130)], fill=C, width=W)
+d.line([(342, 60), (342, 130)], fill=C, width=W)
+for x in (150, 256, 362):
+    for y in (260, 350):
+        d.ellipse([x - 20, y - 20, x + 20, y + 20], fill=C)
+save(im, "week")
 print("ok")

@@ -9,6 +9,10 @@
 #include "radiomodel.h"
 #include "presentations.h"
 #include "shortcuts.h"
+#include "stats.h"
+#include "backup.h"
+#include <QCoreApplication>
+#include <QProcess>
 #include "paths.h"
 #include "thirdparty/qrcodegen.hpp"
 
@@ -41,6 +45,7 @@ constexpr quint16 firstPort = 8642;
 constexpr qint64 maxBody = 1024 * 1024;
 constexpr qint64 maxUpload = 400LL * 1024 * 1024;   // grote PowerPoint met video's
 constexpr qint64 maxPicto = 8LL * 1024 * 1024;
+constexpr qint64 maxRestore = 2048LL * 1024 * 1024;   // back-up met presentaties
 
 QString cleanPictoName(const QString &name)
 {
@@ -274,8 +279,9 @@ void AdminServer::handle(QTcpSocket *socket)
             return;
         }
         const bool picto = p.method == "POST" && p.url.path() == QLatin1String("/api/picto");
-        const bool upload = (p.method == "POST" && p.url.path() == QLatin1String("/api/upload")) || picto;
-        const qint64 limit = picto ? maxPicto : upload ? maxUpload : maxBody;
+        const bool restore = p.method == "POST" && p.url.path() == QLatin1String("/api/restore");
+        const bool upload = (p.method == "POST" && p.url.path() == QLatin1String("/api/upload")) || picto || restore;
+        const qint64 limit = picto ? maxPicto : restore ? maxRestore : upload ? maxUpload : maxBody;
         if (p.length < 0 || p.length > limit) {
             respond(socket, 413, "text/plain; charset=utf-8", picto ? "plaatje is te groot (max. 8 MB)" : upload ? "bestand is te groot (max. 400 MB)" : "te groot");
             return;
@@ -618,6 +624,46 @@ void AdminServer::dispatch(QTcpSocket *socket, Pending &p)
         respond(socket, 200, "image/jpeg", jpg, "Cache-Control: no-store\r\n");
         return;
     }
+    if (path == QLatin1String("/api/backup") && method == "GET") {
+        if (m_stats) {
+            m_stats->flush();
+        }
+        QSettings(appSettingsFile(), QSettings::IniFormat).sync();
+        const QByteArray data = Backup::create(m_dataDir);
+        const QString name = QStringLiteral("PP Kiosk-backup %1.ppkiosk").arg(QDate::currentDate().toString(Qt::ISODate));
+        respond(socket, 200, "application/octet-stream", data, "Content-Disposition: attachment; filename=\"" + name.toUtf8() + "\"\r\n");
+        return;
+    }
+    if (path == QLatin1String("/api/restore") && method == "POST" && p.file) {
+        p.file->close();
+        QString error;
+        int files = 0;
+        if (!Backup::restore(m_dataDir, p.file->fileName(), &error, &files)) {
+            respond(socket, 400, "application/json", QJsonDocument(QJsonObject{{QStringLiteral("error"), error}}).toJson(QJsonDocument::Compact));
+            return;
+        }
+        respond(socket, 200, "application/json", QJsonDocument(QJsonObject{{QStringLiteral("files"), files}}).toJson(QJsonDocument::Compact));
+        // Opnieuw starten, zodat alles uit de back-up geladen wordt
+        qInfo() << "Admin: backup restored; restarting";
+        QTimer::singleShot(1500, qApp, [] {
+            QStringList args = QCoreApplication::arguments().mid(1);
+            args.removeAll(QStringLiteral("--autostart"));
+            QProcess::startDetached(QCoreApplication::applicationFilePath(), args);
+            QCoreApplication::quit();
+        });
+        return;
+    }
+    if (path == QLatin1String("/api/stats") && m_stats) {
+        if (method == "GET") {
+            respond(socket, 200, "application/json", m_stats->toJson());
+            return;
+        }
+        if (method == "DELETE") {
+            m_stats->clear();
+            respond(socket, 200, "application/json", okJson.toByteArray());
+            return;
+        }
+    }
     if (path == QLatin1String("/api/check") && method == "GET") {
         respond(socket, 200, "application/json", okJson.toByteArray());
         return;
@@ -693,6 +739,27 @@ void AdminServer::selfTest()
         ask(address(), "X-Code: 000000\r\n", QStringLiteral("lan-wrong"));
         ask(address(), "X-Code: " + m_code.toLatin1() + "\r\n", QStringLiteral("lan-right"));
     }
+}
+
+void AdminServer::backupTest()
+{
+    int made = 0;
+    const QByteArray data = Backup::create(m_dataDir, &made);
+    QTemporaryFile tmp;
+    tmp.open();
+    tmp.write(data);
+    tmp.close();
+    QString error;
+    int restored = 0;
+    const bool ok = Backup::restore(m_dataDir, tmp.fileName(), &error, &restored);
+    // Kapot bestand moet geweigerd worden
+    QTemporaryFile bad;
+    bad.open();
+    bad.write("geen back-up");
+    bad.close();
+    QString badError;
+    const bool badOk = Backup::restore(m_dataDir, bad.fileName(), &badError);
+    qInfo().noquote() << "Backup test:" << made << "files, restore" << (ok ? "ok" : error) << restored << "files, bad file" << (badOk ? "accepted" : "refused");
 }
 
 void AdminServer::uploadTest()

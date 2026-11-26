@@ -35,6 +35,7 @@ Rectangle {
         first = -1; second = -1; turns = 0; done = false
         game = "memory"
         console.info("Game started: memory " + pairs + " pairs")
+        stats.count("game", "Memory " + pairs + " paren")
     }
     function flip(i) {
         if (cards[i].open || cards[i].found || second >= 0) return
@@ -75,6 +76,7 @@ Rectangle {
         tiles = t; picked = -1; turns = 0; done = false
         game = "puzzle"
         console.info("Game started: puzzle " + n + "x" + n)
+        stats.count("game", "Puzzel " + (n * n) + " stukjes")
     }
     function pick(i) {
         if (done) return

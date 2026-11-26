@@ -284,6 +284,8 @@ bool Agenda::setJson(const QByteArray &json, QString *error)
         {QStringLiteral("dinnerTime"), validTime(dinnerTime) ? dinnerTime : QStringLiteral("17:00")},
         {QStringLiteral("news"), si.value(QStringLiteral("news")).toBool(true)},
         {QStringLiteral("games"), si.value(QStringLiteral("games")).toBool(true)},
+        {QStringLiteral("week"), si.value(QStringLiteral("week")).toBool(true)},
+        {QStringLiteral("voice"), si.value(QStringLiteral("voice")).toBool(false)},
         {QStringLiteral("theme"), si.value(QStringLiteral("theme")).toString() == QLatin1String("volwassen") ? QStringLiteral("volwassen") : QStringLiteral("standaard")},
         {QStringLiteral("background"), QJsonObject{
              {QStringLiteral("type"), (bgType == QLatin1String("color") || bgType == QLatin1String("photo")) ? bgType : QStringLiteral("daypart")},
@@ -335,6 +337,12 @@ QVariantMap Agenda::settings() const
     if (!m.contains(QStringLiteral("music"))) {
         m.insert(QStringLiteral("music"), QVariantMap{{QStringLiteral("auto"), false}});
     }
+    if (!m.contains(QStringLiteral("week"))) {
+        m.insert(QStringLiteral("week"), true);
+    }
+    if (!m.contains(QStringLiteral("voice"))) {
+        m.insert(QStringLiteral("voice"), false);
+    }
     if (!m.contains(QStringLiteral("theme"))) {
         m.insert(QStringLiteral("theme"), QStringLiteral("standaard"));
     }
@@ -380,6 +388,40 @@ QVariantList Agenda::itemsFor(const QDate &date) const
     QVariantList out;
     for (const QJsonObject &o : list) {
         out.append(o.toVariantMap());
+    }
+    return out;
+}
+
+QVariantList Agenda::week() const
+{
+    QVariantList out;
+    const QDate first = QDate::currentDate();
+    const QJsonArray menu = m_data.value(QStringLiteral("menu")).toArray();
+    for (int i = 0; i < 7; ++i) {
+        const QDate d = first.addDays(i);
+        const QString md = d.toString(QStringLiteral("MM-dd"));
+        const QString ymd = d.toString(Qt::ISODate);
+        QStringList feest;
+        for (const QJsonValue &v : m_data.value(QStringLiteral("birthdays")).toArray()) {
+            const QJsonObject o = v.toObject();
+            if (o.value(QStringLiteral("date")).toString() == md) {
+                feest.append(QStringLiteral("🎂 ") + o.value(QStringLiteral("name")).toString());
+            }
+        }
+        for (const QJsonValue &v : m_data.value(QStringLiteral("special")).toArray()) {
+            const QJsonObject o = v.toObject();
+            const QString date = o.value(QStringLiteral("date")).toString();
+            if (date == md || date == ymd) {
+                const QString icon = o.value(QStringLiteral("icon")).toString();
+                feest.append((icon.isEmpty() ? QStringLiteral("🎉") : icon) + QLatin1Char(' ') + o.value(QStringLiteral("title")).toString());
+            }
+        }
+        out.append(QVariantMap{
+            {QStringLiteral("date"), ymd},
+            {QStringLiteral("items"), itemsFor(d)},
+            {QStringLiteral("dish"), menu.at(d.dayOfWeek() - 1).toObject().value(QStringLiteral("dish")).toString()},
+            {QStringLiteral("feest"), feest},
+        });
     }
     return out;
 }

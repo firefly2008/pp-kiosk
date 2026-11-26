@@ -36,6 +36,7 @@ Rectangle {
         model.launch(row)
         homeBridge.externalLaunched()
         console.info("Stream opened: " + model.nameAt(row))
+        stats.count("stream", model.nameAt(row))
     }
 
     // ---------- Kop ----------
