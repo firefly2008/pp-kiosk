@@ -3,10 +3,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import QtQuick
 import QtQuick.Layouts
+import QtMultimedia
 
 Rectangle {
     id: root
-    color: contrast ? "#000000" : part.bg
+    color: contrast ? "#000000" : bgType === "color" ? bgColor : part.bg
     Behavior on color { ColorAnimation { duration: 2000 } }
     focus: true
 
@@ -14,16 +15,35 @@ Rectangle {
     // Instellingen uit de beheerpagina
     readonly property var cfg: agenda.settings
     readonly property bool contrast: cfg.contrast === true
+    // Volwassen thema: rustige kleuren (donkerblauw, zand, salie), minder ronde hoeken, lijn-pictogrammen
+    readonly property bool adult: cfg.theme === "volwassen" && !contrast
+    readonly property var bg: cfg.background || {}
+    readonly property string bgType: bg.type || "daypart"
+    readonly property color bgColor: bg.color || "#ECE6DA"
+    readonly property string bgPhoto: bgType === "photo" ? (cfg.backgroundUrl || "") : ""
     readonly property real f: s * (cfg.textScale || 1)          // tekstgrootte (grote-tekst-stand)
-    readonly property color ink: contrast ? "#FFFFFF" : "#1F2A44"
-    readonly property color soft: contrast ? "#FFE14D" : "#5B6478"
-    readonly property color green: contrast ? "#7CFC9A" : "#2E8B57"
-    readonly property color card: contrast ? "#000000" : "#FFFFFF"
-    readonly property color line: contrast ? "#FFFFFF" : "#14000000"
+    readonly property color ink: contrast ? "#FFFFFF" : adult ? "#1E2A3A" : "#1F2A44"
+    readonly property color soft: contrast ? "#FFE14D" : adult ? "#55606E" : "#5B6478"
+    readonly property color green: contrast ? "#7CFC9A" : adult ? "#4F6E5B" : "#2E8B57"
+    readonly property color card: contrast ? "#000000" : adult ? "#FBF9F5" : "#FFFFFF"
+    readonly property color line: contrast ? "#FFFFFF" : adult ? "#22000000" : "#14000000"
     readonly property int lineWidth: contrast ? 4 : 2
-    function fill(c) { return contrast ? "#000000" : c }
+    // Hoekafronding: in het volwassen thema strakker
+    function r(px) { return px * s * (adult ? 0.35 : 1) }
+    // Kleur van een activiteit; in het volwassen thema gedempt
+    function tone(c) {
+        if (!adult || !c) return c
+        const k = Qt.darker(c, 1.0)
+        return Qt.hsla(k.hslHue, k.hslSaturation * 0.4, Math.min(0.9, k.hslLightness * 0.92 + 0.06), k.a)
+    }
+    function fill(c) { return contrast ? "#000000" : tone(c) }
     // Dagdeel: achtergrond en begroeting
-    readonly property var dayparts: ({
+    readonly property var dayparts: adult ? ({
+        ochtend: { bg: "#EFE9DD", hello: "Goedemorgen", icon: "🌅" },
+        middag: { bg: "#ECE6DA", hello: "Goedemiddag", icon: "☀️" },
+        avond: { bg: "#E3E4E1", hello: "Goedenavond", icon: "🌆" },
+        nacht: { bg: "#DCDEE0", hello: "Goedenacht", icon: "🌙" }
+    }) : ({
         ochtend: { bg: "#FFF7E8", hello: "Goedemorgen", icon: "🌅" },
         middag: { bg: "#F7F4EE", hello: "Goedemiddag", icon: "☀️" },
         avond: { bg: "#EEF0F8", hello: "Goedenavond", icon: "🌆" },
@@ -84,6 +104,24 @@ Rectangle {
 
     Component.onCompleted: console.info("Home screen ready; agenda items " + items.length + " now " + agenda.currentIndex + " next " + agenda.nextIndex)
 
+    // ---------- Eigen achtergrondfoto (met een lichte laag erover, zodat de tekst leesbaar blijft) ----------
+    Image {
+        id: bgImage
+        anchors.fill: parent
+        visible: root.bgPhoto !== "" && !root.contrast && status === Image.Ready
+        source: root.bgPhoto
+        fillMode: Image.PreserveAspectCrop
+        asynchronous: true
+        sourceSize.width: 1920
+        onStatusChanged: if (status === Image.Ready) console.info("Background photo shown")
+    }
+    Rectangle {
+        anchors.fill: parent
+        visible: bgImage.visible
+        color: root.part.bg
+        opacity: 0.72
+    }
+
     // ---------- Bovenbalk ----------
     Item {
         id: header
@@ -119,6 +157,45 @@ Rectangle {
         Row {
             anchors { right: parent.right; verticalCenter: parent.verticalCenter }
             spacing: 20 * root.s
+            // Muziek: zender van dit dagdeel aanzetten, of de radio die speelt stoppen
+            Rectangle {
+                id: musicChip
+                anchors.verticalCenter: parent.verticalCenter
+                visible: root.radioRow >= 0 || root.daypartStation !== ""
+                width: musicRow.implicitWidth + 48 * root.s
+                height: 88 * root.f
+                radius: height / 2
+                color: root.contrast ? "#000000" : root.radioRow >= 0 ? (musicTap.pressed ? "#245F3E" : "#2E8B57") : (musicTap.pressed ? "#DDE3EA" : "#FFFFFF")
+                border.color: root.contrast ? "#FFE14D" : root.radioRow >= 0 ? "transparent" : "#2E8B57"
+                border.width: 3 * root.s
+                Row {
+                    id: musicRow
+                    anchors.centerIn: parent
+                    spacing: 14 * root.s
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: root.radioRow >= 0 ? "■" : "🎵"
+                        font.family: root.radioRow >= 0 ? "" : root.emojiFont
+                        font.pixelSize: 40 * root.f
+                        color: root.radioRow >= 0 || root.contrast ? "#FFFFFF" : root.green
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: root.radioRow >= 0 ? root.radioName : root.daypartStation
+                        font.pixelSize: 36 * root.f; font.bold: true
+                        color: root.radioRow >= 0 || root.contrast ? "#FFFFFF" : root.green
+                        elide: Text.ElideRight
+                        width: Math.min(implicitWidth, 360 * root.s)
+                    }
+                }
+                TapHandler {
+                    id: musicTap
+                    onTapped: {
+                        if (root.radioRow >= 0) root.stopRadio(); else root.playDaypart()
+                        console.info("Music chip tapped")
+                    }
+                }
+            }
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: weather.available ? weather.icon : root.part.icon
@@ -166,8 +243,8 @@ Rectangle {
         visible: root.tickerItem !== null
         readonly property bool isNews: visible && root.tickerItem.kind === "news"
         height: visible ? 84 * root.f : 0
-        radius: 20 * root.s
-        color: root.contrast ? "#000000" : isNews ? "#1F2A44" : "#FFF4CC"
+        radius: root.r(20)
+        color: root.contrast ? "#000000" : isNews ? "#1F2A44" : root.adult ? "#E8DFC8" : "#FFF4CC"
         border.color: root.contrast ? "#FFE14D" : "transparent"; border.width: root.lineWidth
         Behavior on color { ColorAnimation { duration: 300 } }
         RowLayout {
@@ -178,7 +255,7 @@ Rectangle {
                 visible: messageBar.isNews
                 Layout.preferredHeight: 56 * root.f
                 Layout.preferredWidth: newsLabel.implicitWidth + 32 * root.s
-                radius: 12 * root.s
+                radius: root.r(12)
                 color: "#E1251B"
                 Text {
                     id: newsLabel
@@ -216,12 +293,12 @@ Rectangle {
         anchors { left: parent.left; right: parent.right; top: messageBar.visible ? messageBar.bottom : header.bottom; leftMargin: 48 * root.s; rightMargin: 48 * root.s; topMargin: 12 * root.s }
         visible: agenda.celebrations.length > 0
         height: visible ? 96 * root.f : 0
-        radius: 24 * root.s
+        radius: root.r(24)
         clip: true
         gradient: Gradient {
             orientation: Gradient.Horizontal
-            GradientStop { position: 0; color: root.contrast ? "#000000" : "#FF7EB3" }
-            GradientStop { position: 1; color: root.contrast ? "#000000" : "#FFC72C" }
+            GradientStop { position: 0; color: root.contrast ? "#000000" : root.adult ? "#8A6F7E" : "#FF7EB3" }
+            GradientStop { position: 1; color: root.contrast ? "#000000" : root.adult ? "#B89A5E" : "#FFC72C" }
         }
         border.color: root.contrast ? "#FFFFFF" : "transparent"; border.width: root.lineWidth
         // Confetti
@@ -229,7 +306,7 @@ Rectangle {
             model: party.visible ? 28 : 0
             delegate: Rectangle {
                 required property int index
-                width: 14 * root.s; height: 22 * root.s; radius: 3 * root.s
+                width: 14 * root.s; height: 22 * root.s; radius: root.r(3)
                 color: ["#FFFFFF", "#2E8B57", "#5DA9E9", "#DA291C", "#F6C85F", "#C3B1E1"][index % 6]
                 x: (index * 137) % Math.max(1, party.width)
                 rotation: index * 33
@@ -276,7 +353,7 @@ Rectangle {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.minimumHeight: 220 * root.f
-                radius: 32 * root.s
+                radius: root.r(32)
                 color: root.current ? root.fill(root.current.color) : root.card
                 border.color: root.line; border.width: root.lineWidth
 
@@ -294,7 +371,7 @@ Rectangle {
                         Layout.preferredWidth: side
                         Layout.preferredHeight: side
                         Layout.alignment: Qt.AlignVCenter
-                        radius: 40 * root.s
+                        radius: root.r(40)
                         color: root.contrast ? "#FFFFFF" : "#AAFFFFFF"
                         Picto {
                             anchors { fill: parent; margins: parent.side * 0.1 }
@@ -362,7 +439,7 @@ Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredWidth: 3
                 Layout.fillHeight: true
-                radius: 28 * root.s
+                radius: root.r(28)
                 color: root.card
                 border.color: root.line; border.width: root.lineWidth
                 visible: root.next !== null
@@ -371,8 +448,8 @@ Rectangle {
                     spacing: 22 * root.s
                     Rectangle {
                         Layout.preferredWidth: 104 * root.s; Layout.preferredHeight: 104 * root.s
-                        radius: 24 * root.s
-                        color: root.next ? (root.contrast ? "#FFFFFF" : root.next.color) : "transparent"
+                        radius: root.r(24)
+                        color: root.next ? (root.contrast ? "#FFFFFF" : root.tone(root.next.color)) : "transparent"
                         Picto {
                             anchors { fill: parent; margins: 12 * root.s }
                             it: root.next
@@ -401,7 +478,7 @@ Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredWidth: 2
                 Layout.fillHeight: true
-                radius: 28 * root.s
+                radius: root.r(28)
                 color: root.card
                 border.color: root.line; border.width: root.lineWidth
                 visible: !!agenda.todayMenu.dish
@@ -440,29 +517,43 @@ Rectangle {
                 spacing: 24 * root.s
                 Repeater {
                     model: [
-                        { title: "Presentaties", icon: "🖼️", tint: "#5DA9E9", page: "presentations" },
-                        { title: "Kijk & luister", icon: "🎧", tint: "#6CC28B", page: "stream" },
-                        { title: "Snelkoppelingen", icon: "⭐", tint: "#E97A6B", page: "shortcuts" }
-                    ]
+                        { title: "Presentaties", icon: "🖼️", line: "presentaties", tint: "#5DA9E9", calm: "#4D6A86", page: "presentations" },
+                        { title: "Kijk & luister", icon: "🎧", line: "stream", tint: "#6CC28B", calm: "#5E7D6A", page: "stream" },
+                        { title: "Snelkoppelingen", icon: "⭐", line: "snelkoppelingen", tint: "#E97A6B", calm: "#A0745E", page: "shortcuts" },
+                        { title: "Spelletjes", icon: "🧩", line: "spelletjes", tint: "#B48AD6", calm: "#6E6684", page: "games" }
+                    ].filter(t => t.page !== "games" || root.cfg.games !== false)
                     delegate: Rectangle {
+                        id: tileBox
                         required property var modelData
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        radius: 28 * root.s
-                        color: tap.pressed ? Qt.darker(modelData.tint, 1.15) : modelData.tint
+                        radius: root.r(28)
+                        readonly property color tint: root.adult ? modelData.calm : modelData.tint
+                        color: tap.pressed ? Qt.darker(tint, 1.15) : tint
                         Column {
                             anchors.centerIn: parent
                             spacing: 4 * root.s
+                            Image {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                visible: root.adult
+                                width: (root.f > root.s ? 48 : 60) * root.s; height: width
+                                source: root.adult ? "qrc:/icons/" + modelData.line + ".png" : ""
+                                smooth: true; mipmap: true
+                            }
                             Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
+                                visible: !root.adult
                                 text: modelData.icon
                                 font.family: root.emojiFont
                                 font.pixelSize: (root.f > root.s ? 44 : 56) * root.s
                             }
                             Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
+                                width: tileBox.width - 24 * root.s
+                                horizontalAlignment: Text.AlignHCenter
                                 text: modelData.title
                                 font.pixelSize: 36 * root.f; font.bold: true; color: "#FFFFFF"
+                                fontSizeMode: Text.HorizontalFit; minimumPixelSize: 20 * root.s
                             }
                         }
                         TapHandler {
@@ -481,7 +572,7 @@ Rectangle {
         Rectangle {
             Layout.preferredWidth: 620 * root.s
             Layout.fillHeight: true
-            radius: 32 * root.s
+            radius: root.r(32)
             color: root.card
             border.color: root.line; border.width: root.lineWidth
 
@@ -511,9 +602,9 @@ Rectangle {
                     readonly property bool isPast: modelData.state === "past"
                     width: ListView.view.width
                     height: (isNow ? 130 : 104) * root.s
-                    radius: 22 * root.s
+                    radius: root.r(22)
                     color: isNow ? root.fill(modelData.color) : "transparent"
-                    border.color: modelData.state === "next" ? (root.contrast ? "#FFE14D" : modelData.color) : (isNow && root.contrast ? "#FFFFFF" : "transparent")
+                    border.color: modelData.state === "next" ? (root.contrast ? "#FFE14D" : root.tone(modelData.color)) : (isNow && root.contrast ? "#FFFFFF" : "transparent")
                     border.width: 4 * root.s
                     opacity: isPast ? 0.45 : 1
 
@@ -527,8 +618,8 @@ Rectangle {
                         }
                         Rectangle {
                             Layout.preferredWidth: 76 * root.s; Layout.preferredHeight: 76 * root.s
-                            radius: 18 * root.s
-                            color: root.contrast ? "#FFFFFF" : isNow ? "#AAFFFFFF" : modelData.color
+                            radius: root.r(18)
+                            color: root.contrast ? "#FFFFFF" : isNow ? "#AAFFFFFF" : root.tone(modelData.color)
                             Picto {
                                 anchors { fill: parent; margins: 8 * root.s }
                                 it: modelData
@@ -576,7 +667,7 @@ Rectangle {
         Rectangle {
             anchors.centerIn: parent
             width: 1100 * root.s; height: 620 * root.s
-            radius: 32 * root.s
+            radius: root.r(32)
             color: "#FFFFFF"
             TapHandler { }   // tikken op de kaart sluit niet
 
@@ -604,13 +695,13 @@ Rectangle {
                     Row {
                         spacing: 20 * root.s
                         Rectangle {
-                            width: 300 * root.s; height: 90 * root.s; radius: 20 * root.s
+                            width: 300 * root.s; height: 90 * root.s; radius: root.r(20)
                             color: newCodeTap.pressed ? "#DDE3EA" : "#EEF1F5"
                             Text { anchors.centerIn: parent; text: "Nieuwe code"; font.pixelSize: 34 * root.s; color: root.ink }
                             TapHandler { id: newCodeTap; onTapped: admin.newCode() }
                         }
                         Rectangle {
-                            width: 240 * root.s; height: 90 * root.s; radius: 20 * root.s
+                            width: 240 * root.s; height: 90 * root.s; radius: root.r(20)
                             color: closeTap.pressed ? Qt.darker(root.green, 1.2) : root.green
                             Text { anchors.centerIn: parent; text: "Sluiten"; font.pixelSize: 34 * root.s; color: "#FFFFFF" }
                             TapHandler { id: closeTap; onTapped: adminPanel.visible = false }
@@ -634,9 +725,10 @@ Rectangle {
         anchors.fill: parent
         active: root.page !== "home"
         sourceComponent: root.page === "stream" ? streamPage : root.page === "presentations" ? presentationPage
-                         : root.page === "shortcuts" ? shortcutsPage : null
+                         : root.page === "shortcuts" ? shortcutsPage : root.page === "games" ? gamesPage : null
     }
-    Component { id: streamPage; StreamScreen { s: root.s; onBack: root.page = "home" } }
+    Component { id: streamPage; StreamScreen { s: root.s; home: root; onBack: root.page = "home" } }
+    Component { id: gamesPage; GamesScreen { s: root.s; onBack: root.page = "home" } }
     Component { id: presentationPage; PresentationScreen { s: root.s; onBack: root.page = "home" } }
     Component { id: shortcutsPage; ShortcutsScreen { s: root.s; onBack: root.page = "home" } }
 
@@ -646,8 +738,8 @@ Rectangle {
         interval: 15 * 60 * 1000
         running: root.page !== "home"
         onTriggered: {
-            const busy = pageLoader.item && ((pageLoader.item.show !== undefined && pageLoader.item.show !== null)
-                                            || (pageLoader.item.radioRow !== undefined && pageLoader.item.radioRow >= 0))
+            const busy = (pageLoader.item && pageLoader.item.show !== undefined && pageLoader.item.show !== null)
+                         || root.radioRow >= 0 || (pageLoader.item && pageLoader.item.playing === true)
             if (busy) restart(); else root.page = "home"
         }
     }
@@ -680,6 +772,19 @@ Rectangle {
                 console.info("Menu today: " + (agenda.todayMenu.dish ? "yes" : "no") + " daypart " + agenda.daypart)
             } else if (selfTest === "speak") {
                 speaker.announce("Het is tijd voor: Test", true)
+            } else if (selfTest === "music") {
+                const row = radio.rowOfName(radio.nameAt(0))
+                console.info("Daypart music: station " + radio.nameAt(0) + " row " + row + " daypart " + agenda.daypart)
+                root.playRadio(0)
+                root.page = "stream"
+                root.page = "home"
+                console.info("Music still playing after page change: " + (root.radioRow === 0 ? "yes" : "no"))
+            } else if (selfTest === "memory") {
+                root.page = "games"
+                pageLoader.item.startMemory(6)
+            } else if (selfTest === "puzzle") {
+                root.page = "games"
+                pageLoader.item.startPuzzle(3)
             } else if (selfTest === "news") {
                 news.loadSample()
                 console.info("News ticker: " + root.tickerItems.length + " items, shown " + (root.tickerItem ? root.tickerItem.title : "-"))
@@ -689,13 +794,17 @@ Rectangle {
                 root.page = "presentations"
                 pageLoader.item.startNamed("Menu van de week")
             } else if (selfTest === "radiosaver") {
-                root.page = "stream"
-                pageLoader.item.section = "radio"
-                pageLoader.item.radioRow = 0
-                pageLoader.item.saver = true
+                root.radioRow = 0
+                root.radioSaver = true
             } else if (selfTest === "screensaver") {
                 root.page = "presentations"
                 if (pageLoader.item.startNamed("")) { root.screensaver = true; console.info("Screensaver started") }
+            } else if (selfTest === "theme") {
+                agenda.setTestSetting("theme", "volwassen")
+                console.info("Theme: " + (root.adult ? "volwassen" : "standaard") + " radius " + root.r(28).toFixed(1))
+            } else if (selfTest === "background") {
+                agenda.setTestSetting("background", { type: "photo", photo: agenda.testPhoto() })
+                console.info("Background url set: " + (root.bgPhoto !== "" ? "yes" : "no"))
             } else if (selfTest === "admin") {
                 adminPanel.visible = true
                 admin.selfTest()
@@ -721,7 +830,7 @@ Rectangle {
             const min = root.cfg.screensaverMinutes || 0
             // Niet tijdens een presentatie of als de radio speelt (die heeft een eigen screensaver)
             const item = pageLoader.item
-            const busy = item && ((item.show !== undefined && item.show !== null) || (item.radioRow !== undefined && item.radioRow >= 0))
+            const busy = (item && item.show !== undefined && item.show !== null) || root.radioRow >= 0
             if (min > 0 && !root.screensaver && !root.night && !busy && !adminPanel.visible
                     && activity.idleSeconds() >= min * 60 && presentations.list.length > 0) {
                 root.page = "presentations"
@@ -746,6 +855,140 @@ Rectangle {
         }
     }
 
+    // ---------- Radio: speelt door op alle schermen ----------
+    property int radioRow: -1
+    readonly property bool radioPlaying: radioPlayer.playbackState === MediaPlayer.PlayingState
+    readonly property string radioName: radioRow >= 0 ? radio.nameAt(radioRow) : ""
+    MediaPlayer {
+        id: radioPlayer
+        audioOutput: AudioOutput { volume: 0.8 }
+        onErrorOccurred: (error, text) => console.warn("Radio error: " + text)
+        onPlaybackStateChanged: console.info("Radio state " + playbackState)
+    }
+    function playRadio(row) {
+        const streams = radio.streamsAt(row)
+        if (!streams || streams.length === 0) return false
+        radioRow = row
+        radioPlayer.source = streams[0]
+        radioPlayer.play()
+        console.info("Radio playing: " + radio.nameAt(row))
+        return true
+    }
+    function stopRadio() { radioPlayer.stop(); radioRow = -1; radioSaver = false }
+
+    // ---------- Muziek per dagdeel ----------
+    readonly property var music: cfg.music || {}
+    readonly property string daypartStation: music[agenda.daypart] || ""
+    function playDaypart() {
+        const row = daypartStation !== "" ? radio.rowOfName(daypartStation) : -1
+        if (row >= 0 && radio.isStation(row)) return playRadio(row)
+        console.info("Daypart music: no station for " + agenda.daypart)
+        return false
+    }
+    readonly property string daypartNow: agenda.daypart
+    onDaypartNowChanged: {
+        if (!music.auto) return
+        console.info("Daypart music: " + daypartNow + " " + daypartStation)
+        if (daypartNow === "nacht" || daypartStation === "") stopRadio()
+        else if (radioName !== daypartStation) playDaypart()
+    }
+
+    // ---------- Radio-screensaver: de zender zweeft over het scherm ----------
+    property bool radioSaver: false
+    onRadioSaverChanged: console.info(radioSaver ? "Radio screensaver started" : "Radio screensaver stopped")
+    Timer {
+        interval: 5000; running: root.radioRow >= 0 && !root.radioSaver && !root.night; repeat: true
+        onTriggered: {
+            const min = agenda.settings.screensaverMinutes || 5
+            if (activity.idleSeconds() >= min * 60) { root.screensaver = false; root.radioSaver = true }
+        }
+    }
+    Connections {
+        target: activity
+        function onTouched() { root.radioSaver = false }
+    }
+    Rectangle {
+        id: saverLayer
+        anchors.fill: parent
+        visible: root.radioSaver && root.radioRow >= 0
+        z: 95
+        gradient: Gradient {
+            GradientStop { position: 0; color: "#0E1630" }
+            GradientStop { position: 1; color: "#05070F" }
+        }
+        // Tik ergens: screensaver weg, radio speelt door
+        MouseArea { anchors.fill: parent; onPressed: root.radioSaver = false }
+
+        property real vx: 2.2 * root.s
+        property real vy: 1.6 * root.s
+        property color accent: root.radioRow >= 0 ? String(radio.accentAt(root.radioRow) || "#F2B33D") : "#F2B33D"
+        readonly property var accents: ["#F2B33D", "#E85D75", "#4FC3F7", "#8CC084", "#C3B1E1", "#FF8A3D"]
+        property int bounce: 0
+
+        Rectangle {
+            id: floater
+            width: 720 * root.s; height: 300 * root.s
+            radius: root.r(48)
+            color: "#1B2547"
+            border.color: saverLayer.bounce > 0 ? saverLayer.accents[saverLayer.bounce % saverLayer.accents.length] : saverLayer.accent
+            border.width: 8 * root.s
+            x: (saverLayer.width - width) / 2; y: (saverLayer.height - height) / 2
+            RowLayout {
+                anchors { fill: parent; margins: 36 * root.s }
+                spacing: 32 * root.s
+                Rectangle {
+                    Layout.preferredWidth: 200 * root.s; Layout.preferredHeight: 200 * root.s
+                    radius: root.r(36)
+                    color: saverLayer.accent
+                    Image {
+                        id: saverLogo
+                        anchors { fill: parent; margins: 24 * root.s }
+                        fillMode: Image.PreserveAspectFit
+                        source: root.radioRow >= 0 && !String(radio.iconAt(root.radioRow)).startsWith("glyph:") ? radio.iconAt(root.radioRow) : ""
+                        sourceSize.width: 256
+                    }
+                    Text {
+                        anchors.centerIn: parent
+                        visible: saverLogo.status !== Image.Ready
+                        text: "📻"
+                        font.family: Qt.platform.os === "windows" ? "Segoe UI Emoji" : "Noto Color Emoji"
+                        font.pixelSize: 110 * root.s
+                    }
+                }
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 8 * root.s
+                    Text {
+                        Layout.fillWidth: true
+                        text: root.radioRow >= 0 ? radio.nameAt(root.radioRow) : ""
+                        font.pixelSize: 64 * root.s; font.bold: true; color: "#FFFFFF"
+                        elide: Text.ElideRight
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        text: "♪  Nu op de radio"
+                        font.pixelSize: 38 * root.s; color: "#AEB8D6"
+                    }
+                }
+            }
+        }
+        Timer {
+            interval: 33; repeat: true; running: saverLayer.visible
+            onTriggered: {
+                let nx = floater.x + saverLayer.vx, ny = floater.y + saverLayer.vy
+                if (nx <= 0 || nx + floater.width >= saverLayer.width) { saverLayer.vx = -saverLayer.vx; saverLayer.bounce++ }
+                if (ny <= 0 || ny + floater.height >= saverLayer.height) { saverLayer.vy = -saverLayer.vy; saverLayer.bounce++ }
+                floater.x = Math.max(0, Math.min(nx, saverLayer.width - floater.width))
+                floater.y = Math.max(0, Math.min(ny, saverLayer.height - floater.height))
+            }
+        }
+        Text {
+            anchors { right: parent.right; bottom: parent.bottom; margins: 40 * root.s }
+            text: "Tik op het scherm om terug te gaan"
+            font.pixelSize: 30 * root.s; color: "#5B6688"
+        }
+    }
+
     // ---------- Nachtstand: scherm dimmen of zwart ----------
     property double wakeUntil: 0
     function inRange(t, a, b) { return a <= b ? (t >= a && t < b) : (t >= a || t < b) }
@@ -754,7 +997,7 @@ Rectangle {
                                    && now.getTime() > wakeUntil
     onNightChanged: {
         console.info("Night mode " + night)
-        if (night) { root.screensaver = false; root.page = "home" }
+        if (night) { root.screensaver = false; root.page = "home"; if (root.music.auto) root.stopRadio() }
     }
     Rectangle {
         anchors.fill: parent

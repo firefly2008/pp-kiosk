@@ -302,6 +302,7 @@ int main(int argc, char *argv[])
     ctx->setContextProperty(QStringLiteral("shortcuts"), &shortcuts);
     AdminServer admin(appDataDir(), &agenda, &presentations, &shortcuts);
     admin.setMedia({&webVideo, &webMusic, &webPodcasts}, &radio);
+    admin.setWindow(&view);
     Speaker speaker;
     ctx->setContextProperty(QStringLiteral("speaker"), &speaker);
     Activity activity;

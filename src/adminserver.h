@@ -17,6 +17,8 @@ class Shortcuts;
 class QTcpSocket;
 class QTemporaryFile;
 
+class QQuickWindow;
+
 class AdminServer : public QObject
 {
     Q_OBJECT
@@ -41,6 +43,8 @@ public:
 
     // Keuze van diensten (tv/video, muziek, podcasts) en radiozenders op de beheerpagina
     void setMedia(const QList<AppModel *> &web, RadioModel *radio) { m_web = web; m_radio = radio; }
+    // Live-beeld van het kioskscherm voor de beheerpagina
+    void setWindow(QQuickWindow *window) { m_window = window; }
 
 Q_SIGNALS:
     void changed();
@@ -74,6 +78,7 @@ private:
     QHash<QTcpSocket *, Pending> m_pending;
     QList<AppModel *> m_web;
     RadioModel *m_radio = nullptr;
+    QQuickWindow *m_window = nullptr;
     QTcpServer m_server;
     QString m_code;
     QUrl m_qr;

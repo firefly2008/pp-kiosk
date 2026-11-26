@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "adminserver.h"
+
+#include <QBuffer>
+#include <QImage>
+#include <QQuickWindow>
 #include "agenda.h"
 #include "appmodel.h"
 #include "radiomodel.h"
@@ -202,7 +206,7 @@ void AdminServer::respond(QTcpSocket *socket, int status, const QByteArray &type
     head += "Content-Type: " + type + "\r\nContent-Length: " + QByteArray::number(body.size())
             + "\r\nCache-Control: no-store\r\nConnection: close\r\n" + cors + extraHeaders
             + "X-Content-Type-Options: nosniff\r\nX-Frame-Options: DENY\r\nReferrer-Policy: no-referrer"
-              "\r\nContent-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: http:; connect-src 'self' http:; frame-ancestors 'none'"
+              "\r\nContent-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http:; connect-src 'self' http:; frame-ancestors 'none'"
               "\r\n\r\n";
     socket->write(head + body);
     socket->disconnectFromHost();
@@ -595,6 +599,24 @@ void AdminServer::dispatch(QTcpSocket *socket, Pending &p)
             respond(socket, 200, "application/json", okJson.toByteArray());
             return;
         }
+    }
+    if (path == QLatin1String("/api/screen") && method == "GET") {
+        if (!m_window) {
+            respond(socket, 404, "text/plain; charset=utf-8", "geen scherm");
+            return;
+        }
+        const QImage full = m_window->grabWindow();
+        if (full.isNull()) {
+            respond(socket, 503, "text/plain; charset=utf-8", "scherm nog niet klaar");
+            return;
+        }
+        const QImage shot = full.scaledToWidth(960, Qt::SmoothTransformation);
+        QByteArray jpg;
+        QBuffer buffer(&jpg);
+        buffer.open(QIODevice::WriteOnly);
+        shot.save(&buffer, "JPG", 80);
+        respond(socket, 200, "image/jpeg", jpg, "Cache-Control: no-store\r\n");
+        return;
     }
     if (path == QLatin1String("/api/check") && method == "GET") {
         respond(socket, 200, "application/json", okJson.toByteArray());
