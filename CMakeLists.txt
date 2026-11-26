@@ -43,6 +43,8 @@ qt_add_executable(ppkiosk WIN32
     src/menuboard.cpp
     src/activity.h
     src/menuboard.h
+    src/news.cpp
+    src/news.h
     src/shortcuts.h
     src/thirdparty/qrcodegen.cpp
     src/thirdparty/qrcodegen.hpp

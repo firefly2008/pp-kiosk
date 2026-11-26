@@ -276,6 +276,7 @@ bool Agenda::setJson(const QByteArray &json, QString *error)
         {QStringLiteral("nightTo"), validTime(nightTo) ? nightTo : QString()},
         {QStringLiteral("nightMode"), nightMode == QLatin1String("black") ? nightMode : QStringLiteral("dim")},
         {QStringLiteral("dinnerTime"), validTime(dinnerTime) ? dinnerTime : QStringLiteral("17:00")},
+        {QStringLiteral("news"), si.value(QStringLiteral("news")).toBool(true)},
     };
     m_data = QJsonObject{{QStringLiteral("version"), 3}, {QStringLiteral("items"), items}, {QStringLiteral("messages"), messages},
                          {QStringLiteral("menu"), menu}, {QStringLiteral("birthdays"), birthdays}, {QStringLiteral("special"), special},
@@ -308,6 +309,9 @@ QVariantMap Agenda::settings() const
     }
     if (!m.contains(QStringLiteral("nightMode"))) {
         m.insert(QStringLiteral("nightMode"), QStringLiteral("dim"));
+    }
+    if (!m.contains(QStringLiteral("news"))) {
+        m.insert(QStringLiteral("news"), true);
     }
     if (!m.contains(QStringLiteral("dinnerTime"))) {
         m.insert(QStringLiteral("dinnerTime"), QStringLiteral("17:00"));
