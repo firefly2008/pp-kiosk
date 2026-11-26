@@ -9,7 +9,7 @@ project(ppkiosk LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 6.8 CONFIG REQUIRED COMPONENTS Core Gui Quick Qml Network Multimedia Concurrent Pdf)
+find_package(Qt6 6.8 CONFIG REQUIRED COMPONENTS Core Gui Quick Qml Network Multimedia Concurrent Pdf TextToSpeech)
 qt_standard_project_setup(REQUIRES 6.8)
 
 qt_add_executable(ppkiosk WIN32
@@ -37,6 +37,10 @@ qt_add_executable(ppkiosk WIN32
     src/presentations.cpp
     src/presentations.h
     src/shortcuts.cpp
+    src/speaker.cpp
+    src/speaker.h
+    src/activity.cpp
+    src/activity.h
     src/shortcuts.h
     src/thirdparty/qrcodegen.cpp
     src/thirdparty/qrcodegen.hpp
@@ -46,7 +50,7 @@ qt_add_executable(ppkiosk WIN32
 set(PPKIOSK_VERSION "0.0.0" CACHE STRING "Versie van PP Kiosk (voor bijwerken)")
 target_compile_definitions(ppkiosk PRIVATE PPKIOSK_VERSION="${PPKIOSK_VERSION}")
 
-qt_add_resources(ppkiosk "icons" PREFIX "/" FILES assets/ppkiosk-256.png assets/web-192.png assets/web-512.png assets/web-maskable-512.png assets/logos/nlziet.png assets/logos/simone-fm.png)
+qt_add_resources(ppkiosk "icons" PREFIX "/" FILES assets/ppkiosk-256.png assets/web-192.png assets/web-512.png assets/web-maskable-512.png assets/logos/nlziet.png assets/logos/simone-fm.png assets/chime.wav)
 qt_add_resources(ppkiosk "releasenotes" PREFIX "/" FILES releasenotes.json)
 qt_add_resources(ppkiosk "admin" PREFIX "/" FILES admin/index.html)
 qt_add_resources(ppkiosk "demo" PREFIX "/" FILES demo/diner-van-de-dag.jpg)
@@ -91,6 +95,7 @@ target_link_libraries(ppkiosk PRIVATE
     Qt6::Multimedia
     Qt6::Concurrent
     Qt6::Pdf
+    Qt6::TextToSpeech
 )
 
 if(WIN32)

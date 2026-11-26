@@ -10,6 +10,8 @@
 #include <QUrl>
 
 class Agenda;
+class AppModel;
+class RadioModel;
 class Presentations;
 class Shortcuts;
 class QTcpSocket;
@@ -37,6 +39,9 @@ public:
     // Rooktest: een PDF van 2 pagina's uploaden en wachten tot er dia's van gemaakt zijn
     Q_INVOKABLE void uploadTest();
 
+    // Keuze van diensten (tv/video, muziek, podcasts) en radiozenders op de beheerpagina
+    void setMedia(const QList<AppModel *> &web, RadioModel *radio) { m_web = web; m_radio = radio; }
+
 Q_SIGNALS:
     void changed();
 
@@ -52,9 +57,12 @@ private:
         qint64 length = 0;
         qint64 received = 0;
         QTemporaryFile *file = nullptr;
+        QByteArray origin;      // Origin-kop (beheer van een andere kiosk uit)
     };
     void handle(QTcpSocket *socket);
-    bool checkAccess(QTcpSocket *socket, const QByteArray &host, const QString &code, const QString &path);
+    bool checkAccess(QTcpSocket *socket, const QByteArray &host, const QString &code, const QString &path, const QByteArray &origin);
+    QByteArray mediaJson() const;
+    bool setMediaJson(const QByteArray &json);
     void dispatch(QTcpSocket *socket, Pending &p);
     void respond(QTcpSocket *socket, int status, const QByteArray &type, const QByteArray &body, const QByteArray &extraHeaders = {});
     void makeQr();
@@ -64,6 +72,8 @@ private:
     Presentations *m_presentations;
     Shortcuts *m_shortcuts;
     QHash<QTcpSocket *, Pending> m_pending;
+    QList<AppModel *> m_web;
+    RadioModel *m_radio = nullptr;
     QTcpServer m_server;
     QString m_code;
     QUrl m_qr;

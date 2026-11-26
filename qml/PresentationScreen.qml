@@ -23,6 +23,14 @@ Rectangle {
         console.info("Presentation started: " + item.title + " slides " + slides.length)
     }
     function stop() { show = null; slides = [] }
+    // Screensaver: presentatie op naam starten (leeg of onbekend: de eerste)
+    function startNamed(name) {
+        const list = presentations.list
+        if (list.length === 0) return false
+        let pick = list.find(x => x.title === name || x.folder === name)
+        start(pick || list[0])
+        return true
+    }
     function step(d) {
         if (slides.length === 0) return
         slide = (slide + d + slides.length) % slides.length
@@ -123,9 +131,13 @@ Rectangle {
                     asynchronous: true
                     sourceSize.width: 1920
                 }
+                // Weekmenu: ondertitel = eten van vandaag (bij een presentatie met "menu")
+                readonly property bool fromMenu: page.show && page.show.menu && agenda.todayMenu.dish
+                readonly property string capTitle: fromMenu && !modelData.title ? "Diner van de dag" : modelData.title
+                readonly property string capSub: fromMenu ? (agenda.todayMenu.dish + (agenda.todayMenu.note ? " " + agenda.todayMenu.note : "")) : modelData.subtitle
                 // Tekst op de dia (titel, ondertitel, label rechtsboven)
                 Rectangle {
-                    visible: modelData.title !== ""
+                    visible: parent.capTitle !== ""
                     anchors { left: parent.left; bottom: parent.bottom; leftMargin: 72 * page.s; bottomMargin: 96 * page.s }
                     width: Math.max(captionCol.implicitWidth + 96 * page.s, 520 * page.s)
                     height: captionCol.implicitHeight + 64 * page.s
@@ -135,8 +147,8 @@ Rectangle {
                         id: captionCol
                         anchors.centerIn: parent
                         spacing: 8 * page.s
-                        Text { text: modelData.title; font.pixelSize: 88 * page.s; font.bold: true; color: "#FFC72C" }
-                        Text { visible: text !== ""; text: modelData.subtitle; font.pixelSize: 56 * page.s; font.bold: true; color: "#FFFFFF" }
+                        Text { text: captionCol.parent.parent.capTitle; font.pixelSize: 88 * page.s; font.bold: true; color: "#FFC72C" }
+                        Text { visible: text !== ""; text: captionCol.parent.parent.capSub; font.pixelSize: 56 * page.s; font.bold: true; color: "#FFFFFF" }
                     }
                 }
                 Rectangle {

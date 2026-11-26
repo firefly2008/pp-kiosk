@@ -2,6 +2,9 @@
 #include "agenda.h"
 
 #include <QDateTime>
+#include <QDir>
+#include <QFileInfo>
+#include <QUrl>
 #include <QDebug>
 #include <QFile>
 #include <QJsonArray>
@@ -11,6 +14,24 @@
 #include <QUuid>
 
 namespace {
+
+bool validDate(const QString &t)
+{
+    return QDate::fromString(t, Qt::ISODate).isValid() && t.size() == 10;
+}
+
+// Alleen een kale bestandsnaam uit de map met picto's (geen paden)
+QString cleanPicto(const QString &name)
+{
+    static const QRegularExpression re(QStringLiteral("^[A-Za-z0-9][A-Za-z0-9 ._-]{0,80}\\.(png|jpg|jpeg|webp|svg)$"), QRegularExpression::CaseInsensitiveOption);
+    return re.match(name).hasMatch() ? name : QString();
+}
+
+QString cleanColor(const QString &c, const QString &fallback)
+{
+    static const QRegularExpression re(QStringLiteral("^#[0-9A-Fa-f]{6}$"));
+    return re.match(c).hasMatch() ? c : fallback;
+}
 
 bool validTime(const QString &t)
 {
@@ -37,7 +58,9 @@ QJsonObject item(const char *start, const char *end, const char *title, const ch
 Agenda::Agenda(const QString &dataDir, QObject *parent)
     : QObject(parent)
     , m_file(dataDir + QStringLiteral("/agenda.json"))
+    , m_pictoDir(dataDir + QStringLiteral("/pictos"))
 {
+    QDir().mkpath(m_pictoDir);
     load();
     recompute();
     m_timer.setInterval(15000);
@@ -63,6 +86,15 @@ QJsonObject Agenda::defaultAgenda()
              item("22:00", "22:30", "Naar bed", "🛏️", "#C3B1E1"),
          }},
         {QStringLiteral("messages"), QJsonArray{QStringLiteral("Welkom! Pas deze dag aan via de beheerpagina.")}},
+        {QStringLiteral("menu"), QJsonArray{
+             QJsonObject{{QStringLiteral("dish"), QStringLiteral("Zuurkoolstamppot")}, {QStringLiteral("note"), QStringLiteral("met rookworst")}},
+             QJsonObject{{QStringLiteral("dish"), QStringLiteral("Macaroni")}, {QStringLiteral("note"), QStringLiteral("met ham en kaas")}},
+             QJsonObject{{QStringLiteral("dish"), QStringLiteral("Kip met rijst")}, {QStringLiteral("note"), QStringLiteral("en sperziebonen")}},
+             QJsonObject{{QStringLiteral("dish"), QStringLiteral("Erwtensoep")}, {QStringLiteral("note"), QStringLiteral("met roggebrood")}},
+             QJsonObject{{QStringLiteral("dish"), QStringLiteral("Vis met friet")}, {QStringLiteral("note"), QStringLiteral("en sla")}},
+             QJsonObject{{QStringLiteral("dish"), QStringLiteral("Pannenkoeken")}, {QStringLiteral("note"), QString()}},
+             QJsonObject{{QStringLiteral("dish"), QStringLiteral("Hutspot")}, {QStringLiteral("note"), QStringLiteral("met gehaktbal")}},
+         }},
     };
 }
 
@@ -122,9 +154,11 @@ bool Agenda::setJson(const QByteArray &json, QString *error)
                 days.append(day);
             }
         }
-        QString color = o.value(QStringLiteral("color")).toString();
-        if (!QRegularExpression(QStringLiteral("^#[0-9A-Fa-f]{6}$")).match(color).hasMatch()) {
-            color = QStringLiteral("#A7D8F0");
+        const QString color = cleanColor(o.value(QStringLiteral("color")).toString(), QStringLiteral("#A7D8F0"));
+        const QString date = o.value(QStringLiteral("date")).toString();
+        if (!date.isEmpty() && !validDate(date)) {
+            *error = QStringLiteral("Activiteit \"%1\": datum klopt niet.").arg(title);
+            return false;
         }
         QString id = o.value(QStringLiteral("id")).toString();
         if (id.isEmpty()) {
@@ -139,8 +173,10 @@ bool Agenda::setJson(const QByteArray &json, QString *error)
             {QStringLiteral("color"), color},
             {QStringLiteral("note"), o.value(QStringLiteral("note")).toString().left(200)},
             {QStringLiteral("days"), days},
+            {QStringLiteral("date"), date},
+            {QStringLiteral("image"), cleanPicto(o.value(QStringLiteral("image")).toString())},
         });
-        if (items.size() > 100) {
+        if (items.size() > 400) {
             break;
         }
     }
@@ -151,7 +187,64 @@ bool Agenda::setJson(const QByteArray &json, QString *error)
             messages.append(text);
         }
     }
-    m_data = QJsonObject{{QStringLiteral("version"), 1}, {QStringLiteral("items"), items}, {QStringLiteral("messages"), messages}};
+    // Weekmenu: 7 dagen (maandag eerst)
+    QJsonArray menu;
+    const QJsonArray menuIn = in.value(QStringLiteral("menu")).toArray();
+    for (int d = 0; d < 7; ++d) {
+        const QJsonObject o = menuIn.at(d).toObject();
+        menu.append(QJsonObject{
+            {QStringLiteral("dish"), o.value(QStringLiteral("dish")).toString().trimmed().left(80)},
+            {QStringLiteral("note"), o.value(QStringLiteral("note")).toString().trimmed().left(120)},
+            {QStringLiteral("image"), cleanPicto(o.value(QStringLiteral("image")).toString())},
+        });
+    }
+    // Verjaardagen (MM-DD) en bijzondere dagen (JJJJ-MM-DD of MM-DD)
+    static const QRegularExpression dayRe(QStringLiteral("^(\\d{4}-)?(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$"));
+    QJsonArray birthdays;
+    for (const QJsonValue &v : in.value(QStringLiteral("birthdays")).toArray()) {
+        const QJsonObject o = v.toObject();
+        const QString name = o.value(QStringLiteral("name")).toString().trimmed().left(60);
+        QString date = o.value(QStringLiteral("date")).toString().trimmed();
+        if (date.size() == 10) {
+            date = date.mid(5);   // geboortedatum: alleen maand en dag tellen
+        }
+        if (name.isEmpty() || !dayRe.match(date).hasMatch() || birthdays.size() >= 200) {
+            continue;
+        }
+        birthdays.append(QJsonObject{{QStringLiteral("name"), name}, {QStringLiteral("date"), date}});
+    }
+    QJsonArray special;
+    for (const QJsonValue &v : in.value(QStringLiteral("special")).toArray()) {
+        const QJsonObject o = v.toObject();
+        const QString title = o.value(QStringLiteral("title")).toString().trimmed().left(80);
+        const QString date = o.value(QStringLiteral("date")).toString().trimmed();
+        if (title.isEmpty() || !dayRe.match(date).hasMatch() || special.size() >= 200) {
+            continue;
+        }
+        special.append(QJsonObject{{QStringLiteral("title"), title}, {QStringLiteral("date"), date},
+                                   {QStringLiteral("icon"), o.value(QStringLiteral("icon")).toString().left(16)}});
+    }
+    // Scherminstellingen
+    const QJsonObject si = in.value(QStringLiteral("settings")).toObject();
+    const QString nightFrom = si.value(QStringLiteral("nightFrom")).toString();
+    const QString nightTo = si.value(QStringLiteral("nightTo")).toString();
+    const double scale = si.value(QStringLiteral("textScale")).toDouble(1.0);
+    const QString nightMode = si.value(QStringLiteral("nightMode")).toString();
+    const QJsonObject settings{
+        {QStringLiteral("name"), si.value(QStringLiteral("name")).toString().trimmed().left(40)},
+        {QStringLiteral("speak"), si.value(QStringLiteral("speak")).toBool(false)},
+        {QStringLiteral("chime"), si.value(QStringLiteral("chime")).toBool(true)},
+        {QStringLiteral("textScale"), qBound(1.0, scale, 1.5)},
+        {QStringLiteral("contrast"), si.value(QStringLiteral("contrast")).toBool(false)},
+        {QStringLiteral("screensaverMinutes"), qBound(0, si.value(QStringLiteral("screensaverMinutes")).toInt(0), 240)},
+        {QStringLiteral("screensaverPresentation"), si.value(QStringLiteral("screensaverPresentation")).toString().left(60)},
+        {QStringLiteral("nightFrom"), validTime(nightFrom) ? nightFrom : QString()},
+        {QStringLiteral("nightTo"), validTime(nightTo) ? nightTo : QString()},
+        {QStringLiteral("nightMode"), nightMode == QLatin1String("black") ? nightMode : QStringLiteral("dim")},
+    };
+    m_data = QJsonObject{{QStringLiteral("version"), 2}, {QStringLiteral("items"), items}, {QStringLiteral("messages"), messages},
+                         {QStringLiteral("menu"), menu}, {QStringLiteral("birthdays"), birthdays}, {QStringLiteral("special"), special},
+                         {QStringLiteral("settings"), settings}};
     save();
     m_stamp.clear();
     recompute();
@@ -164,6 +257,48 @@ QStringList Agenda::messages() const
     QStringList out;
     for (const QJsonValue &v : m_data.value(QStringLiteral("messages")).toArray()) {
         out.append(v.toString());
+    }
+    return out;
+}
+
+QVariantMap Agenda::settings() const
+{
+    QVariantMap m = m_data.value(QStringLiteral("settings")).toObject().toVariantMap();
+    // Standaardwaarden voor een agenda van een oudere versie
+    if (!m.contains(QStringLiteral("textScale"))) {
+        m.insert(QStringLiteral("textScale"), 1.0);
+    }
+    if (!m.contains(QStringLiteral("chime"))) {
+        m.insert(QStringLiteral("chime"), true);
+    }
+    if (!m.contains(QStringLiteral("nightMode"))) {
+        m.insert(QStringLiteral("nightMode"), QStringLiteral("dim"));
+    }
+    return m;
+}
+
+QVariantList Agenda::itemsFor(const QDate &date) const
+{
+    const QString iso = date.toString(Qt::ISODate);
+    const int weekday = date.dayOfWeek();
+    QList<QJsonObject> list;
+    for (const QJsonValue &v : m_data.value(QStringLiteral("items")).toArray()) {
+        const QJsonObject o = v.toObject();
+        const QString only = o.value(QStringLiteral("date")).toString();
+        if (only.isEmpty() ? o.value(QStringLiteral("days")).toArray().contains(weekday) : only == iso) {
+            QJsonObject copy = o;
+            const QString image = o.value(QStringLiteral("image")).toString();
+            const QString path = m_pictoDir + QLatin1Char('/') + image;
+            copy.insert(QStringLiteral("imageUrl"), !image.isEmpty() && QFileInfo::exists(path) ? QUrl::fromLocalFile(path).toString() : QString());
+            list.append(copy);
+        }
+    }
+    std::stable_sort(list.begin(), list.end(), [](const QJsonObject &a, const QJsonObject &b) {
+        return a.value(QStringLiteral("start")).toString() < b.value(QStringLiteral("start")).toString();
+    });
+    QVariantList out;
+    for (const QJsonObject &o : list) {
+        out.append(o.toVariantMap());
     }
     return out;
 }
@@ -184,18 +319,45 @@ void Agenda::recompute()
         return;
     }
     m_stamp = stamp;
-    const int weekday = now.date().dayOfWeek();
+    const QDate today = now.date();
+    const int weekday = today.dayOfWeek();
 
     QList<QJsonObject> list;
-    for (const QJsonValue &v : m_data.value(QStringLiteral("items")).toArray()) {
+    for (const QVariant &v : itemsFor(today)) {
+        list.append(QJsonObject::fromVariantMap(v.toMap()));
+    }
+
+    // Dagdeel (voor kleur en begroeting op het startscherm)
+    const int hour = nowTime.left(2).toInt();
+    m_daypart = hour < 6 ? QStringLiteral("nacht") : hour < 12 ? QStringLiteral("ochtend") : hour < 18 ? QStringLiteral("middag") : QStringLiteral("avond");
+
+    // Eten van vandaag
+    const QJsonObject dish = m_data.value(QStringLiteral("menu")).toArray().at(weekday - 1).toObject();
+    m_menu = dish.toVariantMap();
+    const QString dishImage = dish.value(QStringLiteral("image")).toString();
+    m_menu.insert(QStringLiteral("imageUrl"), !dishImage.isEmpty() && QFileInfo::exists(m_pictoDir + QLatin1Char('/') + dishImage)
+                                                 ? QUrl::fromLocalFile(m_pictoDir + QLatin1Char('/') + dishImage).toString() : QString());
+
+    // Verjaardagen en bijzondere dagen
+    const QString md = today.toString(QStringLiteral("MM-dd"));
+    const QString ymd = today.toString(Qt::ISODate);
+    m_celebrations.clear();
+    for (const QJsonValue &v : m_data.value(QStringLiteral("birthdays")).toArray()) {
         const QJsonObject o = v.toObject();
-        if (o.value(QStringLiteral("days")).toArray().contains(weekday)) {
-            list.append(o);
+        if (o.value(QStringLiteral("date")).toString() == md) {
+            m_celebrations.append(QVariantMap{{QStringLiteral("title"), QStringLiteral("Gefeliciteerd %1!").arg(o.value(QStringLiteral("name")).toString())},
+                                              {QStringLiteral("icon"), QStringLiteral("🎂")}});
         }
     }
-    std::stable_sort(list.begin(), list.end(), [](const QJsonObject &a, const QJsonObject &b) {
-        return a.value(QStringLiteral("start")).toString() < b.value(QStringLiteral("start")).toString();
-    });
+    for (const QJsonValue &v : m_data.value(QStringLiteral("special")).toArray()) {
+        const QJsonObject o = v.toObject();
+        const QString d = o.value(QStringLiteral("date")).toString();
+        if (d == md || d == ymd) {
+            const QString icon = o.value(QStringLiteral("icon")).toString();
+            m_celebrations.append(QVariantMap{{QStringLiteral("title"), o.value(QStringLiteral("title")).toString()},
+                                              {QStringLiteral("icon"), icon.isEmpty() ? QStringLiteral("🎉") : icon}});
+        }
+    }
 
     // Bezig: begonnen en (eind nog niet bereikt, of zonder eind: tot de volgende activiteit)
     m_current = -1;
@@ -225,5 +387,15 @@ void Agenda::recompute()
                                                          : QStringLiteral("later"));
         m_today.append(m);
     }
+
+    // Nieuwe activiteit begonnen: melden (voorlezen), niet bij het opstarten
+    const QString currentId = m_current >= 0 ? list[m_current].value(QStringLiteral("id")).toString() : QString();
+    if (currentId != m_currentId) {
+        m_currentId = currentId;
+        if (!m_first && m_current >= 0) {
+            Q_EMIT activityStarted(list[m_current].value(QStringLiteral("title")).toString(), list[m_current].value(QStringLiteral("note")).toString());
+        }
+    }
+    m_first = false;
     Q_EMIT changed();
 }

@@ -1,5 +1,24 @@
 [
   {
+    "version": "0.5.0",
+    "date": "2026-11-26",
+    "notes": [
+      "Eigen picto's bij activiteiten (uploaden via de beheerpagina).",
+      "Weekplanning: activiteiten elke week of alleen op één datum, met weekoverzicht.",
+      "Voorlezen: geluidje en de activiteit hardop als hij begint.",
+      "Weer en dagdeel (ochtend, middag, avond) op het startscherm.",
+      "Menu van de week: 'Vandaag eten' op het startscherm en op de dia 'Diner van de dag'.",
+      "Verjaardagen en bijzondere dagen met feestelijke balk.",
+      "Screensaver (presentatie na een tijd zonder aanraken) en nachtstand.",
+      "Grotere tekst en hoog contrast.",
+      "Kiezen welke diensten en radiozenders op de kiosk staan.",
+      "Meerdere kiosken beheren vanaf één beheerpagina, planning kopiëren."
+    ],
+    "notes_en": [
+      "Pictograms, week planning, read aloud, weather and daypart, weekly menu, birthdays, screensaver, night mode, large text and high contrast, choose providers, manage multiple kiosks."
+    ]
+  },
+  {
     "version": "0.4.0",
     "date": "2026-11-26",
     "notes": [

@@ -39,6 +39,8 @@
 #include "agenda.h"
 #include "presentations.h"
 #include "shortcuts.h"
+#include "speaker.h"
+#include "activity.h"
 
 #include <QNetworkAccessManager>
 #include <QNetworkDiskCache>
@@ -293,6 +295,12 @@ int main(int argc, char *argv[])
     Shortcuts shortcuts(appDataDir());
     ctx->setContextProperty(QStringLiteral("shortcuts"), &shortcuts);
     AdminServer admin(appDataDir(), &agenda, &presentations, &shortcuts);
+    admin.setMedia({&webVideo, &webMusic, &webPodcasts}, &radio);
+    Speaker speaker;
+    ctx->setContextProperty(QStringLiteral("speaker"), &speaker);
+    Activity activity;
+    app.installEventFilter(&activity);
+    ctx->setContextProperty(QStringLiteral("activity"), &activity);
     ctx->setContextProperty(QStringLiteral("admin"), &admin);
     SystemTools systemTools;
     ctx->setContextProperty(QStringLiteral("systemTools"), &systemTools);

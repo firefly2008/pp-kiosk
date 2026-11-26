@@ -10,20 +10,26 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{margin:0;font:18px/1.4 "Segoe UI",system-ui,sans-serif;color:var(--tekst);background:var(--bg)}
-header{background:var(--groen);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:12px}
+header{background:var(--groen);color:#fff;padding:12px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 header img{width:36px;height:36px;border-radius:8px}
 header h1{font-size:22px;margin:0;flex:1}
+header select{font:inherit;padding:6px 10px;border-radius:10px;border:0;min-height:40px}
 main{max-width:1100px;margin:0 auto;padding:20px 16px 120px}
 h2{font-size:20px;margin:28px 0 10px}
+h3{font-size:18px;margin:0 0 8px}
 .card{background:#fff;border:1px solid var(--lijn);border-radius:14px;padding:16px;margin-bottom:12px}
 .row{display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:start}
-.pict{width:56px;height:56px;border-radius:12px;font-size:32px;display:flex;align-items:center;justify-content:center;border:0;cursor:pointer}
+.pict{width:56px;height:56px;border-radius:12px;font-size:32px;display:flex;align-items:center;justify-content:center;border:0;cursor:pointer;padding:4px;overflow:hidden}
+.pict img,.thumb{width:100%;height:100%;object-fit:contain}
 .fields{display:grid;grid-template-columns:110px 110px 1fr;gap:8px}
 .fields .wide{grid-column:1/-1}
 label{font-size:14px;color:var(--grijs);display:block}
-input[type=text],input[type=time],textarea{width:100%;font:inherit;padding:8px 10px;border:1px solid var(--lijn);border-radius:8px}
-.days{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-.days label{display:inline-flex;align-items:center;gap:4px;font-size:15px;color:var(--tekst);background:var(--groen-licht);padding:4px 10px;border-radius:999px;cursor:pointer}
+input[type=text],input[type=time],input[type=date],input[type=number],textarea,select{width:100%;font:inherit;padding:8px 10px;border:1px solid var(--lijn);border-radius:8px;background:#fff}
+.days{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center}
+.days label,.chip{display:inline-flex;align-items:center;gap:4px;font-size:15px;color:var(--tekst);background:var(--groen-licht);padding:4px 10px;border-radius:999px;cursor:pointer}
+.when{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:15px}
+.when label{display:inline-flex;gap:6px;align-items:center;color:var(--tekst);font-size:15px}
+.when input[type=date]{width:auto}
 .tools{display:flex;flex-direction:column;gap:6px}
 button{font:inherit;border-radius:10px;border:1px solid var(--lijn);background:#fff;padding:8px 14px;cursor:pointer;min-height:44px}
 button.primary{background:var(--groen);color:#fff;border-color:var(--groen);font-weight:600}
@@ -36,9 +42,10 @@ button.danger{color:var(--rood)}
 .colors{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
 .colors button{width:32px;height:32px;min-height:0;padding:0;border-radius:50%}
 .colors button.on{outline:3px solid var(--tekst);outline-offset:2px}
-dialog{border:0;border-radius:16px;max-width:560px;width:calc(100% - 32px)}
-.picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:6px;margin:12px 0}
-.picker button{font-size:30px;padding:4px}
+dialog{border:0;border-radius:16px;max-width:640px;width:calc(100% - 32px)}
+.picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(60px,1fr));gap:6px;margin:12px 0;max-height:40vh;overflow:auto}
+.picker button{font-size:30px;padding:4px;height:60px}
+.picker button.on{outline:3px solid var(--groen)}
 .hint{color:var(--grijs);font-size:15px}
 nav.tabs{display:flex;gap:8px;max-width:1100px;margin:0 auto;padding:16px 16px 0;flex-wrap:wrap}
 nav.tabs button{border-radius:999px;font-weight:600}
@@ -53,16 +60,47 @@ progress{width:100%;height:16px}
 .drop.over{border-color:var(--groen);background:var(--groen-licht)}
 .lrow{display:grid;grid-template-columns:56px 140px 1fr 2fr auto;gap:8px;align-items:center}
 .lrow input[type=color]{width:56px;height:44px;padding:2px;border:1px solid var(--lijn);border-radius:8px}
-@media (max-width:700px){.lrow{grid-template-columns:56px 1fr}.lrow>*:nth-child(n+3){grid-column:1/-1}.pres{grid-template-columns:1fr}}
-@media (max-width:700px){.fields{grid-template-columns:1fr 1fr}.fields>div:nth-child(3){grid-column:1/-1}.row{grid-template-columns:48px 1fr}.tools{grid-column:1/-1;flex-direction:row;flex-wrap:wrap}}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+.week .day{background:#fff;border:1px solid var(--lijn);border-radius:12px;padding:8px;min-height:120px}
+.week .day.today{border:2px solid var(--groen)}
+.week .day h4{margin:0 0 6px;font-size:15px}
+.week .it{display:flex;gap:6px;align-items:center;font-size:14px;padding:3px 4px;border-radius:6px;margin-bottom:3px}
+.week .it .ic{width:22px;height:22px;flex:none;text-align:center}
+.week .it .ic img{width:22px;height:22px;object-fit:contain}
+.week .once{font-weight:600}
+.weeknav{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mrow{display:grid;grid-template-columns:110px 56px 1fr 1fr;gap:8px;align-items:center;margin-bottom:8px}
+.brow{display:grid;grid-template-columns:1fr 160px auto;gap:8px;align-items:center;margin-bottom:8px}
+.srow{display:grid;grid-template-columns:70px 1fr 160px auto;gap:8px;align-items:center;margin-bottom:8px}
+.srow input.icon{text-align:center;font-size:24px}
+.set{display:grid;grid-template-columns:260px 1fr;gap:10px 16px;align-items:center}
+.set .full{grid-column:1/-1}
+.set>span,.set>label{font-size:15px;color:var(--grijs);font-weight:600}
+.toggle{display:inline-flex;gap:8px;align-items:center;color:var(--tekst);font-size:17px}
+.toggle input{width:22px;height:22px}
+.media{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}
+.media label{display:flex;gap:8px;align-items:center;background:#fff;border:1px solid var(--lijn);border-radius:10px;padding:8px 10px;color:var(--tekst);font-size:16px;cursor:pointer}
+.media input{width:20px;height:20px}
+.krow{display:grid;grid-template-columns:1fr 1.3fr 120px auto auto;gap:8px;align-items:center;margin-bottom:8px}
+.remote{background:#FFF4CC;border:1px solid #F6C85F;border-radius:12px;padding:10px 14px;margin-bottom:12px}
+@media (max-width:900px){.week{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}}
+@media (max-width:700px){.lrow{grid-template-columns:56px 1fr}.lrow>*:nth-child(n+3){grid-column:1/-1}.pres{grid-template-columns:1fr}
+  .fields{grid-template-columns:1fr 1fr}.fields>div:nth-child(3){grid-column:1/-1}.row{grid-template-columns:48px 1fr}.tools{grid-column:1/-1;flex-direction:row;flex-wrap:wrap}
+  .set{grid-template-columns:1fr}.mrow{grid-template-columns:90px 56px 1fr}.mrow>*:nth-child(4){grid-column:1/-1}
+  .krow,.srow,.brow{grid-template-columns:1fr 1fr}.week{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<header><img src="/icon.png" alt=""><h1>PP Kiosk beheer</h1></header>
+<header>
+  <img src="/icon.png" alt="">
+  <h1 id="title">PP Kiosk beheer</h1>
+  <select id="target" hidden aria-label="Welke kiosk beheren"></select>
+</header>
 
 <div id="login" hidden>
   <h2>Code invoeren</h2>
-  <p class="hint">Tik op de klok op het kioskscherm en houd vast: de code staat dan in beeld.</p>
+  <p class="hint">Houd op het kioskscherm de klok 1,5 seconde vast: de code staat dan in beeld.</p>
   <input id="code" inputmode="numeric" maxlength="6" autocomplete="off">
   <p><button class="primary" id="go">Verder</button></p>
   <p id="loginErr" class="hint"></p>
@@ -70,11 +108,17 @@ progress{width:100%;height:16px}
 
 <nav class="tabs" id="tabs" hidden>
   <button data-tab="agenda" class="on">📅 Dagplanning</button>
+  <button data-tab="food">🍽️ Eten &amp; feest</button>
   <button data-tab="pres">🖼️ Presentaties</button>
+  <button data-tab="media">🎧 Kijk &amp; luister</button>
   <button data-tab="links">⭐ Snelkoppelingen</button>
+  <button data-tab="screen">🖥️ Scherm</button>
+  <button data-tab="kiosks">🏠 Kiosken</button>
 </nav>
 
 <main id="app" hidden>
+ <div class="remote" id="remoteNote" hidden></div>
+
  <section id="tab-agenda">
   <h2>Mededelingen</h2>
   <div class="card">
@@ -82,10 +126,38 @@ progress{width:100%;height:16px}
     <textarea id="messages" rows="3"></textarea>
   </div>
 
-  <h2>Dagplanning</h2>
-  <p class="hint">Activiteiten staan op het scherm op volgorde van begintijd. Vink aan op welke dagen ze gelden.</p>
+  <h2>Weekoverzicht</h2>
+  <div class="weeknav">
+    <button id="wkPrev" aria-label="Vorige week">‹</button>
+    <strong id="wkLabel"></strong>
+    <button id="wkNext" aria-label="Volgende week">›</button>
+    <button id="wkNow">Deze week</button>
+  </div>
+  <div class="week" id="week"></div>
+  <p class="hint">Vetgedrukt = alleen op die datum. Het overzicht ververst na Opslaan.</p>
+
+  <h2>Activiteiten</h2>
+  <p class="hint">Kies per activiteit: elke week op vaste dagen, of alleen op één datum (bijvoorbeeld een uitje of de kapper).</p>
   <div id="items"></div>
   <button id="add">+ Activiteit toevoegen</button>
+ </section>
+
+ <section id="tab-food" hidden>
+  <h2>Menu van de week</h2>
+  <p class="hint">Staat op het startscherm onder "Vandaag eten" en op de dia "Diner van de dag".</p>
+  <div class="card" id="menu"></div>
+  <div class="grid2">
+    <div>
+      <h2>Verjaardagen</h2>
+      <p class="hint">Op de dag zelf: feestelijke balk met confetti op het startscherm.</p>
+      <div class="card"><div id="bdays"></div><button id="addBday">+ Verjaardag</button></div>
+    </div>
+    <div>
+      <h2>Bijzondere dagen</h2>
+      <p class="hint">Bijvoorbeeld Koningsdag (elk jaar) of een feestje (één datum).</p>
+      <div class="card"><div id="special"></div><button id="addSpecial">+ Bijzondere dag</button></div>
+    </div>
+  </div>
  </section>
 
  <section id="tab-pres" hidden>
@@ -107,11 +179,71 @@ progress{width:100%;height:16px}
   <div id="presList"></div>
  </section>
 
+ <section id="tab-media" hidden>
+  <h2>Kijk &amp; luister</h2>
+  <p class="hint">Vink aan welke diensten en zenders op de kiosk staan.</p>
+  <div id="mediaLists"></div>
+ </section>
+
  <section id="tab-links" hidden>
   <h2>Snelkoppelingen</h2>
   <p class="hint">Grote tegels op de kiosk. Groep = kopje waaronder de tegel staat (bijv. Tv, Radio, Online).</p>
   <div id="links"></div>
   <button id="addLink">+ Snelkoppeling toevoegen</button>
+ </section>
+
+ <section id="tab-screen" hidden>
+  <h2>Scherm</h2>
+  <div class="card set">
+    <label for="sName">Naam van deze kiosk</label>
+    <input type="text" id="sName" maxlength="40" placeholder="Bijvoorbeeld: Woonkamer">
+
+    <span>Voorlezen</span>
+    <div>
+      <label class="toggle"><input type="checkbox" id="sSpeak"> Activiteit hardop zeggen als hij begint</label>
+      <label class="toggle"><input type="checkbox" id="sChime"> Eerst een geluidje</label>
+      <p class="hint">Tikken op "Nu" of "Vandaag eten" leest ook voor. Gebruikt de Nederlandse stem van Windows.</p>
+    </div>
+
+    <label for="sScale">Tekstgrootte</label>
+    <select id="sScale"><option value="1">Normaal</option><option value="1.2">Groot</option><option value="1.4">Extra groot</option></select>
+
+    <span>Hoog contrast</span>
+    <label class="toggle"><input type="checkbox" id="sContrast"> Zwarte achtergrond, witte en gele tekst (voor slechtzienden)</label>
+
+    <label for="sSaver">Screensaver</label>
+    <div>
+      <select id="sSaver">
+        <option value="0">Uit</option><option value="5">Na 5 minuten</option><option value="10">Na 10 minuten</option>
+        <option value="15">Na 15 minuten</option><option value="30">Na 30 minuten</option><option value="60">Na 1 uur</option>
+      </select>
+      <label for="sSaverPres" style="margin-top:8px">Presentatie</label>
+      <select id="sSaverPres"></select>
+      <p class="hint">Na zoveel minuten zonder aanraken start de presentatie. Aanraken = terug naar het startscherm.</p>
+    </div>
+
+    <span>Nachtstand</span>
+    <div>
+      <div class="when">
+        <label>Van <input type="time" id="sNightFrom"></label>
+        <label>tot <input type="time" id="sNightTo"></label>
+        <select id="sNightMode" style="width:auto"><option value="dim">Dimmen (klok blijft zichtbaar)</option><option value="black">Helemaal zwart</option></select>
+      </div>
+      <p class="hint">Leeg = geen nachtstand. Aanraken = 2 minuten wakker.</p>
+    </div>
+  </div>
+ </section>
+
+ <section id="tab-kiosks" hidden>
+  <h2>Meerdere kiosken</h2>
+  <p class="hint">Zet hier de andere kiosken (adres en code staan op hun scherm: klok 1,5 seconde vasthouden). Kies daarna bovenin welke kiosk je beheert.</p>
+  <div class="card"><div id="kiosks"></div><button id="addKiosk">+ Kiosk toevoegen</button></div>
+  <h2>Kopiëren naar andere kiosken</h2>
+  <div class="card">
+    <p class="hint">Neemt de dagplanning, mededelingen, het menu en verjaardagen van de kiosk die je nu beheert over naar alle andere kiosken in de lijst.</p>
+    <button id="copyAll">Kopieer naar alle andere kiosken</button>
+    <p id="copyStatus" class="hint"></p>
+  </div>
  </section>
 </main>
 
@@ -123,24 +255,42 @@ progress{width:100%;height:16px}
 <dialog id="pickDlg">
   <h3>Kies een pictogram</h3>
   <div class="picker" id="picker"></div>
+  <h3>Eigen picto's</h3>
+  <p class="hint">Upload eigen plaatjes (.png, .jpg, .svg), bijvoorbeeld picto's van je organisatie of een foto.</p>
+  <div class="picker" id="ownPictos"></div>
+  <p><input type="file" id="pictoFile" accept=".png,.jpg,.jpeg,.webp,.svg" multiple></p>
   <label for="ownIcon">Of typ/plak zelf een emoji</label>
   <input type="text" id="ownIcon" maxlength="8">
-  <p><button class="primary" id="pickOk">Klaar</button></p>
+  <p><button class="primary" id="pickOk">Klaar</button> <button id="pickNone">Geen eigen plaatje</button></p>
 </dialog>
 
 <script>
-const ICONS = ['🛏️','🚿','🪥','👕','🍞','🥣','☕','🥪','🍽️','🍎','💊','🛠️','🎨','📚','🧩','🎵','📺','🎮','🚶','🚲','🚌','🚗','⚽','🏊','🧘','🛋️','😴','🛒','🧺','🧹','🍳','👨‍⚕️','🏥','💇','👪','🎉','☎️','💻','🌳','🐕','⛪','🎂'];
+const ICONS = ['🛏️','🚿','🛁','🪥','🚽','👕','🧥','🍞','🥣','☕','🥪','🍽️','🍎','🥤','💊','🩺','🛠️','🎨','✂️','📚','🧩','🎲','🎵','🎤','📺','🎮','💻','📱','☎️','🚶','🚲','🚌','🚗','🚆','⚽','🏊','🧘','💪','🛋️','😴','🛒','🧺','🧹','🧽','🍳','🥕','👨‍⚕️','🦷','🏥','💇','👪','🤝','🎉','🎂','🎁','🌳','🌻','🐕','🐈','⛪','🕌','📅','⏰','🏠','🏫','💼','💶','✉️','🧸','🎬'];
 const COLORS = ['#A7D8F0','#F6C85F','#8CC084','#C3B1E1','#F4A6A0','#F7B267','#B8E0D2','#D5D5D5'];
 const DAYS = ['ma','di','wo','do','vr','za','zo'];
+const DAYNAMES = ['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'];
+const MEDIA_TITLES = {video: 'Tv en video', radio: 'Radio', podcasts: 'Podcasts', muziek: 'Muziek'};
 let code = '';
+let ownCode = '';
+let base = '';                    // '' = deze kiosk, anders http://adres:poort van een andere kiosk
 let data = {items: [], messages: []};
+let links = null, media = null, kiosks = [], pictos = [];
 let dirty = false;
+let tab = 'agenda';
 const $ = id => document.getElementById(id);
 
 function esc(s){return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function pictoUrl(name){return base + '/pictos/' + encodeURIComponent(name) + '?c=' + encodeURIComponent(code);}
+function pictoHtml(it, cls){
+  if (it.image) return `<img class="${cls || 'thumb'}" src="${esc(pictoUrl(it.image))}" alt="">`;
+  return esc(it.icon) || '';
+}
 
 async function api(method, body, path = '/api/agenda'){
-  const r = await fetch(path, {method, headers: {'X-Code': code, 'Content-Type': 'application/json'}, body: body ? JSON.stringify(body) : undefined});
+  let r;
+  try {
+    r = await fetch(base + path, {method, headers: {'X-Code': code, 'Content-Type': 'application/json'}, body: body ? JSON.stringify(body) : undefined});
+  } catch (e) { throw Object.assign(new Error(base ? 'Kiosk ' + base + ' is niet bereikbaar' : 'Kiosk niet bereikbaar'), {login: !base}); }
   if (r.status === 403) throw Object.assign(new Error('Code klopt niet'), {login: true});
   if (r.status === 429) throw Object.assign(new Error('Te veel pogingen. Probeer het over 10 minuten.'), {login: true});
   const j = await r.json().catch(() => ({}));
@@ -152,28 +302,37 @@ async function start(){
   try {
     data = await api('GET');
     $('login').hidden = true; $('app').hidden = false; $('bar').hidden = false; $('tabs').hidden = false;
-    render();
+    if (!base) { ownCode = code; await loadKiosks(); }
+    links = null; media = null;
+    render(); renderFood(); renderScreen(); loadPictos(); loadWeek();
     showTab(tab);
   } catch (e) {
+    if (base) { alert(e.message); switchTarget(''); return; }
     $('login').hidden = false; $('app').hidden = true; $('bar').hidden = true; $('tabs').hidden = true;
     $('loginErr').textContent = code ? e.message : '';
   }
 }
 
+// ---------- Dagplanning ----------
 function render(){
   $('messages').value = (data.messages || []).join('\n');
-  data.items.sort((a, b) => a.start.localeCompare(b.start));
+  data.items.sort((a, b) => (a.date || '').localeCompare(b.date || '') || a.start.localeCompare(b.start));
   $('items').innerHTML = data.items.map((it, i) => `
     <div class="card row" data-i="${i}">
-      <button class="pict" data-act="pick" style="background:${esc(it.color)}" aria-label="Pictogram kiezen">${esc(it.icon) || '＋'}</button>
+      <button class="pict" data-act="pick" style="background:${esc(it.color)}" aria-label="Pictogram kiezen">${pictoHtml(it) || '＋'}</button>
       <div>
         <div class="fields">
           <div><label>Begin</label><input type="time" data-f="start" value="${esc(it.start)}"></div>
           <div><label>Eind</label><input type="time" data-f="end" value="${esc(it.end)}"></div>
           <div><label>Wat</label><input type="text" data-f="title" maxlength="80" value="${esc(it.title)}"></div>
-          <div class="wide"><label>Toelichting (klein onder de titel)</label><input type="text" data-f="note" maxlength="200" value="${esc(it.note)}"></div>
+          <div class="wide"><label>Toelichting (klein onder de titel, wordt ook voorgelezen)</label><input type="text" data-f="note" maxlength="200" value="${esc(it.note)}"></div>
         </div>
-        <div class="days">${DAYS.map((d, k) => `<label><input type="checkbox" data-day="${k + 1}" ${(it.days || []).includes(k + 1) ? 'checked' : ''}>${d}</label>`).join('')}</div>
+        <div class="when">
+          <label><input type="radio" name="w${i}" data-when="week" ${it.date ? '' : 'checked'}> Elke week</label>
+          <label><input type="radio" name="w${i}" data-when="date" ${it.date ? 'checked' : ''}> Alleen op</label>
+          <input type="date" data-f="date" value="${esc(it.date)}" ${it.date ? '' : 'hidden'}>
+        </div>
+        <div class="days" ${it.date ? 'hidden' : ''}>${DAYS.map((d, k) => `<label><input type="checkbox" data-day="${k + 1}" ${(it.days || []).includes(k + 1) ? 'checked' : ''}>${d}</label>`).join('')}</div>
         <div class="colors">${COLORS.map(c => `<button data-color="${c}" class="${c === it.color ? 'on' : ''}" style="background:${c}" aria-label="Kleur ${c}"></button>`).join('')}</div>
       </div>
       <div class="tools">
@@ -193,59 +352,210 @@ $('items').addEventListener('input', e => {
     const d = +e.target.dataset.day;
     it.days = e.target.checked ? [...new Set([...(it.days || []), d])].sort() : (it.days || []).filter(x => x !== d);
   }
+  if (e.target.dataset.when) {
+    if (e.target.dataset.when === 'date') it.date = it.date || new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    else it.date = '';
+    render();
+  }
   changed();
 });
-$('items').addEventListener('change', e => { if (e.target.dataset.f === 'start') { render(); } });
+$('items').addEventListener('change', e => { if (e.target.dataset.f === 'start' || e.target.dataset.f === 'date') render(); });
 
-let picking = null;
+let picking = null, pickImage = '';
 $('items').addEventListener('click', e => {
   const btn = e.target.closest('button'); if (!btn) return;
   const row = btn.closest('[data-i]'); const i = +row.dataset.i; const it = data.items[i];
   if (btn.dataset.color) { it.color = btn.dataset.color; changed(); render(); return; }
   if (btn.dataset.act === 'del') { if (confirm('"' + it.title + '" verwijderen?')) { data.items.splice(i, 1); changed(); render(); } return; }
   if (btn.dataset.act === 'copy') { data.items.splice(i + 1, 0, {...it, id: '', days: [...(it.days || [])]}); changed(); render(); return; }
-  if (btn.dataset.act === 'pick') { picking = it; $('ownIcon').value = it.icon || ''; $('pickDlg').showModal(); }
+  if (btn.dataset.act === 'pick') openPicker(it, () => render());
 });
+
+// ---------- Pictogram kiezen (emoji of eigen picto) ----------
+let pickDone = null;
+function openPicker(target, done){
+  picking = target; pickDone = done; pickImage = target.image || '';
+  $('ownIcon').value = target.icon || '';
+  renderOwnPictos();
+  $('pickDlg').showModal();
+}
+function renderOwnPictos(){
+  $('ownPictos').innerHTML = pictos.length ? pictos.map(n => `<button data-picto="${esc(n)}" class="${n === pickImage ? 'on' : ''}" title="${esc(n)}"><img class="thumb" src="${esc(pictoUrl(n))}" alt="${esc(n)}"></button>`).join('')
+    : '<p class="hint">Nog geen eigen picto\'s.</p>';
+}
+async function loadPictos(){
+  try { pictos = (await api('GET', null, '/api/pictos')).items; } catch (e) { pictos = []; }
+}
 $('picker').innerHTML = ICONS.map(c => `<button>${c}</button>`).join('');
-$('picker').addEventListener('click', e => { if (e.target.tagName === 'BUTTON') { $('ownIcon').value = e.target.textContent; } });
-$('pickOk').onclick = () => { if (picking) { picking.icon = $('ownIcon').value.trim(); changed(); render(); } $('pickDlg').close(); };
+$('picker').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { $('ownIcon').value = b.textContent; pickImage = ''; renderOwnPictos(); } });
+$('ownPictos').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-picto]'); if (!b) return;
+  pickImage = b.dataset.picto; renderOwnPictos();
+});
+$('pictoFile').addEventListener('change', async () => {
+  for (const f of $('pictoFile').files) {
+    try {
+      const r = await fetch(base + '/api/picto?file=' + encodeURIComponent(f.name), {method: 'POST', headers: {'X-Code': code}, body: f});
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || 'Uploaden mislukt');
+      pickImage = j.name;
+    } catch (err) { alert(f.name + ': ' + err.message); }
+  }
+  $('pictoFile').value = '';
+  await loadPictos(); renderOwnPictos();
+});
+$('pickNone').onclick = () => { pickImage = ''; renderOwnPictos(); };
+$('pickOk').onclick = () => {
+  if (picking) { picking.icon = $('ownIcon').value.trim(); picking.image = pickImage; changed(); if (pickDone) pickDone(); }
+  $('pickDlg').close();
+};
 
 $('add').onclick = () => {
   const last = data.items[data.items.length - 1];
-  data.items.push({id: '', start: last ? (last.end || last.start) : '09:00', end: '', title: 'Nieuwe activiteit', icon: '', note: '', color: COLORS[0], days: [1,2,3,4,5,6,7]});
+  data.items.push({id: '', start: last ? (last.end || last.start) : '09:00', end: '', title: 'Nieuwe activiteit', icon: '', image: '', note: '', color: COLORS[0], days: [1,2,3,4,5,6,7], date: ''});
   changed(); render();
   window.scrollTo(0, document.body.scrollHeight);
 };
 $('messages').addEventListener('input', changed);
 
+// ---------- Weekoverzicht ----------
+function isoDate(d){ return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
+function monday(d){ const x = new Date(d); x.setHours(12); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
+let weekStart = monday(new Date());
+async function loadWeek(){
+  const end = new Date(weekStart); end.setDate(end.getDate() + 6);
+  $('wkLabel').textContent = weekStart.toLocaleDateString('nl-NL', {day: 'numeric', month: 'long'}) + ' – ' + end.toLocaleDateString('nl-NL', {day: 'numeric', month: 'long'});
+  try {
+    const j = await api('GET', null, '/api/week?start=' + isoDate(weekStart));
+    const today = isoDate(new Date());
+    $('week').innerHTML = j.days.map((d, k) => `
+      <div class="day ${d.date === today ? 'today' : ''}">
+        <h4>${DAYNAMES[k]} ${+d.date.slice(8)}</h4>
+        ${d.items.map(it => `<div class="it ${it.once ? 'once' : ''}" style="background:${esc(it.color)}33"><span class="ic">${pictoHtml(it)}</span><span>${esc(it.start)} ${esc(it.title)}</span></div>`).join('') || '<span class="hint">—</span>'}
+      </div>`).join('');
+  } catch (e) { $('week').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+}
+$('wkPrev').onclick = () => { weekStart.setDate(weekStart.getDate() - 7); loadWeek(); };
+$('wkNext').onclick = () => { weekStart.setDate(weekStart.getDate() + 7); loadWeek(); };
+$('wkNow').onclick = () => { weekStart = monday(new Date()); loadWeek(); };
+
+// ---------- Eten & feest ----------
+function renderFood(){
+  data.menu = data.menu && data.menu.length === 7 ? data.menu : DAYNAMES.map(() => ({dish: '', note: '', image: ''}));
+  $('menu').innerHTML = data.menu.map((m, k) => `
+    <div class="mrow" data-m="${k}">
+      <strong>${DAYNAMES[k]}</strong>
+      <button class="pict" data-act="mpick" style="background:var(--groen-licht)" aria-label="Plaatje kiezen">${pictoHtml({image: m.image, icon: '🍽️'})}</button>
+      <input type="text" data-k="dish" value="${esc(m.dish)}" maxlength="80" placeholder="Gerecht" aria-label="Gerecht ${DAYNAMES[k]}">
+      <input type="text" data-k="note" value="${esc(m.note)}" maxlength="120" placeholder="met ... (mag leeg)" aria-label="Toevoeging ${DAYNAMES[k]}">
+    </div>`).join('');
+  data.birthdays = data.birthdays || [];
+  $('bdays').innerHTML = data.birthdays.map((b, k) => `
+    <div class="brow" data-b="${k}">
+      <input type="text" data-k="name" value="${esc(b.name)}" maxlength="60" placeholder="Naam" aria-label="Naam">
+      <input type="text" data-k="date" value="${esc(b.date)}" maxlength="10" placeholder="dd-mm" aria-label="Datum" title="Dag en maand, bijv. 14-03">
+      <button class="danger" data-act="del" aria-label="Verwijderen">✕</button>
+    </div>`).join('') || '<p class="hint">Nog geen verjaardagen.</p>';
+  data.special = data.special || [];
+  $('special').innerHTML = data.special.map((b, k) => `
+    <div class="srow" data-s="${k}">
+      <input class="icon" type="text" data-k="icon" value="${esc(b.icon)}" maxlength="8" placeholder="🎉" aria-label="Pictogram">
+      <input type="text" data-k="title" value="${esc(b.title)}" maxlength="80" placeholder="Bijv. Koningsdag" aria-label="Titel">
+      <input type="text" data-k="date" value="${esc(b.date)}" maxlength="10" placeholder="dd-mm of dd-mm-jjjj" aria-label="Datum">
+      <button class="danger" data-act="del" aria-label="Verwijderen">✕</button>
+    </div>`).join('') || '<p class="hint">Nog geen bijzondere dagen.</p>';
+  // Datums op het scherm als dd-mm(-jjjj), opgeslagen als mm-dd of jjjj-mm-dd
+  for (const el of document.querySelectorAll('#bdays [data-k=date], #special [data-k=date]')) el.value = showDate(el.value);
+}
+function showDate(v){ const m = String(v).match(/^(?:(\d{4})-)?(\d{2})-(\d{2})$/); return m ? m[3] + '-' + m[2] + (m[1] ? '-' + m[1] : '') : v; }
+function storeDate(v){ const m = String(v).trim().match(/^(\d{1,2})[-\/.](\d{1,2})(?:[-\/.](\d{4}))?$/); if (!m) return v; const dd = m[1].padStart(2, '0'), mm = m[2].padStart(2, '0'); return (m[3] ? m[3] + '-' : '') + mm + '-' + dd; }
+$('menu').addEventListener('input', e => { const r = e.target.closest('[data-m]'); if (r && e.target.dataset.k) { data.menu[r.dataset.m][e.target.dataset.k] = e.target.value; changed(); } });
+$('menu').addEventListener('click', e => { const b = e.target.closest('button[data-act=mpick]'); if (!b) return; const m = data.menu[b.closest('[data-m]').dataset.m]; openPicker(m, renderFood); });
+for (const [box, key, rowAttr] of [['bdays', 'birthdays', 'b'], ['special', 'special', 's']]) {
+  $(box).addEventListener('input', e => {
+    const r = e.target.closest(`[data-${rowAttr}]`); if (!r || !e.target.dataset.k) return;
+    const v = e.target.dataset.k === 'date' ? storeDate(e.target.value) : e.target.value;
+    data[key][r.dataset[rowAttr]][e.target.dataset.k] = v; changed();
+  });
+  $(box).addEventListener('click', e => {
+    const b = e.target.closest('button[data-act=del]'); if (!b) return;
+    data[key].splice(+b.closest(`[data-${rowAttr}]`).dataset[rowAttr], 1); changed(); renderFood();
+  });
+}
+$('addBday').onclick = () => { data.birthdays.push({name: '', date: ''}); changed(); renderFood(); };
+$('addSpecial').onclick = () => { data.special.push({title: '', date: '', icon: '🎉'}); changed(); renderFood(); };
+
+// ---------- Scherm ----------
+const S = {sName: 'name', sSpeak: 'speak', sChime: 'chime', sScale: 'textScale', sContrast: 'contrast', sSaver: 'screensaverMinutes',
+           sSaverPres: 'screensaverPresentation', sNightFrom: 'nightFrom', sNightTo: 'nightTo', sNightMode: 'nightMode'};
+async function renderScreen(){
+  const s = data.settings = Object.assign({speak: false, chime: true, textScale: 1, contrast: false, screensaverMinutes: 0, screensaverPresentation: '', nightFrom: '', nightTo: '', nightMode: 'dim', name: ''}, data.settings || {});
+  try {
+    const p = await api('GET', null, '/api/presentations');
+    $('sSaverPres').innerHTML = '<option value="">De eerste presentatie</option>' + p.items.map(x => `<option value="${esc(x.name)}">${esc(x.title)}</option>`).join('');
+  } catch (e) {}
+  for (const [id, k] of Object.entries(S)) {
+    const el = $(id);
+    if (el.type === 'checkbox') el.checked = !!s[k];
+    else el.value = String(s[k] ?? '');
+  }
+  $('sScale').value = [1, 1.2, 1.4].reduce((a, b) => Math.abs(b - s.textScale) < Math.abs(a - s.textScale) ? b : a, 1);
+  showName();
+}
+for (const [id, k] of Object.entries(S)) {
+  $(id).addEventListener('input', () => {
+    const el = $(id);
+    data.settings[k] = el.type === 'checkbox' ? el.checked : (k === 'textScale' || k === 'screensaverMinutes') ? +el.value : el.value;
+    changed(); if (k === 'name') showName();
+  });
+}
+function showName(){
+  const n = data.settings && data.settings.name;
+  $('title').textContent = 'PP Kiosk beheer' + (n ? ' · ' + n : '');
+}
+
+// ---------- Opslaan ----------
 $('save').onclick = async () => {
   try {
     if (tab === 'links') {
       await api('PUT', {items: links}, '/api/shortcuts');
       links = (await api('GET', null, '/api/shortcuts')).items; renderLinks();
+    } else if (tab === 'media') {
+      await api('PUT', media, '/api/media');
+      media = await api('GET', null, '/api/media'); renderMedia();
+    } else if (tab === 'kiosks') {
+      await api('PUT', {items: kiosks}, '/api/kiosks');
+      await loadKiosks();
     } else {
       data.messages = $('messages').value.split('\n').map(s => s.trim()).filter(Boolean);
       await api('PUT', data);
-      data = await api('GET'); render();
+      data = await api('GET'); render(); renderFood(); renderScreen(); loadWeek();
     }
     dirty = false; $('status').textContent = 'Opgeslagen, staat op het scherm'; $('status').className = '';
   } catch (e) { $('status').textContent = e.message; $('status').className = 'err'; }
 };
 
 // ---------- Tabbladen ----------
-let tab = 'agenda';
 function showTab(t){
   tab = t;
   for (const b of $('tabs').querySelectorAll('button')) b.classList.toggle('on', b.dataset.tab === t);
-  $('tab-agenda').hidden = t !== 'agenda'; $('tab-pres').hidden = t !== 'pres'; $('tab-links').hidden = t !== 'links';
+  for (const s of document.querySelectorAll('main > section')) s.hidden = s.id !== 'tab-' + t;
   $('bar').hidden = t === 'pres';
   if (t === 'pres') loadPres();
   if (t === 'links' && !links) api('GET', null, '/api/shortcuts').then(j => { links = j.items; renderLinks(); }).catch(e => alert(e.message));
+  if (t === 'media' && !media) api('GET', null, '/api/media').then(j => { media = j; renderMedia(); }).catch(e => alert(e.message));
+  if (t === 'kiosks') renderKiosks();
 }
 $('tabs').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b || b.dataset.tab === tab) return;
-  if (dirty && !confirm('Wijzigingen zijn nog niet opgeslagen. Toch wisselen?')) return;
-  if (dirty) { dirty = false; $('status').textContent = ''; if (tab === 'links') links = null; else api('GET').then(j => { data = j; render(); }); }
+  const agendaTabs = ['agenda', 'food', 'screen'];
+  const leavingOwnSave = !(agendaTabs.includes(tab) && agendaTabs.includes(b.dataset.tab));
+  if (dirty && leavingOwnSave) {
+    if (!confirm('Wijzigingen zijn nog niet opgeslagen. Toch wisselen?')) return;
+    dirty = false; $('status').textContent = '';
+    if (tab === 'links') links = null; else if (tab === 'media') media = null; else if (tab === 'kiosks') loadKiosks();
+    else api('GET').then(j => { data = j; render(); renderFood(); renderScreen(); });
+  }
   showTab(b.dataset.tab);
 });
 
@@ -285,7 +595,7 @@ $('presList').addEventListener('click', async e => {
   if (b.dataset.act === 'orig') {
     b.disabled = true; b.textContent = 'Downloaden…';
     try {
-      const r = await fetch('/api/original' + q, {headers: {'X-Code': code}});
+      const r = await fetch(base + '/api/original' + q, {headers: {'X-Code': code}});
       if (!r.ok) throw new Error('Downloaden mislukt');
       const cd = r.headers.get('Content-Disposition') || '';
       const fn = decodeURIComponent((cd.match(/filename\*=UTF-8''(.+)$/) || [])[1] || name + '.pptx');
@@ -299,7 +609,7 @@ $('presList').addEventListener('click', async e => {
 function sendFile(name, file){
   return new Promise((resolve, reject) => {
     const x = new XMLHttpRequest();
-    x.open('POST', '/api/upload?pres=' + encodeURIComponent(name) + '&file=' + encodeURIComponent(file.name));
+    x.open('POST', base + '/api/upload?pres=' + encodeURIComponent(name) + '&file=' + encodeURIComponent(file.name));
     x.setRequestHeader('X-Code', code);
     x.upload.onprogress = e => { if (e.lengthComputable) { $('upProg').max = e.total; $('upProg').value = e.loaded; } };
     x.onload = () => {
@@ -332,8 +642,26 @@ $('drop').addEventListener('dragover', e => { e.preventDefault(); $('drop').clas
 $('drop').addEventListener('dragleave', () => $('drop').classList.remove('over'));
 $('drop').addEventListener('drop', e => { e.preventDefault(); $('drop').classList.remove('over'); uploadFiles([...e.dataTransfer.files]); });
 
+// ---------- Kijk & luister ----------
+function renderMedia(){
+  const order = ['video', 'radio', 'podcasts', 'muziek'].filter(k => media[k]);
+  $('mediaLists').innerHTML = order.map(k => `
+    <div class="card" data-cat="${k}">
+      <h3>${MEDIA_TITLES[k] || k} <button data-all="1">Alles aan</button> <button data-all="0">Alles uit</button></h3>
+      <div class="media">${media[k].map((m, i) => `<label><input type="checkbox" data-i="${i}" ${m.on ? 'checked' : ''}>${esc(m.name)}</label>`).join('')}</div>
+    </div>`).join('');
+}
+$('mediaLists').addEventListener('change', e => {
+  const cat = e.target.closest('[data-cat]'); if (!cat || e.target.dataset.i === undefined) return;
+  media[cat.dataset.cat][+e.target.dataset.i].on = e.target.checked; changed();
+});
+$('mediaLists').addEventListener('click', e => {
+  const b = e.target.closest('button[data-all]'); if (!b) return;
+  const k = b.closest('[data-cat]').dataset.cat;
+  media[k].forEach(m => m.on = b.dataset.all === '1'); changed(); renderMedia();
+});
+
 // ---------- Snelkoppelingen ----------
-let links = null;
 function renderLinks(){
   $('links').innerHTML = links.map((l, i) => `
     <div class="card lrow" data-l="${i}">
@@ -361,6 +689,74 @@ $('links').addEventListener('click', e => {
 $('addLink').onclick = () => {
   links.push({group: links.length ? links[links.length - 1].group : 'Online', name: '', url: 'https://', icon: '🌐', color: '#3A4A6B'});
   changed(); renderLinks(); window.scrollTo(0, document.body.scrollHeight);
+};
+
+// ---------- Kiosken ----------
+async function loadKiosks(){
+  const saveBase = base, saveCode = code;
+  base = ''; code = ownCode;
+  try { kiosks = (await api('GET', null, '/api/kiosks')).items || []; } catch (e) { kiosks = []; }
+  base = saveBase; code = saveCode;
+  $('target').innerHTML = '<option value="">Deze kiosk</option>' + kiosks.map((k, i) => `<option value="${i}">${esc(k.name)}</option>`).join('');
+  $('target').hidden = kiosks.length === 0;
+  $('target').value = base ? String(kiosks.findIndex(k => k.address === base)) : '';
+  renderKiosks();
+}
+function renderKiosks(){
+  $('kiosks').innerHTML = kiosks.map((k, i) => `
+    <div class="krow" data-k="${i}">
+      <input type="text" data-f="name" value="${esc(k.name)}" maxlength="40" placeholder="Naam (bijv. Keuken)" aria-label="Naam">
+      <input type="text" data-f="address" value="${esc(k.address)}" placeholder="192.168.1.21:8642" aria-label="Adres">
+      <input type="text" data-f="code" value="${esc(k.code)}" maxlength="6" inputmode="numeric" placeholder="Code" aria-label="Code">
+      <button data-act="test">Test</button>
+      <button class="danger" data-act="del" aria-label="Verwijderen">✕</button>
+    </div>`).join('') || '<p class="hint">Nog geen andere kiosken.</p>';
+  $('copyAll').disabled = kiosks.length === 0;
+}
+$('kiosks').addEventListener('input', e => {
+  const r = e.target.closest('[data-k]'); if (!r || !e.target.dataset.f) return;
+  kiosks[r.dataset.k][e.target.dataset.f] = e.target.value; changed();
+});
+function kioskBase(k){ let a = String(k.address || '').trim().replace(/\/+$/, ''); if (!/^https?:\/\//.test(a)) a = 'http://' + a; return a; }
+$('kiosks').addEventListener('click', async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const i = +b.closest('[data-k]').dataset.k;
+  if (b.dataset.act === 'del') { kiosks.splice(i, 1); changed(); renderKiosks(); return; }
+  if (b.dataset.act === 'test') {
+    b.textContent = '…';
+    try {
+      const r = await fetch(kioskBase(kiosks[i]) + '/api/check', {headers: {'X-Code': kiosks[i].code}});
+      b.textContent = r.ok ? '✓ Goed' : r.status === 403 ? 'Code fout' : 'Fout';
+    } catch (err) { b.textContent = 'Niet bereikbaar'; }
+  }
+});
+$('addKiosk').onclick = () => { kiosks.push({name: '', address: '', code: ''}); changed(); renderKiosks(); };
+function switchTarget(v){
+  if (dirty && !confirm('Wijzigingen zijn nog niet opgeslagen. Toch wisselen?')) { $('target').value = base ? String(kiosks.findIndex(k => k.address === base)) : ''; return; }
+  dirty = false; $('status').textContent = '';
+  if (v === '') { base = ''; code = ownCode; }
+  else { const k = kiosks[+v]; base = kioskBase(k); code = k.code; }
+  $('target').value = v;
+  $('remoteNote').hidden = !base;
+  $('remoteNote').textContent = base ? 'Je beheert nu kiosk "' + kiosks[+v].name + '" (' + base + '). Kies bovenin "Deze kiosk" om terug te gaan.' : '';
+  start();
+}
+$('target').addEventListener('change', () => switchTarget($('target').value));
+$('copyAll').onclick = async () => {
+  if (!confirm('Dagplanning, menu en verjaardagen naar alle andere kiosken kopiëren? Hun eigen planning wordt vervangen.')) return;
+  const src = {items: data.items, messages: data.messages, menu: data.menu, birthdays: data.birthdays, special: data.special};
+  const targets = [{name: 'Deze kiosk', address: ''}, ...kiosks].filter(k => (k.address ? kioskBase(k) : '') !== base);
+  const out = [];
+  for (const k of targets) {
+    const kb = k.address ? kioskBase(k) : '', kc = k.address ? k.code : ownCode;
+    try {
+      const h = {'X-Code': kc, 'Content-Type': 'application/json'};
+      const cur = await (await fetch(kb + '/api/agenda', {headers: h})).json();
+      const r = await fetch(kb + '/api/agenda', {method: 'PUT', headers: h, body: JSON.stringify({...src, settings: cur.settings || {}})});
+      out.push(k.name + (r.ok ? ': ✓' : ': mislukt'));
+    } catch (e) { out.push(k.name + ': niet bereikbaar'); }
+  }
+  $('copyStatus').textContent = out.join(' · ');
 };
 
 $('go').onclick = () => { code = $('code').value.trim(); try { sessionStorage.setItem('ppcode', code); } catch (e) {} start(); };
