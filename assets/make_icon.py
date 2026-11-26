@@ -1,72 +1,79 @@
-# Pictogram PP Kiosk: afspeelknop (kijken) met geluidsgolven (luisteren)
-# op een afgeronde vierkant met verloop. Getekend op 1024 px, daarna verkleind.
-import math, sys
-from PIL import Image, ImageDraw, ImageFilter
+# Pictogram PP Kiosk: een wit kioskscherm met "PP" op een groen-blauwe achtergrond.
+# Getekend op 1024 px en daarna verkleind. Maakt ppkiosk.ico (programma, startmenu, installer),
+# ppkiosk-256.png en de pictogrammen voor de beheerpagina (web-192/512, maskable).
+# Gebruik: python make_icon.py  (vanuit de map assets; lettertype Inter Black)
+import sys
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
+FONT = sys.argv[1] if len(sys.argv) > 1 else "/usr/share/fonts/opentype/inter/Inter-Black.otf"
 S = 1024
+GREEN = (46, 139, 87)
+NAVY = (31, 42, 68)
+
+
 def gradient(size, c1, c2):
-    img = Image.new("RGBA", (size, size))
-    px = img.load()
-    for y in range(size):
-        for x in range(size):
-            t = (x * 0.45 + y * 0.55) / size
-            px[x, y] = tuple(int(c1[i] + (c2[i] - c1[i]) * t) for i in range(3)) + (255,)
-    return img
+    top = Image.new("RGBA", (size, size), c1 + (255,))
+    bottom = Image.new("RGBA", (size, size), c2 + (255,))
+    m = Image.linear_gradient("L").resize((size, size))
+    return Image.composite(bottom, top, m)
 
-bg = gradient(S, (255, 122, 69), (184, 42, 120))   # oranje naar framboos
-mask = Image.new("L", (S, S), 0)
-ImageDraw.Draw(mask).rounded_rectangle([0, 0, S - 1, S - 1], radius=int(S * 0.23), fill=255)
-icon = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-icon.paste(bg, (0, 0), mask)
 
-# zachte schaduw onder de vormen
-shadow = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-sd = ImageDraw.Draw(shadow)
-fg = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-d = ImageDraw.Draw(fg)
-white = (255, 255, 255, 255)
+def artwork(size, full_bleed=False):
+    """full_bleed: vierkant zonder afgeronde hoeken (maskable), tekening iets kleiner."""
+    bg = gradient(size, (58, 170, 110), (24, 74, 92))
+    mask = Image.new("L", (size, size), 0)
+    if full_bleed:
+        mask.paste(255, (0, 0, size, size))
+    else:
+        ImageDraw.Draw(mask).rounded_rectangle([0, 0, size - 1, size - 1], radius=int(size * 0.23), fill=255)
+    icon = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    icon.paste(bg, (0, 0), mask)
 
-# afspeeldriehoek, iets links van het midden, met afgeronde hoeken
-cx, cy = S * 0.355, S * 0.50
-h = S * 0.46
-pts = [(cx - h * 0.38, cy - h / 2), (cx - h * 0.38, cy + h / 2), (cx + h * 0.52, cy)]
-def rounded_triangle(draw, pts, r, fill):
-    draw.polygon(pts, fill=fill)
-    for p in pts:
-        draw.ellipse([p[0] - r, p[1] - r, p[0] + r, p[1] + r], fill=fill)
-# driehoek een fractie verkleinen zodat de afronding binnen de vorm valt
-r = S * 0.045
-cxm = sum(p[0] for p in pts) / 3; cym = sum(p[1] for p in pts) / 3
-inner = [(cxm + (p[0] - cxm) * 0.86, cym + (p[1] - cym) * 0.86) for p in pts]
-d.polygon(pts, fill=white)
-d.line(pts + [pts[0]], fill=white, width=int(r * 2), joint="curve")
-for p in pts:
-    d.ellipse([p[0] - r, p[1] - r, p[0] + r, p[1] + r], fill=white)
+    k = 0.78 if full_bleed else 1.0          # schaal van de tekening
+    o = size * (1 - k) / 2                   # verschuiving naar het midden
+    def P(x, y):
+        return (o + x * size * k, o + y * size * k)
 
-# geluidsgolven rechts
-ox, oy = S * 0.40, S * 0.50
-w = int(S * 0.055)
-for i, rad in enumerate([S * 0.30, S * 0.42]):
-    box = [ox - rad, oy - rad, ox + rad, oy + rad]
-    d.arc(box, start=-38, end=38, fill=white, width=w)
-    # ronde uiteinden
-    for ang in (-38, 38):
-        a = math.radians(ang)
-        # PIL tekent de lijndikte naar binnen: midden van de lijn ligt op rad - w/2
-        rm = rad - w / 2
-        ex, ey = ox + rm * math.cos(a), oy + rm * math.sin(a)
-        rr = w / 2
-        d.ellipse([ex - rr, ey - rr, ex + rr, ey + rr], fill=white)
+    fg = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    d = ImageDraw.Draw(fg)
+    white = (255, 255, 255, 255)
+    # scherm
+    x0, y0 = P(0.14, 0.15)
+    x1, y1 = P(0.86, 0.66)
+    d.rounded_rectangle([x0, y0, x1, y1], radius=size * k * 0.07, fill=white)
+    # voet: hals en plaat
+    hx0, hy0 = P(0.44, 0.64)
+    hx1, hy1 = P(0.56, 0.78)
+    d.rectangle([hx0, hy0, hx1, hy1], fill=white)
+    bx0, by0 = P(0.28, 0.77)
+    bx1, by1 = P(0.72, 0.85)
+    d.rounded_rectangle([bx0, by0, bx1, by1], radius=size * k * 0.04, fill=white)
 
-alpha = fg.split()[3]
-sd.bitmap((0, int(S * 0.012)), alpha, fill=(90, 0, 40, 110))
-shadow = shadow.filter(ImageFilter.GaussianBlur(S * 0.012))
-icon = Image.alpha_composite(icon, Image.composite(shadow, Image.new("RGBA", (S, S)), mask))
-icon = Image.alpha_composite(icon, fg)
+    # schaduw onder het witte deel
+    alpha = fg.split()[3]
+    shadow = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    ImageDraw.Draw(shadow).bitmap((0, int(size * 0.014)), alpha, fill=(0, 30, 30, 110))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(size * 0.014))
+    icon = Image.alpha_composite(icon, Image.composite(shadow, Image.new("RGBA", (size, size)), mask))
+    icon = Image.alpha_composite(icon, fg)
 
-icon.save("kijkluister-1024.png")
-icon.resize((512, 512), Image.LANCZOS).save("kijkluister-512.png")
+    # "PP" in het scherm, groen
+    d = ImageDraw.Draw(icon)
+    font = ImageFont.truetype(FONT, int(size * k * 0.36))
+    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    d.text((cx, cy + size * k * 0.005), "PP", font=font, fill=GREEN + (255,), anchor="mm")
+    # klein accent: groene "aan"-stip rechtsonder in het scherm
+    r = size * k * 0.025
+    sx, sy = P(0.80, 0.60)
+    d.ellipse([sx - r, sy - r, sx + r, sy + r], fill=(242, 179, 61, 255))
+    return icon
+
+
+icon = artwork(S)
 icon.resize((256, 256), Image.LANCZOS).save("ppkiosk-256.png")
+icon.resize((512, 512), Image.LANCZOS).save("web-512.png")
+icon.resize((192, 192), Image.LANCZOS).save("web-192.png")
+artwork(S, full_bleed=True).resize((512, 512), Image.LANCZOS).save("web-maskable-512.png")
 sizes = [(16, 16), (20, 20), (24, 24), (32, 32), (40, 40), (48, 48), (64, 64), (128, 128), (256, 256)]
 icon.save("ppkiosk.ico", sizes=sizes)
 # voorbeeld van kleine formaten naast elkaar

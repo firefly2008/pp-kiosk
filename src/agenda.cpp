@@ -85,7 +85,7 @@ QJsonObject Agenda::defaultAgenda()
              item("19:00", "21:00", "Tv kijken", "📺", "#A7D8F0"),
              item("22:00", "22:30", "Naar bed", "🛏️", "#C3B1E1"),
          }},
-        {QStringLiteral("messages"), QJsonArray{QStringLiteral("Welkom! Pas deze dag aan via de beheerpagina.")}},
+        {QStringLiteral("messages"), QJsonArray{}},
         {QStringLiteral("menu"), QJsonArray{
              QJsonObject{{QStringLiteral("dish"), QStringLiteral("Zuurkoolstamppot")}, {QStringLiteral("note"), QStringLiteral("met rookworst")}},
              QJsonObject{{QStringLiteral("dish"), QStringLiteral("Macaroni")}, {QStringLiteral("note"), QStringLiteral("met ham en kaas")}},
@@ -111,6 +111,17 @@ void Agenda::load()
         if (doc.isObject() && doc.object().value(QStringLiteral("items")).isArray()) {
             m_data = doc.object();
             qInfo() << "Agenda: loaded" << m_data.value(QStringLiteral("items")).toArray().size() << "items";
+            // Oude voorbeeldmelding over de beheerpagina niet meer op het startscherm
+            {
+                QJsonArray messages = m_data.value(QStringLiteral("messages")).toArray();
+                for (int i = messages.size() - 1; i >= 0; --i) {
+                    if (messages.at(i).toString().startsWith(QStringLiteral("Welkom! Pas deze dag aan via de beheerpagina"))) {
+                        messages.removeAt(i);
+                        m_data.insert(QStringLiteral("messages"), messages);
+                        save();
+                    }
+                }
+            }
             // Versie 3: screensaver standaard na 5 minuten met het menu van de week, diner om 17:00
             if (m_data.value(QStringLiteral("version")).toInt() < 3) {
                 QJsonObject settings = m_data.value(QStringLiteral("settings")).toObject();
