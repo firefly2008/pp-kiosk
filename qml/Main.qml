@@ -15,6 +15,7 @@ Rectangle {
     readonly property color green: "#2E8B57"
     readonly property string emojiFont: Qt.platform.os === "windows" ? "Segoe UI Emoji" : "Noto Color Emoji"
     property date now: new Date()
+    property string page: "home"     // home, stream, presentations
 
     readonly property var items: agenda.today
     readonly property var current: agenda.currentIndex >= 0 ? items[agenda.currentIndex] : null
@@ -240,9 +241,9 @@ Rectangle {
                 spacing: 24 * root.s
                 Repeater {
                     model: [
-                        { title: "Presentaties", icon: "🖼️", tint: "#5DA9E9" },
-                        { title: "Kijken en luisteren", icon: "🎧", tint: "#6CC28B" },
-                        { title: "Snelkoppelingen", icon: "⭐", tint: "#E97A6B" }
+                        { title: "Presentaties", icon: "🖼️", tint: "#5DA9E9", page: "presentations" },
+                        { title: "Kijk & luister", icon: "🎧", tint: "#6CC28B", page: "stream" },
+                        { title: "Snelkoppelingen", icon: "⭐", tint: "#E97A6B", page: "" }
                     ]
                     delegate: Rectangle {
                         required property var modelData
@@ -267,7 +268,10 @@ Rectangle {
                         }
                         TapHandler {
                             id: tap
-                            onTapped: console.info("Tile tapped: " + modelData.title)
+                            onTapped: {
+                                console.info("Tile tapped: " + modelData.title)
+                                if (modelData.page !== "") root.page = modelData.page
+                            }
                         }
                     }
                 }
@@ -426,8 +430,31 @@ Rectangle {
         }
     }
 
+    // ---------- Andere pagina's (over het startscherm heen) ----------
+    Loader {
+        id: pageLoader
+        anchors.fill: parent
+        active: root.page !== "home"
+        sourceComponent: root.page === "stream" ? streamPage : root.page === "presentations" ? presentationPage : null
+    }
+    Component { id: streamPage; StreamScreen { s: root.s; onBack: root.page = "home" } }
+    Component { id: presentationPage; PresentationScreen { s: root.s; onBack: root.page = "home" } }
+
+    // Na 15 minuten terug naar het startscherm (behalve tijdens een presentatie of radio)
+    Timer {
+        id: idle
+        interval: 15 * 60 * 1000
+        running: root.page !== "home"
+        onTriggered: {
+            const busy = pageLoader.item && ((pageLoader.item.show !== undefined && pageLoader.item.show !== null)
+                                            || (pageLoader.item.radioRow !== undefined && pageLoader.item.radioRow >= 0))
+            if (busy) restart(); else root.page = "home"
+        }
+    }
+
     Keys.onEscapePressed: {
         if (adminPanel.visible) adminPanel.visible = false
+        else if (root.page !== "home") root.page = "home"
         else if (selfTest !== "") Qt.quit()
     }
 
@@ -439,6 +466,12 @@ Rectangle {
             if (selfTest === "agenda") {
                 agenda.setTestTime("10:30")
                 console.info("Agenda test: now " + agenda.currentIndex + " title " + (root.current ? root.current.title : "-") + " next " + (root.next ? root.next.title : "-"))
+            } else if (selfTest === "stream") {
+                root.page = "stream"
+            } else if (selfTest === "presentation") {
+                root.page = "presentations"
+                console.info("Presentations listed: " + presentations.list.length)
+                if (presentations.list.length > 0) pageLoader.item.start(presentations.list[0])
             } else if (selfTest === "admin") {
                 adminPanel.visible = true
                 admin.selfTest()

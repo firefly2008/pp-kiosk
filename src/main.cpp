@@ -37,6 +37,7 @@
 #include "systemtools.h"
 #include "adminserver.h"
 #include "agenda.h"
+#include "presentations.h"
 
 #include <QNetworkAccessManager>
 #include <QNetworkDiskCache>
@@ -286,6 +287,8 @@ int main(int argc, char *argv[])
     ctx->setContextProperty(QStringLiteral("selfTest"), selfTestMode);
     Agenda agenda(appDataDir());
     ctx->setContextProperty(QStringLiteral("agenda"), &agenda);
+    Presentations presentations(appDataDir());
+    ctx->setContextProperty(QStringLiteral("presentations"), &presentations);
     AdminServer admin(appDataDir(), &agenda);
     ctx->setContextProperty(QStringLiteral("admin"), &admin);
     SystemTools systemTools;

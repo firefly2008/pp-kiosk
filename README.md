@@ -13,7 +13,7 @@ Gebaseerd op [Kijkluister](https://github.com/firefly2008/kijkluister) (Qt 6.8, 
 |---|---|---|
 | 1 | Kijkluister kopiëren en opschonen, naam PP Kiosk | klaar |
 | 2 | Startscherm + dagstructuur-agenda + beheerpagina | klaar |
-| 3 | Media: PowerPoint (origineel bewaard), foto's, snelkoppelingen, speler | gepland |
+| 3 | Media: kijk & luister, presentaties (klaar); PowerPoint-upload en snelkoppelingen (volgt) | bezig |
 | 4 | Testen op het touchscreen + release | gepland |
 
 ## Bouwen
