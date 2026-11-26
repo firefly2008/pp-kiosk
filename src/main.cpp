@@ -38,6 +38,7 @@
 #include "adminserver.h"
 #include "agenda.h"
 #include "presentations.h"
+#include "shortcuts.h"
 
 #include <QNetworkAccessManager>
 #include <QNetworkDiskCache>
@@ -289,7 +290,9 @@ int main(int argc, char *argv[])
     ctx->setContextProperty(QStringLiteral("agenda"), &agenda);
     Presentations presentations(appDataDir());
     ctx->setContextProperty(QStringLiteral("presentations"), &presentations);
-    AdminServer admin(appDataDir(), &agenda);
+    Shortcuts shortcuts(appDataDir());
+    ctx->setContextProperty(QStringLiteral("shortcuts"), &shortcuts);
+    AdminServer admin(appDataDir(), &agenda, &presentations, &shortcuts);
     ctx->setContextProperty(QStringLiteral("admin"), &admin);
     SystemTools systemTools;
     ctx->setContextProperty(QStringLiteral("systemTools"), &systemTools);

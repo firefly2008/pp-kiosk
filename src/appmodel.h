@@ -112,6 +112,8 @@ public:
     Q_INVOKABLE void refresh();
     Q_INVOKABLE bool launch(int row);
     Q_INVOKABLE bool openUri(const QString &uri);
+    // Website schermvullend openen in Edge/Chrome (eigen profiel, Home-knop terug naar PP Kiosk)
+    Q_INVOKABLE bool launchWeb(const QString &url);
     Q_INVOKABLE QString nameAt(int row) const;
     Q_INVOKABLE bool hasCustomIcon(int row) const;
     Q_INVOKABLE QString iconAt(int row) const;
@@ -153,7 +155,6 @@ private:
     void saveCustomTiles(const QList<App> &tiles);
     QString faviconFile(const QString &url) const;
     void fetchFavicons();
-    bool launchWeb(const QString &url);
 
     QColor accentFor(const App &app) const;
     void applyOrder(QList<App> &tiles) const;

@@ -1,5 +1,17 @@
 [
   {
+    "version": "0.4.0",
+    "date": "2026-11-26",
+    "notes": [
+      "PowerPoint, PDF en foto's uploaden via de beheerpagina; PowerPoint wordt automatisch omgezet, het origineel blijft bewaard.",
+      "Snelkoppelingen naar Nederlandse tv, radio en websites, aan te passen via de beheerpagina."
+    ],
+    "notes_en": [
+      "Upload PowerPoint, PDF and photos via the admin page.",
+      "Shortcuts page."
+    ]
+  },
+  {
     "version": "0.3.0",
     "date": "2026-11-26",
     "notes": [

@@ -8,6 +8,7 @@
 <style>
 :root{--groen:#2E8B57;--groen-licht:#E6F3EC;--tekst:#1F2A44;--grijs:#5B6478;--lijn:#D9DDE5;--rood:#C0392B;--bg:#F7F4EE}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{margin:0;font:18px/1.4 "Segoe UI",system-ui,sans-serif;color:var(--tekst);background:var(--bg)}
 header{background:var(--groen);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:12px}
 header img{width:36px;height:36px;border-radius:8px}
@@ -39,6 +40,20 @@ dialog{border:0;border-radius:16px;max-width:560px;width:calc(100% - 32px)}
 .picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:6px;margin:12px 0}
 .picker button{font-size:30px;padding:4px}
 .hint{color:var(--grijs);font-size:15px}
+nav.tabs{display:flex;gap:8px;max-width:1100px;margin:0 auto;padding:16px 16px 0;flex-wrap:wrap}
+nav.tabs button{border-radius:999px;font-weight:600}
+nav.tabs button.on{background:var(--groen);color:#fff;border-color:var(--groen)}
+.pres{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
+.pres h3{margin:0 0 4px;font-size:19px}
+.pres .tools{flex-direction:row;flex-wrap:wrap}
+.busy{color:#B7791F;font-weight:600}
+.err{color:var(--rood)}
+progress{width:100%;height:16px}
+.drop{border:2px dashed var(--lijn);border-radius:14px;padding:18px;text-align:center;background:#fff}
+.drop.over{border-color:var(--groen);background:var(--groen-licht)}
+.lrow{display:grid;grid-template-columns:56px 140px 1fr 2fr auto;gap:8px;align-items:center}
+.lrow input[type=color]{width:56px;height:44px;padding:2px;border:1px solid var(--lijn);border-radius:8px}
+@media (max-width:700px){.lrow{grid-template-columns:56px 1fr}.lrow>*:nth-child(n+3){grid-column:1/-1}.pres{grid-template-columns:1fr}}
 @media (max-width:700px){.fields{grid-template-columns:1fr 1fr}.fields>div:nth-child(3){grid-column:1/-1}.row{grid-template-columns:48px 1fr}.tools{grid-column:1/-1;flex-direction:row;flex-wrap:wrap}}
 </style>
 </head>
@@ -53,7 +68,14 @@ dialog{border:0;border-radius:16px;max-width:560px;width:calc(100% - 32px)}
   <p id="loginErr" class="hint"></p>
 </div>
 
+<nav class="tabs" id="tabs" hidden>
+  <button data-tab="agenda" class="on">📅 Dagplanning</button>
+  <button data-tab="pres">🖼️ Presentaties</button>
+  <button data-tab="links">⭐ Snelkoppelingen</button>
+</nav>
+
 <main id="app" hidden>
+ <section id="tab-agenda">
   <h2>Mededelingen</h2>
   <div class="card">
     <label for="messages">Eén mededeling per regel (bovenaan het scherm)</label>
@@ -64,6 +86,33 @@ dialog{border:0;border-radius:16px;max-width:560px;width:calc(100% - 32px)}
   <p class="hint">Activiteiten staan op het scherm op volgorde van begintijd. Vink aan op welke dagen ze gelden.</p>
   <div id="items"></div>
   <button id="add">+ Activiteit toevoegen</button>
+ </section>
+
+ <section id="tab-pres" hidden>
+  <h2>Presentatie toevoegen of bijwerken</h2>
+  <div class="card">
+    <label for="presName">Naam van de presentatie (bestaande naam = bijwerken)</label>
+    <input type="text" id="presName" list="presNames" maxlength="60" placeholder="Bijvoorbeeld: Diner van de dag">
+    <datalist id="presNames"></datalist>
+    <div class="drop" id="drop" style="margin-top:12px">
+      <p>Sleep hier een PowerPoint (.pptx), PDF of foto's naartoe, of</p>
+      <input type="file" id="files" multiple accept=".pptx,.ppt,.pps,.ppsx,.odp,.pdf,.jpg,.jpeg,.png,.webp,.bmp,.gif">
+    </div>
+    <p class="hint">PowerPoint wordt op de kiosk-pc omgezet naar dia's. Het origineel blijft bewaard: download het, pas het aan en upload het opnieuw onder dezelfde naam.</p>
+    <p><button class="primary" id="upload">Uploaden</button></p>
+    <progress id="upProg" value="0" max="1" hidden></progress>
+    <p id="upStatus" class="hint"></p>
+  </div>
+  <h2>Presentaties op de kiosk</h2>
+  <div id="presList"></div>
+ </section>
+
+ <section id="tab-links" hidden>
+  <h2>Snelkoppelingen</h2>
+  <p class="hint">Grote tegels op de kiosk. Groep = kopje waaronder de tegel staat (bijv. Tv, Radio, Online).</p>
+  <div id="links"></div>
+  <button id="addLink">+ Snelkoppeling toevoegen</button>
+ </section>
 </main>
 
 <div class="bar" id="bar" hidden>
@@ -90,8 +139,8 @@ const $ = id => document.getElementById(id);
 
 function esc(s){return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
-async function api(method, body){
-  const r = await fetch('/api/agenda', {method, headers: {'X-Code': code, 'Content-Type': 'application/json'}, body: body ? JSON.stringify(body) : undefined});
+async function api(method, body, path = '/api/agenda'){
+  const r = await fetch(path, {method, headers: {'X-Code': code, 'Content-Type': 'application/json'}, body: body ? JSON.stringify(body) : undefined});
   if (r.status === 403) throw Object.assign(new Error('Code klopt niet'), {login: true});
   if (r.status === 429) throw Object.assign(new Error('Te veel pogingen. Probeer het over 10 minuten.'), {login: true});
   const j = await r.json().catch(() => ({}));
@@ -102,10 +151,11 @@ async function api(method, body){
 async function start(){
   try {
     data = await api('GET');
-    $('login').hidden = true; $('app').hidden = false; $('bar').hidden = false;
+    $('login').hidden = true; $('app').hidden = false; $('bar').hidden = false; $('tabs').hidden = false;
     render();
+    showTab(tab);
   } catch (e) {
-    $('login').hidden = false; $('app').hidden = true; $('bar').hidden = true;
+    $('login').hidden = false; $('app').hidden = true; $('bar').hidden = true; $('tabs').hidden = true;
     $('loginErr').textContent = code ? e.message : '';
   }
 }
@@ -169,12 +219,148 @@ $('add').onclick = () => {
 $('messages').addEventListener('input', changed);
 
 $('save').onclick = async () => {
-  data.messages = $('messages').value.split('\n').map(s => s.trim()).filter(Boolean);
   try {
-    await api('PUT', data);
-    data = await api('GET'); render();
+    if (tab === 'links') {
+      await api('PUT', {items: links}, '/api/shortcuts');
+      links = (await api('GET', null, '/api/shortcuts')).items; renderLinks();
+    } else {
+      data.messages = $('messages').value.split('\n').map(s => s.trim()).filter(Boolean);
+      await api('PUT', data);
+      data = await api('GET'); render();
+    }
     dirty = false; $('status').textContent = 'Opgeslagen, staat op het scherm'; $('status').className = '';
   } catch (e) { $('status').textContent = e.message; $('status').className = 'err'; }
+};
+
+// ---------- Tabbladen ----------
+let tab = 'agenda';
+function showTab(t){
+  tab = t;
+  for (const b of $('tabs').querySelectorAll('button')) b.classList.toggle('on', b.dataset.tab === t);
+  $('tab-agenda').hidden = t !== 'agenda'; $('tab-pres').hidden = t !== 'pres'; $('tab-links').hidden = t !== 'links';
+  $('bar').hidden = t === 'pres';
+  if (t === 'pres') loadPres();
+  if (t === 'links' && !links) api('GET', null, '/api/shortcuts').then(j => { links = j.items; renderLinks(); }).catch(e => alert(e.message));
+}
+$('tabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || b.dataset.tab === tab) return;
+  if (dirty && !confirm('Wijzigingen zijn nog niet opgeslagen. Toch wisselen?')) return;
+  if (dirty) { dirty = false; $('status').textContent = ''; if (tab === 'links') links = null; else api('GET').then(j => { data = j; render(); }); }
+  showTab(b.dataset.tab);
+});
+
+// ---------- Presentaties ----------
+let presTimer = null;
+async function loadPres(){
+  clearTimeout(presTimer);
+  try {
+    const j = await api('GET', null, '/api/presentations');
+    $('presNames').innerHTML = j.items.map(p => `<option value="${esc(p.name)}">`).join('');
+    $('presList').innerHTML = j.items.length ? j.items.map(p => `
+      <div class="card pres" data-name="${esc(p.name)}">
+        <div>
+          <h3>${esc(p.title)}</h3>
+          <div class="hint">${p.slides} ${p.slides === 1 ? 'dia' : "dia's"}${p.original ? ' · origineel: ' + esc(p.original) : ''}</div>
+          ${p.status === 'bezig' ? '<div class="busy">Bezig met omzetten…</div>' : p.status ? `<div class="err">${esc(p.status)}</div>` : ''}
+        </div>
+        <div class="tools">
+          <button data-act="addto">Bestand toevoegen</button>
+          ${p.original ? '<button data-act="orig">Origineel downloaden</button>' : ''}
+          <button class="danger" data-act="delpres">Verwijderen</button>
+        </div>
+      </div>`).join('') : '<p class="hint">Nog geen presentaties.</p>';
+    if (j.items.some(p => p.status === 'bezig')) presTimer = setTimeout(loadPres, 3000);
+  } catch (e) { $('presList').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+}
+$('presList').addEventListener('click', async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const name = b.closest('[data-name]').dataset.name;
+  const q = '?pres=' + encodeURIComponent(name);
+  if (b.dataset.act === 'addto') { $('presName').value = name; $('files').click(); return; }
+  if (b.dataset.act === 'delpres') {
+    if (!confirm('"' + name + '" helemaal verwijderen (ook het origineel)?')) return;
+    try { await api('DELETE', null, '/api/presentation' + q); } catch (err) { alert(err.message); }
+    loadPres(); return;
+  }
+  if (b.dataset.act === 'orig') {
+    b.disabled = true; b.textContent = 'Downloaden…';
+    try {
+      const r = await fetch('/api/original' + q, {headers: {'X-Code': code}});
+      if (!r.ok) throw new Error('Downloaden mislukt');
+      const cd = r.headers.get('Content-Disposition') || '';
+      const fn = decodeURIComponent((cd.match(/filename\*=UTF-8''(.+)$/) || [])[1] || name + '.pptx');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(await r.blob()); a.download = fn; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+    } catch (err) { alert(err.message); }
+    b.disabled = false; b.textContent = 'Origineel downloaden';
+  }
+});
+function sendFile(name, file){
+  return new Promise((resolve, reject) => {
+    const x = new XMLHttpRequest();
+    x.open('POST', '/api/upload?pres=' + encodeURIComponent(name) + '&file=' + encodeURIComponent(file.name));
+    x.setRequestHeader('X-Code', code);
+    x.upload.onprogress = e => { if (e.lengthComputable) { $('upProg').max = e.total; $('upProg').value = e.loaded; } };
+    x.onload = () => {
+      let j = {}; try { j = JSON.parse(x.responseText); } catch (e) {}
+      if (x.status === 200) resolve(); else reject(new Error(j.error || x.responseText || 'Uploaden mislukt'));
+    };
+    x.onerror = () => reject(new Error('Verbinding met de kiosk verbroken'));
+    x.send(file);
+  });
+}
+async function uploadFiles(list){
+  const name = $('presName').value.trim();
+  if (!name) { $('upStatus').textContent = 'Vul eerst een naam in.'; $('upStatus').className = 'err'; $('presName').focus(); return; }
+  if (!list.length) { $('upStatus').textContent = 'Kies eerst een bestand.'; $('upStatus').className = 'err'; return; }
+  $('upload').disabled = true; $('upProg').hidden = false; $('upStatus').className = 'hint';
+  try {
+    for (let i = 0; i < list.length; i++) {
+      $('upStatus').textContent = `Uploaden ${i + 1} van ${list.length}: ${list[i].name}`;
+      await sendFile(name, list[i]);
+    }
+    $('upStatus').textContent = 'Klaar. PowerPoint wordt nu omgezet, dat kan een minuut duren.';
+    $('files').value = '';
+  } catch (e) { $('upStatus').textContent = e.message; $('upStatus').className = 'err'; }
+  $('upload').disabled = false; $('upProg').hidden = true;
+  loadPres();
+}
+$('upload').onclick = () => uploadFiles([...$('files').files]);
+$('files').addEventListener('change', () => { if ($('presName').value.trim()) uploadFiles([...$('files').files]); });
+$('drop').addEventListener('dragover', e => { e.preventDefault(); $('drop').classList.add('over'); });
+$('drop').addEventListener('dragleave', () => $('drop').classList.remove('over'));
+$('drop').addEventListener('drop', e => { e.preventDefault(); $('drop').classList.remove('over'); uploadFiles([...e.dataTransfer.files]); });
+
+// ---------- Snelkoppelingen ----------
+let links = null;
+function renderLinks(){
+  $('links').innerHTML = links.map((l, i) => `
+    <div class="card lrow" data-l="${i}">
+      <input type="text" data-k="icon" value="${esc(l.icon)}" maxlength="8" aria-label="Pictogram" style="font-size:26px;text-align:center">
+      <div><label>Groep</label><input type="text" data-k="group" value="${esc(l.group)}" maxlength="30"></div>
+      <div><label>Naam</label><input type="text" data-k="name" value="${esc(l.name)}" maxlength="40"></div>
+      <div><label>Webadres</label><input type="text" data-k="url" value="${esc(l.url)}" inputmode="url"></div>
+      <div class="tools" style="flex-direction:row">
+        <input type="color" data-k="color" value="${esc(l.color)}" aria-label="Kleur">
+        <button data-act="up" aria-label="Omhoog">↑</button>
+        <button class="danger" data-act="dellink" aria-label="Verwijderen">✕</button>
+      </div>
+    </div>`).join('');
+}
+$('links').addEventListener('input', e => {
+  const row = e.target.closest('[data-l]'); if (!row || !e.target.dataset.k) return;
+  links[row.dataset.l][e.target.dataset.k] = e.target.value; changed();
+});
+$('links').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const i = +b.closest('[data-l]').dataset.l;
+  if (b.dataset.act === 'dellink') { if (confirm('"' + links[i].name + '" verwijderen?')) { links.splice(i, 1); changed(); renderLinks(); } }
+  if (b.dataset.act === 'up' && i > 0) { [links[i - 1], links[i]] = [links[i], links[i - 1]]; changed(); renderLinks(); }
+});
+$('addLink').onclick = () => {
+  links.push({group: links.length ? links[links.length - 1].group : 'Online', name: '', url: 'https://', icon: '🌐', color: '#3A4A6B'});
+  changed(); renderLinks(); window.scrollTo(0, document.body.scrollHeight);
 };
 
 $('go').onclick = () => { code = $('code').value.trim(); try { sessionStorage.setItem('ppcode', code); } catch (e) {} start(); };

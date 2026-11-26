@@ -10,7 +10,10 @@
 #include <QUrl>
 
 class Agenda;
+class Presentations;
+class Shortcuts;
 class QTcpSocket;
+class QTemporaryFile;
 
 class AdminServer : public QObject
 {
@@ -21,7 +24,7 @@ class AdminServer : public QObject
     Q_PROPERTY(QUrl qrImage READ qrImage NOTIFY changed)
 
 public:
-    AdminServer(const QString &dataDir, Agenda *agenda, QObject *parent = nullptr);
+    AdminServer(const QString &dataDir, Agenda *agenda, Presentations *presentations, Shortcuts *shortcuts, QObject *parent = nullptr);
 
     bool listening() const { return m_server.isListening(); }
     QString address() const;
@@ -31,18 +34,36 @@ public:
     Q_INVOKABLE void newCode();
     // Rooktest: een aanvraag naar de eigen server doen en het resultaat loggen
     Q_INVOKABLE void selfTest();
+    // Rooktest: een PDF van 2 pagina's uploaden en wachten tot er dia's van gemaakt zijn
+    Q_INVOKABLE void uploadTest();
 
 Q_SIGNALS:
     void changed();
 
 private:
     void start();
+    // Een aanvraag in opbouw: kop eerst (dan controle), daarna de inhoud (uploads direct naar schijf)
+    struct Pending {
+        QByteArray buffer;
+        bool headersDone = false;
+        bool done = false;
+        QByteArray method;
+        QUrl url;
+        qint64 length = 0;
+        qint64 received = 0;
+        QTemporaryFile *file = nullptr;
+    };
     void handle(QTcpSocket *socket);
-    void respond(QTcpSocket *socket, int status, const QByteArray &type, const QByteArray &body);
+    bool checkAccess(QTcpSocket *socket, const QByteArray &host, const QString &code, const QString &path);
+    void dispatch(QTcpSocket *socket, Pending &p);
+    void respond(QTcpSocket *socket, int status, const QByteArray &type, const QByteArray &body, const QByteArray &extraHeaders = {});
     void makeQr();
 
     QString m_dataDir;
     Agenda *m_agenda;
+    Presentations *m_presentations;
+    Shortcuts *m_shortcuts;
+    QHash<QTcpSocket *, Pending> m_pending;
     QTcpServer m_server;
     QString m_code;
     QUrl m_qr;
