@@ -13,7 +13,7 @@ Gebaseerd op [Kijkluister](https://github.com/firefly2008/kijkluister) (Qt 6.8, 
 |---|---|---|
 | 1 | Kijkluister kopiëren en opschonen, naam PP Kiosk | klaar |
 | 2 | Startscherm + dagstructuur-agenda + beheerpagina | klaar |
-| 3 | Media: kijk & luister, presentaties (klaar); PowerPoint-upload en snelkoppelingen (volgt) | bezig |
+| 3 | Media: kijk & luister, presentaties, PowerPoint-upload, snelkoppelingen | klaar |
 | 4 | Testen op het touchscreen + release | gepland |
 
 ## Bouwen
@@ -39,3 +39,9 @@ Alles staat in `%LOCALAPPDATA%\PPKiosk`: `settings.ini`, `ppkiosk.log` en de cac
 - Vanaf een andere pc, tablet of telefoon op hetzelfde netwerk: houd op het kioskscherm de klok
   1,5 seconde vast. Dan staan het adres, de code en een QR-code in beeld.
 - De dagplanning staat in `%LOCALAPPDATA%\PPKiosk\agenda.json`.
+- Tabblad **Presentaties**: PowerPoint (.pptx/.ppt/.ppsx/.odp), PDF of foto's uploaden (max. 400 MB per bestand).
+  PowerPoint wordt op de kiosk-pc omgezet met PowerPoint zelf; zonder PowerPoint met LibreOffice.
+  Lukt geen van beide, upload dan een PDF. Het origineel blijft bewaard in `presentaties\<naam>\origineel`
+  en is te downloaden, aan te passen en opnieuw te uploaden onder dezelfde naam.
+- Tabblad **Snelkoppelingen**: tegels naar websites (NPO Start, NOS, Videoland, ...), opgeslagen in
+  `snelkoppelingen.json`.

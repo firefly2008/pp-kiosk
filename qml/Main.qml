@@ -15,7 +15,7 @@ Rectangle {
     readonly property color green: "#2E8B57"
     readonly property string emojiFont: Qt.platform.os === "windows" ? "Segoe UI Emoji" : "Noto Color Emoji"
     property date now: new Date()
-    property string page: "home"     // home, stream, presentations
+    property string page: "home"     // home, stream, presentations, shortcuts
 
     readonly property var items: agenda.today
     readonly property var current: agenda.currentIndex >= 0 ? items[agenda.currentIndex] : null
@@ -243,7 +243,7 @@ Rectangle {
                     model: [
                         { title: "Presentaties", icon: "🖼️", tint: "#5DA9E9", page: "presentations" },
                         { title: "Kijk & luister", icon: "🎧", tint: "#6CC28B", page: "stream" },
-                        { title: "Snelkoppelingen", icon: "⭐", tint: "#E97A6B", page: "" }
+                        { title: "Snelkoppelingen", icon: "⭐", tint: "#E97A6B", page: "shortcuts" }
                     ]
                     delegate: Rectangle {
                         required property var modelData
@@ -435,10 +435,12 @@ Rectangle {
         id: pageLoader
         anchors.fill: parent
         active: root.page !== "home"
-        sourceComponent: root.page === "stream" ? streamPage : root.page === "presentations" ? presentationPage : null
+        sourceComponent: root.page === "stream" ? streamPage : root.page === "presentations" ? presentationPage
+                         : root.page === "shortcuts" ? shortcutsPage : null
     }
     Component { id: streamPage; StreamScreen { s: root.s; onBack: root.page = "home" } }
     Component { id: presentationPage; PresentationScreen { s: root.s; onBack: root.page = "home" } }
+    Component { id: shortcutsPage; ShortcutsScreen { s: root.s; onBack: root.page = "home" } }
 
     // Na 15 minuten terug naar het startscherm (behalve tijdens een presentatie of radio)
     Timer {
@@ -472,6 +474,10 @@ Rectangle {
                 root.page = "presentations"
                 console.info("Presentations listed: " + presentations.list.length)
                 if (presentations.list.length > 0) pageLoader.item.start(presentations.list[0])
+            } else if (selfTest === "shortcuts") {
+                root.page = "shortcuts"
+            } else if (selfTest === "upload") {
+                admin.uploadTest()
             } else if (selfTest === "admin") {
                 adminPanel.visible = true
                 admin.selfTest()

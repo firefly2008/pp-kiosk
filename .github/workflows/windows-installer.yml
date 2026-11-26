@@ -22,7 +22,7 @@ jobs:
         with:
           version: "6.8.3"
           arch: win64_msvc2022_64
-          modules: qtmultimedia qtimageformats
+          modules: qtmultimedia qtimageformats qtpdf
           cache: true
       - name: Inno Setup
         run: choco install innosetup -y --no-progress
@@ -38,7 +38,7 @@ jobs:
         run: |
           Add-Type -AssemblyName System.Windows.Forms, System.Drawing
           $log = "$env:LOCALAPPDATA\PPKiosk\ppkiosk.log"
-          $checks = [ordered]@{ 'home' = 'Home screen ready'; 'agenda' = 'Agenda test: now 2 title Dagbesteding next Lunch'; 'admin' = 'Admin test local 200 items'; 'stream' = 'Stream screen opened'; 'presentation' = 'Presentation started: Diner van de dag slides 1' }
+          $checks = [ordered]@{ 'home' = 'Home screen ready'; 'agenda' = 'Agenda test: now 2 title Dagbesteding next Lunch'; 'admin' = 'Admin test local 200 items'; 'stream' = 'Stream screen opened'; 'presentation' = 'Presentation started: Diner van de dag slides 1'; 'shortcuts' = 'Shortcuts screen opened: 16'; 'upload' = 'Upload test: Rooktest converted slides 2' }
           foreach ($mode in $checks.Keys) {
             $env:BIGSCREEN_SELFTEST = $mode
             New-Item -ItemType Directory -Force shots | Out-Null
