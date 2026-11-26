@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import QtQuick
 import QtQuick.Layouts
-import QtMultimedia
 
 Rectangle {
     id: page
@@ -13,7 +12,6 @@ Rectangle {
     readonly property color ink: "#1F2A44"
     readonly property color soft: "#5B6478"
     property string section: "video"
-    property int radioRow: -1
 
     readonly property var sections: [
         { key: "video", title: "Tv en video", icon: "📺", model: webVideo },
@@ -23,22 +21,11 @@ Rectangle {
     ]
     readonly property var current: sections.find(x => x.key === section)
 
-    MediaPlayer {
-        id: player
-        audioOutput: AudioOutput { volume: 0.8 }
-        onErrorOccurred: (error, text) => console.warn("Radio error: " + text)
-        onPlaybackStateChanged: console.info("Radio state " + playbackState)
-    }
-
-    function playRadio(row) {
-        const streams = radio.streamsAt(row)
-        if (!streams || streams.length === 0) return
-        radioRow = row
-        player.source = streams[0]
-        player.play()
-        console.info("Radio playing: " + radio.nameAt(row))
-    }
-    function stopRadio() { player.stop(); radioRow = -1; saver = false }
+    // De radio speelt in het startscherm (Main.qml), zodat hij doorspeelt op andere schermen
+    required property var home
+    readonly property int radioRow: home.radioRow
+    function playRadio(row) { home.playRadio(row) }
+    function stopRadio() { home.stopRadio() }
 
     function open(model, row) {
         if (model === radio) {
@@ -64,7 +51,7 @@ Rectangle {
             color: backTap.pressed ? "#DDE3EA" : "#FFFFFF"
             border.color: "#14000000"; border.width: 2
             Text { anchors.centerIn: parent; text: "‹  Terug"; font.pixelSize: 40 * page.s; font.bold: true; color: page.ink }
-            TapHandler { id: backTap; onTapped: { page.stopRadio(); page.back() } }
+            TapHandler { id: backTap; onTapped: page.back() }
         }
         Text {
             Layout.fillWidth: true
@@ -167,7 +154,7 @@ Rectangle {
             spacing: 24 * page.s
             Text {
                 Layout.fillWidth: true
-                text: page.radioRow >= 0 ? "📻  " + radio.nameAt(page.radioRow) + (player.playbackState === MediaPlayer.PlayingState ? "" : "  (laden…)") : ""
+                text: page.radioRow >= 0 ? "📻  " + radio.nameAt(page.radioRow) + (page.home.radioPlaying ? "" : "  (laden…)") : ""
                 font.pixelSize: 44 * page.s; font.bold: true; color: "#FFFFFF"
                 elide: Text.ElideRight
             }
@@ -178,102 +165,6 @@ Rectangle {
                 Text { anchors.centerIn: parent; text: "■  Stop"; font.pixelSize: 40 * page.s; font.bold: true; color: "#FFFFFF" }
                 TapHandler { id: stopTap; onTapped: page.stopRadio() }
             }
-        }
-    }
-
-    // ---------- Radio-screensaver: de zender zweeft over het scherm ----------
-    property bool saver: false
-    onSaverChanged: console.info(saver ? "Radio screensaver started" : "Radio screensaver stopped")
-    Timer {
-        interval: 5000; running: page.radioRow >= 0 && !page.saver; repeat: true
-        onTriggered: {
-            const min = agenda.settings.screensaverMinutes || 5
-            if (activity.idleSeconds() >= min * 60) page.saver = true
-        }
-    }
-    Connections {
-        target: activity
-        function onTouched() { page.saver = false }
-    }
-    Rectangle {
-        id: saverLayer
-        anchors.fill: parent
-        visible: page.saver && page.radioRow >= 0
-        z: 50
-        gradient: Gradient {
-            GradientStop { position: 0; color: "#0E1630" }
-            GradientStop { position: 1; color: "#05070F" }
-        }
-        // Tik ergens: screensaver weg, radio speelt door
-        MouseArea { anchors.fill: parent; onPressed: page.saver = false }
-
-        property real vx: 2.2 * page.s
-        property real vy: 1.6 * page.s
-        property color accent: page.radioRow >= 0 ? String(radio.accentAt(page.radioRow) || "#F2B33D") : "#F2B33D"
-        readonly property var accents: ["#F2B33D", "#E85D75", "#4FC3F7", "#8CC084", "#C3B1E1", "#FF8A3D"]
-        property int bounce: 0
-
-        Rectangle {
-            id: floater
-            width: 720 * page.s; height: 300 * page.s
-            radius: 48 * page.s
-            color: "#1B2547"
-            border.color: saverLayer.bounce > 0 ? saverLayer.accents[saverLayer.bounce % saverLayer.accents.length] : saverLayer.accent
-            border.width: 8 * page.s
-            x: (saverLayer.width - width) / 2; y: (saverLayer.height - height) / 2
-            RowLayout {
-                anchors { fill: parent; margins: 36 * page.s }
-                spacing: 32 * page.s
-                Rectangle {
-                    Layout.preferredWidth: 200 * page.s; Layout.preferredHeight: 200 * page.s
-                    radius: 36 * page.s
-                    color: saverLayer.accent
-                    Image {
-                        id: saverLogo
-                        anchors { fill: parent; margins: 24 * page.s }
-                        fillMode: Image.PreserveAspectFit
-                        source: page.radioRow >= 0 && !String(radio.iconAt(page.radioRow)).startsWith("glyph:") ? radio.iconAt(page.radioRow) : ""
-                        sourceSize.width: 256
-                    }
-                    Text {
-                        anchors.centerIn: parent
-                        visible: saverLogo.status !== Image.Ready
-                        text: "📻"
-                        font.family: Qt.platform.os === "windows" ? "Segoe UI Emoji" : "Noto Color Emoji"
-                        font.pixelSize: 110 * page.s
-                    }
-                }
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 8 * page.s
-                    Text {
-                        Layout.fillWidth: true
-                        text: page.radioRow >= 0 ? radio.nameAt(page.radioRow) : ""
-                        font.pixelSize: 64 * page.s; font.bold: true; color: "#FFFFFF"
-                        elide: Text.ElideRight
-                    }
-                    Text {
-                        Layout.fillWidth: true
-                        text: "♪  Nu op de radio"
-                        font.pixelSize: 38 * page.s; color: "#AEB8D6"
-                    }
-                }
-            }
-        }
-        Timer {
-            interval: 33; repeat: true; running: saverLayer.visible
-            onTriggered: {
-                let nx = floater.x + saverLayer.vx, ny = floater.y + saverLayer.vy
-                if (nx <= 0 || nx + floater.width >= saverLayer.width) { saverLayer.vx = -saverLayer.vx; saverLayer.bounce++ }
-                if (ny <= 0 || ny + floater.height >= saverLayer.height) { saverLayer.vy = -saverLayer.vy; saverLayer.bounce++ }
-                floater.x = Math.max(0, Math.min(nx, saverLayer.width - floater.width))
-                floater.y = Math.max(0, Math.min(ny, saverLayer.height - floater.height))
-            }
-        }
-        Text {
-            anchors { right: parent.right; bottom: parent.bottom; margins: 40 * page.s }
-            text: "Tik op het scherm om terug te gaan"
-            font.pixelSize: 30 * page.s; color: "#5B6688"
         }
     }
 

@@ -60,6 +60,7 @@ qt_add_resources(ppkiosk "admin" PREFIX "/" FILES admin/index.html)
 qt_add_resources(ppkiosk "demo" PREFIX "/" FILES demo/diner-van-de-dag.jpg)
 # Foto's voor het menubord (gemaakt met Figma AI)
 qt_add_resources(ppkiosk "food" PREFIX "/food" BASE assets/food FILES assets/food/aardappel-vlees.jpg assets/food/burger.jpg assets/food/friet.jpg assets/food/kip-rijst.jpg assets/food/nasi.jpg assets/food/pannenkoek.jpg assets/food/pasta.jpg assets/food/pizza.jpg assets/food/salade.jpg assets/food/soep.jpg assets/food/stamppot.jpg assets/food/vis.jpg)
+qt_add_resources(ppkiosk "lineicons" PREFIX "/icons" BASE assets/icons FILES assets/icons/presentaties.png assets/icons/stream.png assets/icons/snelkoppelingen.png assets/icons/spelletjes.png assets/icons/muziek.png)
 # PowerPoint omzetten (Windows): komt in de resources als :/scripts/ppt-export.ps1
 set_source_files_properties(src/ppt-export.ps1 PROPERTIES QT_RESOURCE_ALIAS ppt-export.ps1)
 qt_add_resources(ppkiosk "scripts" PREFIX "/scripts" FILES src/ppt-export.ps1)
@@ -79,7 +80,7 @@ else()
 endif()
 
 # Zonder alias komt het bestand in de resources onder .../qml/Main.qml terecht
-set(PPKIOSK_QML_FILES qml/Main.qml qml/StreamScreen.qml qml/PresentationScreen.qml qml/ShortcutsScreen.qml qml/FocusButton.qml qml/OnScreenKeyboard.qml)
+set(PPKIOSK_QML_FILES qml/Main.qml qml/StreamScreen.qml qml/PresentationScreen.qml qml/ShortcutsScreen.qml qml/FocusButton.qml qml/OnScreenKeyboard.qml qml/GamesScreen.qml)
 foreach(qml_file IN LISTS PPKIOSK_QML_FILES)
     get_filename_component(qml_name ${qml_file} NAME)
     set_source_files_properties(${qml_file} PROPERTIES QT_RESOURCE_ALIAS ${qml_name})

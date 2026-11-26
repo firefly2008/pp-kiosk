@@ -113,6 +113,7 @@ progress{width:100%;height:16px}
   <button data-tab="media">🎧 Kijk &amp; luister</button>
   <button data-tab="links">⭐ Snelkoppelingen</button>
   <button data-tab="screen">🖥️ Scherm</button>
+  <button data-tab="live">📺 Live</button>
   <button data-tab="kiosks">🏠 Kiosken</button>
 </nav>
 
@@ -214,6 +215,37 @@ progress{width:100%;height:16px}
 
     <span>Nieuws</span>
     <label class="toggle"><input type="checkbox" id="sNews"> Laatste nieuws van de NOS op het startscherm (wisselt met de mededelingen)</label>
+    <span>Spelletjes</span>
+    <label class="toggle"><input type="checkbox" id="sGames"> Tegel "Spelletjes" op het startscherm (memory en puzzel)</label>
+
+    <label for="sTheme">Thema</label>
+    <div>
+      <select id="sTheme"><option value="standaard">Vrolijk (standaard)</option><option value="volwassen">Volwassen: rustige kleuren, strakke vormen</option></select>
+      <p class="hint">Volwassen: donkerblauw, zand en salie, minder ronde hoeken en lijn-pictogrammen op de tegels.</p>
+    </div>
+
+    <label for="sBgType">Achtergrond</label>
+    <div>
+      <select id="sBgType"><option value="daypart">Wisselt met het dagdeel</option><option value="color">Eén kleur</option><option value="photo">Eigen foto</option></select>
+      <div id="bgColorRow" class="when" style="margin-top:8px"><label>Kleur <input type="color" id="sBgColor" style="width:64px;height:40px;padding:2px"></label></div>
+      <div id="bgPhotoRow" style="margin-top:8px">
+        <img id="bgPreview" alt="" style="max-width:240px;max-height:135px;border-radius:8px;display:none">
+        <div><input type="file" id="bgFile" accept="image/png,image/jpeg"></div>
+        <p class="hint">Er komt een lichte laag over de foto, zodat de tekst goed leesbaar blijft.</p>
+      </div>
+    </div>
+
+    <span>Muziek per dagdeel</span>
+    <div>
+      <div class="when">
+        <label>Ochtend <select id="sMusOchtend" style="width:auto"></select></label>
+        <label>Middag <select id="sMusMiddag" style="width:auto"></select></label>
+        <label>Avond <select id="sMusAvond" style="width:auto"></select></label>
+      </div>
+      <label class="toggle" style="margin-top:8px"><input type="checkbox" id="sMusAuto"> Vanzelf aanzetten als het dagdeel begint ('s nachts uit)</label>
+      <p class="hint">Bovenin het startscherm staat een knop om de zender van nu aan of uit te zetten.</p>
+    </div>
+
     <span>Hoog contrast</span>
     <label class="toggle"><input type="checkbox" id="sContrast"> Zwarte achtergrond, witte en gele tekst (voor slechtzienden)</label>
 
@@ -237,6 +269,14 @@ progress{width:100%;height:16px}
       </div>
       <p class="hint">Leeg = geen nachtstand. Aanraken = 2 minuten wakker.</p>
     </div>
+  </div>
+ </section>
+
+ <section id="tab-live" hidden>
+  <h2>Live: zo ziet de kiosk er nu uit</h2>
+  <div class="card">
+    <img id="liveImg" alt="Kioskscherm" style="width:100%;display:block;border-radius:8px;background:#222;aspect-ratio:16/9">
+    <p class="hint" id="liveInfo">Laden…</p>
   </div>
  </section>
 
@@ -493,9 +533,9 @@ $('addSpecial').onclick = () => { data.special.push({title: '', date: '', icon: 
 
 // ---------- Scherm ----------
 const S = {sName: 'name', sSpeak: 'speak', sChime: 'chime', sScale: 'textScale', sContrast: 'contrast', sSaver: 'screensaverMinutes',
-           sSaverPres: 'screensaverPresentation', sNightFrom: 'nightFrom', sNightTo: 'nightTo', sNightMode: 'nightMode', sDinner: 'dinnerTime', sNews: 'news'};
+           sSaverPres: 'screensaverPresentation', sNightFrom: 'nightFrom', sNightTo: 'nightTo', sNightMode: 'nightMode', sDinner: 'dinnerTime', sNews: 'news', sGames: 'games', sTheme: 'theme'};
 async function renderScreen(){
-  const s = data.settings = Object.assign({speak: false, chime: true, textScale: 1, contrast: false, screensaverMinutes: 5, screensaverPresentation: 'Menu van de week', dinnerTime: '17:00', news: true, nightFrom: '', nightTo: '', nightMode: 'dim', name: ''}, data.settings || {});
+  const s = data.settings = Object.assign({speak: false, chime: true, textScale: 1, contrast: false, screensaverMinutes: 5, screensaverPresentation: 'Menu van de week', dinnerTime: '17:00', news: true, games: true, theme: 'standaard', nightFrom: '', nightTo: '', nightMode: 'dim', name: ''}, data.settings || {});
   try {
     const p = await api('GET', null, '/api/presentations');
     $('sSaverPres').innerHTML = '<option value="">De eerste presentatie</option>' + p.items.map(x => `<option value="${esc(x.name)}">${esc(x.title)}</option>`).join('');
@@ -505,6 +545,7 @@ async function renderScreen(){
     if (el.type === 'checkbox') el.checked = !!s[k];
     else el.value = String(s[k] ?? '');
   }
+  renderLook();
   $('sScale').value = [1, 1.2, 1.4].reduce((a, b) => Math.abs(b - s.textScale) < Math.abs(a - s.textScale) ? b : a, 1);
   showName();
 }
@@ -515,6 +556,60 @@ for (const [id, k] of Object.entries(S)) {
     changed(); if (k === 'name') showName();
   });
 }
+// Achtergrond en muziek per dagdeel
+const MUS = {sMusOchtend: 'ochtend', sMusMiddag: 'middag', sMusAvond: 'avond'};
+async function renderLook(){
+  const s = data.settings;
+  s.background = Object.assign({type: 'daypart', color: '#ECE6DA', photo: ''}, s.background || {});
+  s.music = Object.assign({ochtend: '', middag: '', avond: '', auto: false}, s.music || {});
+  $('sBgType').value = s.background.type; $('sBgColor').value = s.background.color;
+  showBg();
+  let names = [];
+  try { const m = media || await api('GET', null, '/api/media'); names = (m.radio || []).filter(x => x.on).map(x => x.name); } catch (e) {}
+  for (const [id, k] of Object.entries(MUS)) {
+    const cur = s.music[k];
+    const list = cur && !names.includes(cur) ? [cur, ...names] : names;
+    $(id).innerHTML = '<option value="">Geen muziek</option>' + list.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    $(id).value = cur || '';
+  }
+  $('sMusAuto').checked = !!s.music.auto;
+}
+function showBg(){
+  const b = data.settings.background;
+  $('bgColorRow').hidden = b.type !== 'color';
+  $('bgPhotoRow').hidden = b.type !== 'photo';
+  $('bgPreview').style.display = b.photo ? 'block' : 'none';
+  if (b.photo) $('bgPreview').src = pictoUrl(b.photo);
+}
+$('sBgType').addEventListener('input', () => { data.settings.background.type = $('sBgType').value; showBg(); changed(); });
+$('sBgColor').addEventListener('input', () => { data.settings.background.color = $('sBgColor').value; changed(); });
+$('bgFile').addEventListener('change', async () => {
+  const f = $('bgFile').files[0]; if (!f) return;
+  try {
+    const r = await fetch(base + '/api/picto?file=' + encodeURIComponent(f.name), {method: 'POST', headers: {'X-Code': code}, body: f});
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || 'Uploaden mislukt');
+    data.settings.background.photo = j.name; data.settings.background.type = 'photo';
+    showBg(); changed();
+  } catch (err) { alert(f.name + ': ' + err.message); }
+  $('bgFile').value = '';
+});
+for (const [id, k] of Object.entries(MUS)) $(id).addEventListener('input', () => { data.settings.music[k] = $(id).value; changed(); });
+$('sMusAuto').addEventListener('input', () => { data.settings.music.auto = $('sMusAuto').checked; changed(); });
+
+// ---------- Live ----------
+let liveTimer = null, liveUrl = '';
+async function liveShot(){
+  if (tab !== 'live' || document.hidden) return;
+  try {
+    const r = await fetch(base + '/api/screen?t=' + Date.now(), {headers: {'X-Code': code}});
+    if (!r.ok) throw new Error(r.status === 503 ? 'Scherm nog niet klaar' : 'Kon het scherm niet ophalen');
+    const u = URL.createObjectURL(await r.blob());
+    $('liveImg').src = u; if (liveUrl) URL.revokeObjectURL(liveUrl); liveUrl = u;
+    $('liveInfo').textContent = 'Bijgewerkt om ' + new Date().toLocaleTimeString('nl-NL') + ' · ververst elke 3 seconden';
+  } catch (e) { $('liveInfo').textContent = e.message; }
+}
+
 function showName(){
   const n = data.settings && data.settings.name;
   $('title').textContent = 'PP Kiosk beheer' + (n ? ' · ' + n : '');
@@ -546,7 +641,9 @@ function showTab(t){
   tab = t;
   for (const b of $('tabs').querySelectorAll('button')) b.classList.toggle('on', b.dataset.tab === t);
   for (const s of document.querySelectorAll('main > section')) s.hidden = s.id !== 'tab-' + t;
-  $('bar').hidden = t === 'pres';
+  $('bar').hidden = t === 'pres' || t === 'live';
+  clearInterval(liveTimer); liveTimer = null;
+  if (t === 'live') { liveShot(); liveTimer = setInterval(liveShot, 3000); }
   if (t === 'pres') loadPres();
   if (t === 'links' && !links) api('GET', null, '/api/shortcuts').then(j => { links = j.items; renderLinks(); }).catch(e => alert(e.message));
   if (t === 'media' && !media) api('GET', null, '/api/media').then(j => { media = j; renderMedia(); }).catch(e => alert(e.message));

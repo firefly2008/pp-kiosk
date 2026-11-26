@@ -9,6 +9,7 @@
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QJSValue>
 #include <QRegularExpression>
 #include <QSaveFile>
 #include <QUuid>
@@ -264,6 +265,11 @@ bool Agenda::setJson(const QByteArray &json, QString *error)
     const double scale = si.value(QStringLiteral("textScale")).toDouble(1.0);
     const QString nightMode = si.value(QStringLiteral("nightMode")).toString();
     const QString dinnerTime = si.value(QStringLiteral("dinnerTime")).toString();
+    const QJsonObject music = si.value(QStringLiteral("music")).toObject();
+    const QJsonObject bgIn = si.value(QStringLiteral("background")).toObject();
+    const QString bgType = bgIn.value(QStringLiteral("type")).toString();
+    const QString bgColor = bgIn.value(QStringLiteral("color")).toString();
+    static const QRegularExpression colorRe(QStringLiteral("^#[0-9A-Fa-f]{6}$"));
     const QJsonObject settings{
         {QStringLiteral("name"), si.value(QStringLiteral("name")).toString().trimmed().left(40)},
         {QStringLiteral("speak"), si.value(QStringLiteral("speak")).toBool(false)},
@@ -277,6 +283,19 @@ bool Agenda::setJson(const QByteArray &json, QString *error)
         {QStringLiteral("nightMode"), nightMode == QLatin1String("black") ? nightMode : QStringLiteral("dim")},
         {QStringLiteral("dinnerTime"), validTime(dinnerTime) ? dinnerTime : QStringLiteral("17:00")},
         {QStringLiteral("news"), si.value(QStringLiteral("news")).toBool(true)},
+        {QStringLiteral("games"), si.value(QStringLiteral("games")).toBool(true)},
+        {QStringLiteral("theme"), si.value(QStringLiteral("theme")).toString() == QLatin1String("volwassen") ? QStringLiteral("volwassen") : QStringLiteral("standaard")},
+        {QStringLiteral("background"), QJsonObject{
+             {QStringLiteral("type"), (bgType == QLatin1String("color") || bgType == QLatin1String("photo")) ? bgType : QStringLiteral("daypart")},
+             {QStringLiteral("color"), colorRe.match(bgColor).hasMatch() ? bgColor : QStringLiteral("#ECE6DA")},
+             {QStringLiteral("photo"), QFileInfo(bgIn.value(QStringLiteral("photo")).toString()).fileName().left(120)},
+         }},
+        {QStringLiteral("music"), QJsonObject{
+             {QStringLiteral("ochtend"), music.value(QStringLiteral("ochtend")).toString().trimmed().left(80)},
+             {QStringLiteral("middag"), music.value(QStringLiteral("middag")).toString().trimmed().left(80)},
+             {QStringLiteral("avond"), music.value(QStringLiteral("avond")).toString().trimmed().left(80)},
+             {QStringLiteral("auto"), music.value(QStringLiteral("auto")).toBool(false)},
+         }},
     };
     m_data = QJsonObject{{QStringLiteral("version"), 3}, {QStringLiteral("items"), items}, {QStringLiteral("messages"), messages},
                          {QStringLiteral("menu"), menu}, {QStringLiteral("birthdays"), birthdays}, {QStringLiteral("special"), special},
@@ -310,6 +329,22 @@ QVariantMap Agenda::settings() const
     if (!m.contains(QStringLiteral("nightMode"))) {
         m.insert(QStringLiteral("nightMode"), QStringLiteral("dim"));
     }
+    if (!m.contains(QStringLiteral("games"))) {
+        m.insert(QStringLiteral("games"), true);
+    }
+    if (!m.contains(QStringLiteral("music"))) {
+        m.insert(QStringLiteral("music"), QVariantMap{{QStringLiteral("auto"), false}});
+    }
+    if (!m.contains(QStringLiteral("theme"))) {
+        m.insert(QStringLiteral("theme"), QStringLiteral("standaard"));
+    }
+    // Eigen achtergrondfoto: volledige adres voor het kioskscherm
+    const QVariantMap bg = m.value(QStringLiteral("background")).toMap();
+    const QString photo = bg.value(QStringLiteral("photo")).toString();
+    const QString photoPath = m_pictoDir + QLatin1Char('/') + photo;
+    m.insert(QStringLiteral("backgroundUrl"), bg.value(QStringLiteral("type")).toString() == QLatin1String("photo") && !photo.isEmpty()
+                                                     && QFileInfo::exists(photoPath)
+                                                 ? QUrl::fromLocalFile(photoPath).toString() : QString());
     if (!m.contains(QStringLiteral("news"))) {
         m.insert(QStringLiteral("news"), true);
     }
@@ -354,6 +389,27 @@ void Agenda::setTestTime(const QString &time)
     m_testTime = validTime(time) ? time : QString();
     m_stamp.clear();
     recompute();
+}
+
+void Agenda::setTestSetting(const QString &key, const QVariant &value)
+{
+    QJsonObject settings = m_data.value(QStringLiteral("settings")).toObject();
+    QVariant v = value;
+    if (v.userType() == qMetaTypeId<QJSValue>()) {
+        v = v.value<QJSValue>().toVariant();
+    }
+    settings.insert(key, QJsonValue::fromVariant(v));
+    m_data.insert(QStringLiteral("settings"), settings);
+    Q_EMIT changed();
+}
+
+QString Agenda::testPhoto()
+{
+    const QString name = QStringLiteral("test-achtergrond.jpg");
+    QFile::remove(m_pictoDir + QLatin1Char('/') + name);
+    QFile::copy(QStringLiteral(":/food/salade.jpg"), m_pictoDir + QLatin1Char('/') + name);
+    QFile::setPermissions(m_pictoDir + QLatin1Char('/') + name, QFile::ReadOwner | QFile::WriteOwner);
+    return name;
 }
 
 void Agenda::recompute()

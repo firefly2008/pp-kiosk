@@ -1,5 +1,23 @@
 [
   {
+    "version": "0.7.0",
+    "date": "2026-11-26",
+    "notes": [
+      "Muziek per dagdeel: kies een radiozender voor ochtend, middag en avond. Hij kan vanzelf aangaan; bovenin staat een knop aan/uit. De radio speelt door op andere schermen.",
+      "Spelletjes: memory (6 of 10 paren) en een fotopuzzel (9 of 16 stukjes), groot en met één vinger te spelen.",
+      "Volwassen thema: rustige kleuren (donkerblauw, zand, salie), strakkere vormen en lijn-pictogrammen.",
+      "Eigen achtergrond: één kleur of een eigen foto, met een lichte laag erover zodat alles leesbaar blijft.",
+      "Beheerpagina: nieuw tabblad Live, toont elke 3 seconden hoe het kioskscherm er nu uitziet."
+    ],
+    "notes_en": [
+      "Radio station per part of the day.",
+      "Games: memory and photo puzzle.",
+      "Grown-up theme.",
+      "Custom background colour or photo.",
+      "Live screen preview in the admin page."
+    ]
+  },
+  {
     "version": "0.6.0",
     "date": "2026-11-26",
     "notes": [

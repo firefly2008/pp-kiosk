@@ -52,6 +52,9 @@ public:
 
     // Rooktest en beheer: tijd vastzetten ("HH:mm"), leeg = echte tijd
     Q_INVOKABLE void setTestTime(const QString &time);
+    // Alleen voor de rooktest: instelling tijdelijk veranderen (wordt niet opgeslagen)
+    Q_INVOKABLE void setTestSetting(const QString &key, const QVariant &value);
+    Q_INVOKABLE QString testPhoto();
 
 Q_SIGNALS:
     void changed();
