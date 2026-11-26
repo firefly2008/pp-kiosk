@@ -5,12 +5,20 @@ import QtQuick.Layouts
 
 Rectangle {
     id: page
-    color: "#F7F4EE"
+    color: glass ? "#0A0F1E" : "#F7F4EE"
     required property real s
     signal back()
 
-    readonly property color ink: "#1F2A44"
-    readonly property color soft: "#5B6478"
+    // Glas-thema (gekozen op de beheerpagina): donker met gloed en doorschijnende kaarten
+    readonly property bool glass: agenda.settings.theme === "glas" && agenda.settings.contrast !== true
+    readonly property real glassAlpha: 1 - Math.max(50, Math.min(95, agenda.settings.glassTransparency || 80)) / 100
+    readonly property color cardBg: glass ? Qt.rgba(1, 1, 1, glassAlpha) : "#FFFFFF"
+    readonly property color pressBg: glass ? "#40FFFFFF" : "#DDE3EA"
+    readonly property color lineColor: glass ? "#40FFFFFF" : "#14000000"
+    GlassBackground { anchors.fill: parent; visible: page.glass }
+
+    readonly property color ink: glass ? "#FFFFFF" : "#1F2A44"
+    readonly property color soft: glass ? "#C3CAE0" : "#5B6478"
     readonly property string emojiFont: Qt.platform.os === "windows" ? "Segoe UI Emoji" : "Noto Color Emoji"
     property var days: agenda.week()
     Connections { target: agenda; function onChanged() { page.days = agenda.week() } }
@@ -24,8 +32,8 @@ Rectangle {
         Rectangle {
             Layout.preferredWidth: 220 * page.s; Layout.preferredHeight: 100 * page.s
             radius: 24 * page.s
-            color: backTap.pressed ? "#DDE3EA" : "#FFFFFF"
-            border.color: "#14000000"; border.width: 2
+            color: backTap.pressed ? page.pressBg : page.cardBg
+            border.color: page.lineColor; border.width: 2
             Text { anchors.centerIn: parent; text: "‹  Terug"; font.pixelSize: 40 * page.s; font.bold: true; color: page.ink }
             TapHandler { id: backTap; onTapped: page.back() }
         }
@@ -53,8 +61,8 @@ Rectangle {
                 width: (cols.width - 6 * cols.spacing) / 7
                 height: cols.height
                 radius: 24 * page.s
-                color: today ? "#FFFFFF" : "#FBFAF7"
-                border.color: today ? "#2E8B57" : "#14000000"
+                color: page.glass ? Qt.rgba(1, 1, 1, today ? page.glassAlpha + 0.08 : page.glassAlpha) : today ? "#FFFFFF" : "#FBFAF7"
+                border.color: today ? (page.glass ? "#8BE9C0" : "#2E8B57") : page.lineColor
                 border.width: today ? 6 * page.s : 2
 
                 Rectangle {
@@ -62,7 +70,7 @@ Rectangle {
                     anchors { left: parent.left; right: parent.right; top: parent.top; margins: day.border.width }
                     height: 112 * page.s
                     radius: 20 * page.s
-                    color: day.today ? "#2E8B57" : "#EEF1F5"
+                    color: day.today ? (page.glass ? "#992E8B57" : "#2E8B57") : (page.glass ? "#1AFFFFFF" : "#EEF1F5")
                     Column {
                         anchors.centerIn: parent
                         Text {
@@ -113,7 +121,7 @@ Rectangle {
                         height: 66 * page.s
                         radius: 14 * page.s
                         color: Qt.rgba(0, 0, 0, 0)
-                        Rectangle { anchors.fill: parent; radius: parent.radius; color: modelData.color || "#DDE3EA"; opacity: 0.28 }
+                        Rectangle { anchors.fill: parent; radius: parent.radius; color: modelData.color || "#DDE3EA"; opacity: page.glass ? 0.36 : 0.28 }
                         Item {
                             id: ic
                             anchors { left: parent.left; leftMargin: 8 * page.s; verticalCenter: parent.verticalCenter }
@@ -154,7 +162,7 @@ Rectangle {
                     anchors { left: parent.left; right: parent.right; bottom: parent.bottom; margins: 12 * page.s }
                     height: visible ? dish.implicitHeight + 20 * page.s : 0
                     radius: 14 * page.s
-                    color: "#FFF4CC"
+                    color: page.glass ? "#33FFD970" : "#FFF4CC"
                     Text {
                         id: dishIcon
                         anchors { left: parent.left; verticalCenter: parent.verticalCenter; leftMargin: 10 * page.s }

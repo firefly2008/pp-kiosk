@@ -5,11 +5,20 @@ import QtQuick.Layouts
 
 Rectangle {
     id: page
-    color: "#F7F4EE"
+    color: glass ? "#0A0F1E" : "#F7F4EE"
     required property real s
     signal back()
 
-    readonly property color ink: "#1F2A44"
+    // Glas-thema (gekozen op de beheerpagina): donker met gloed en doorschijnende kaarten
+    readonly property bool glass: agenda.settings.theme === "glas" && agenda.settings.contrast !== true
+    readonly property real glassAlpha: 1 - Math.max(50, Math.min(95, agenda.settings.glassTransparency || 80)) / 100
+    readonly property color cardBg: glass ? Qt.rgba(1, 1, 1, glassAlpha) : "#FFFFFF"
+    readonly property color pressBg: glass ? "#40FFFFFF" : "#DDE3EA"
+    readonly property color lineColor: glass ? "#40FFFFFF" : "#14000000"
+    GlassBackground { anchors.fill: parent; visible: page.glass }
+
+    readonly property color soft: glass ? "#C3CAE0" : "#5B6478"
+    readonly property color ink: glass ? "#FFFFFF" : "#1F2A44"
     property var show: null          // gekozen presentatie (item uit presentations.list)
     property var slides: []
     property int slide: 0
@@ -50,8 +59,8 @@ Rectangle {
             Rectangle {
                 Layout.preferredWidth: 220 * page.s; Layout.preferredHeight: 100 * page.s
                 radius: 24 * page.s
-                color: backTap.pressed ? "#DDE3EA" : "#FFFFFF"
-                border.color: "#14000000"; border.width: 2
+                color: backTap.pressed ? page.pressBg : page.cardBg
+                border.color: page.lineColor; border.width: 2
                 Text { anchors.centerIn: parent; text: "‹  Terug"; font.pixelSize: 40 * page.s; font.bold: true; color: page.ink }
                 TapHandler { id: backTap; onTapped: page.back() }
             }
@@ -76,7 +85,7 @@ Rectangle {
                 Rectangle {
                     anchors { fill: parent; margins: 14 * page.s }
                     radius: 28 * page.s
-                    color: "#FFFFFF"
+                    color: page.cardBg
                     clip: true
                     Image {
                         anchors { left: parent.left; right: parent.right; top: parent.top; bottom: label.top }
@@ -89,7 +98,7 @@ Rectangle {
                         id: label
                         anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
                         height: 100 * page.s
-                        color: openTap.pressed ? "#E6F3EC" : "#FFFFFF"
+                        color: openTap.pressed ? (page.glass ? "#40FFFFFF" : "#E6F3EC") : page.cardBg
                         Text {
                             anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: 24 * page.s }
                             text: modelData.title + "  ·  " + modelData.count + (modelData.count === 1 ? " dia" : " dia's")
@@ -104,7 +113,7 @@ Rectangle {
                 anchors.centerIn: parent
                 visible: grid.count === 0
                 text: "Nog geen presentaties. Voeg ze toe via de beheerpagina."
-                font.pixelSize: 40 * page.s; color: "#5B6478"
+                font.pixelSize: 40 * page.s; color: page.soft
             }
         }
     }

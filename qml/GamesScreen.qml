@@ -6,12 +6,20 @@ import QtQuick.Layouts
 
 Rectangle {
     id: page
-    color: "#F7F4EE"
+    color: glass ? "#0A0F1E" : "#F7F4EE"
     required property real s
     signal back()
 
-    readonly property color ink: "#1F2A44"
-    readonly property color soft: "#5B6478"
+    // Glas-thema (gekozen op de beheerpagina): donker met gloed en doorschijnende kaarten
+    readonly property bool glass: agenda.settings.theme === "glas" && agenda.settings.contrast !== true
+    readonly property real glassAlpha: 1 - Math.max(50, Math.min(95, agenda.settings.glassTransparency || 80)) / 100
+    readonly property color cardBg: glass ? Qt.rgba(1, 1, 1, glassAlpha) : "#FFFFFF"
+    readonly property color pressBg: glass ? "#40FFFFFF" : "#DDE3EA"
+    readonly property color lineColor: glass ? "#40FFFFFF" : "#14000000"
+    GlassBackground { anchors.fill: parent; visible: page.glass }
+
+    readonly property color ink: glass ? "#FFFFFF" : "#1F2A44"
+    readonly property color soft: glass ? "#C3CAE0" : "#5B6478"
     readonly property string emojiFont: Qt.platform.os === "windows" ? "Segoe UI Emoji" : "Noto Color Emoji"
     property string game: ""          // "", "memory" of "puzzle"
     property bool done: false
@@ -100,8 +108,8 @@ Rectangle {
         Rectangle {
             Layout.preferredWidth: 220 * page.s; Layout.preferredHeight: 100 * page.s
             radius: 24 * page.s
-            color: backTap.pressed ? "#DDE3EA" : "#FFFFFF"
-            border.color: "#14000000"; border.width: 2
+            color: backTap.pressed ? page.pressBg : page.cardBg
+            border.color: page.lineColor; border.width: 2
             Text { anchors.centerIn: parent; text: "‹  Terug"; font.pixelSize: 40 * page.s; font.bold: true; color: page.ink }
             TapHandler { id: backTap; onTapped: { if (page.game !== "") page.game = ""; else page.back() } }
         }
@@ -127,7 +135,8 @@ Rectangle {
         property color tint
         signal chosen()
         radius: 36 * page.s
-        color: choiceTap.pressed ? Qt.darker(tint, 1.12) : tint
+        color: choiceTap.pressed ? Qt.darker(tint, 1.12) : (page.glass ? Qt.rgba(tint.r, tint.g, tint.b, 0.45) : tint)
+        border.color: page.glass ? "#55FFFFFF" : "transparent"; border.width: page.glass ? 2 : 0
         Column {
             anchors.centerIn: parent
             spacing: 12 * page.s
@@ -167,7 +176,7 @@ Rectangle {
                     Rectangle {
                         anchors { fill: parent; margins: 10 * page.s }
                         radius: 28 * page.s
-                        color: card.found ? "#DFF3E6" : card.open ? "#FFFFFF" : (cardTap.pressed ? "#3F7FC0" : "#5DA9E9")
+                        color: card.found ? (page.glass ? "#4D6CC28B" : "#DFF3E6") : card.open ? (page.glass ? "#E6FFFFFF" : "#FFFFFF") : (cardTap.pressed ? "#3F7FC0" : (page.glass ? "#995DA9E9" : "#5DA9E9"))
                         border.color: card.found ? "#6CC28B" : "#14000000"; border.width: card.found ? 6 * page.s : 2
                         Text {
                             anchors.centerIn: parent
@@ -244,7 +253,7 @@ Rectangle {
         visible: page.done
         width: 900 * page.s; height: 420 * page.s
         radius: 40 * page.s
-        color: "#FFFFFF"
+        color: page.glass ? "#E61A2036" : "#FFFFFF"
         border.color: "#6CC28B"; border.width: 8 * page.s
         Column {
             anchors.centerIn: parent
@@ -261,7 +270,7 @@ Rectangle {
                 }
                 Rectangle {
                     width: 320 * page.s; height: 110 * page.s; radius: 28 * page.s
-                    color: stopTap.pressed ? "#DDE3EA" : "#EEF1F5"
+                    color: stopTap.pressed ? page.pressBg : (page.glass ? "#26FFFFFF" : "#EEF1F5")
                     Text { anchors.centerIn: parent; text: "Stoppen"; font.pixelSize: 44 * page.s; font.bold: true; color: page.ink }
                     TapHandler { id: stopTap; onTapped: { page.done = false; page.game = "" } }
                 }

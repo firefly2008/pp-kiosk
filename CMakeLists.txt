@@ -88,7 +88,7 @@ else()
 endif()
 
 # Zonder alias komt het bestand in de resources onder .../qml/Main.qml terecht
-set(PPKIOSK_QML_FILES qml/Main.qml qml/StreamScreen.qml qml/PresentationScreen.qml qml/ShortcutsScreen.qml qml/FocusButton.qml qml/OnScreenKeyboard.qml qml/GamesScreen.qml qml/WeekScreen.qml)
+set(PPKIOSK_QML_FILES qml/Main.qml qml/StreamScreen.qml qml/PresentationScreen.qml qml/ShortcutsScreen.qml qml/FocusButton.qml qml/OnScreenKeyboard.qml qml/GamesScreen.qml qml/WeekScreen.qml qml/GlassBackground.qml)
 foreach(qml_file IN LISTS PPKIOSK_QML_FILES)
     get_filename_component(qml_name ${qml_file} NAME)
     set_source_files_properties(${qml_file} PROPERTIES QT_RESOURCE_ALIAS ${qml_name})

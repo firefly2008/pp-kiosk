@@ -205,12 +205,105 @@ QImage MenuBoard::render(const QString &dayLabel, const QString &dateText, const
     return img;
 }
 
+QImage MenuBoard::renderGlass(const QString &dayLabel, const QString &dateText, const QString &dish, const QString &note,
+                              const QString &time, const QImage &photo)
+{
+    QImage img(1920, 1080, QImage::Format_RGB32);
+    QPainter p(&img);
+    p.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform);
+    const QColor soft(0xC3, 0xCA, 0xE0);
+    const QColor mint(0x8B, 0xE9, 0xC0);
+
+    // Donkere achtergrond met zachte, lichtgevende kleurvlekken
+    p.fillRect(img.rect(), QColor(0x0A, 0x0F, 0x1E));
+    const struct { const char *name; int x, y, size; double opacity; } blobs[] = {
+        {"violet", 220, 180, 1300, 0.8}, {"blauw", 1700, 260, 1200, 0.75}, {"turquoise", 520, 1050, 1200, 0.7}, {"roze", 1820, 1000, 1100, 0.55}};
+    for (const auto &b : blobs) {
+        const QImage blob = QImage(QStringLiteral(":/glass/%1.png").arg(QLatin1String(b.name)))
+                                .scaled(b.size, b.size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        p.setOpacity(b.opacity);
+        p.drawImage(b.x - b.size / 2, b.y - b.size / 2, blob);
+    }
+    p.setOpacity(1);
+
+    // Grote glaskaart
+    const QRectF card(80, 80, 1760, 920);
+    p.setPen(QPen(QColor(255, 255, 255, 90), 2));
+    p.setBrush(QColor(255, 255, 255, 34));
+    p.drawRoundedRect(card, 56, 56);
+    // Lichte rand bovenaan (lichtbreking)
+    p.setPen(QPen(QColor(255, 255, 255, 140), 2));
+    p.drawLine(QPointF(card.left() + 70, card.top() + 3), QPointF(card.right() - 70, card.top() + 3));
+
+    // Foto links, afgeronde hoeken
+    const QRectF photoBox(130, 130, 820, 820);
+    if (!photo.isNull()) {
+        const QImage square = photo.scaled(int(photoBox.width()), int(photoBox.height()), Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
+        QPainterPath clip;
+        clip.addRoundedRect(photoBox, 40, 40);
+        p.save();
+        p.setClipPath(clip);
+        p.drawImage(QPointF(photoBox.center().x() - square.width() / 2.0, photoBox.center().y() - square.height() / 2.0), square);
+        p.restore();
+        p.setPen(QPen(QColor(255, 255, 255, 70), 2));
+        p.setBrush(Qt::NoBrush);
+        p.drawRoundedRect(photoBox, 40, 40);
+    }
+
+    // Rechts: dag (pill), datum, gerecht, toelichting
+    const int left = 1030;
+    const int width = 1920 - left - 150;
+    p.setFont(boardFont(46, QFont::Bold));
+    const QString label = dayLabel.left(1).toUpper() + dayLabel.mid(1);
+    const int pillW = p.fontMetrics().horizontalAdvance(label) + 72;
+    p.setPen(QPen(QColor(255, 255, 255, 110), 2));
+    p.setBrush(QColor(255, 255, 255, 46));
+    p.drawRoundedRect(QRectF(left, 150, pillW, 84), 42, 42);
+    p.setPen(Qt::white);
+    p.drawText(QRectF(left, 150, pillW, 84), Qt::AlignCenter, label);
+
+    p.setPen(soft);
+    p.setFont(boardFont(38, QFont::Medium));
+    p.drawText(QRect(left + 6, 250, width, 56), Qt::AlignLeft | Qt::AlignVCenter, dateText);
+
+    const QRect dishBox(left, 330, width, 290);
+    p.setPen(Qt::white);
+    const int used = fitText(p, dishBox, dish, 116, 58, QFont::Bold);
+    p.drawText(dishBox, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, dish);
+    if (!note.isEmpty()) {
+        const QRect noteBox(left + 4, dishBox.top() + used + 16, width, qMax(60, 740 - (dishBox.top() + used + 16)));
+        p.setPen(soft);
+        fitText(p, noteBox, note, 46, 30, QFont::Medium);
+        p.drawText(noteBox, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, note);
+    }
+
+    // Tijd: gloeiende pill
+    const QRectF timeBox(left, 760, 420, 120);
+    QLinearGradient tg(timeBox.topLeft(), timeBox.bottomRight());
+    tg.setColorAt(0, QColor(139, 92, 246, 230));
+    tg.setColorAt(1, QColor(59, 130, 246, 230));
+    p.setPen(QPen(QColor(255, 255, 255, 120), 2));
+    p.setBrush(tg);
+    p.drawRoundedRect(timeBox, 60, 60);
+    p.setPen(Qt::white);
+    p.setFont(boardFont(60, QFont::Bold));
+    p.drawText(timeBox, Qt::AlignCenter, time + QStringLiteral(" uur"));
+
+    p.setPen(mint);
+    p.setFont(boardFont(46, QFont::Bold));
+    p.drawText(QRect(left + 6, 900, width, 70), Qt::AlignLeft | Qt::AlignVCenter, QStringLiteral("Eet smakelijk!"));
+    p.end();
+    return img;
+}
+
 void MenuBoard::update(bool force)
 {
     const QDate today = QDate::currentDate();
     const QJsonArray menu = m_agenda->weekMenu();
     const QString time = m_agenda->settings().value(QStringLiteral("dinnerTime")).toString();
-    const QString key = today.toString(Qt::ISODate) + time + QString::fromUtf8(QJsonDocument(menu).toJson(QJsonDocument::Compact));
+    const QVariantMap cfg = m_agenda->settings();
+    const bool glass = cfg.value(QStringLiteral("theme")).toString() == QLatin1String("glas") && !cfg.value(QStringLiteral("contrast")).toBool();
+    const QString key = today.toString(Qt::ISODate) + time + (glass ? QStringLiteral("glas") : QString()) + QString::fromUtf8(QJsonDocument(menu).toJson(QJsonDocument::Compact));
     // Opnieuw maken als het menu, de tijd of de dag verandert, of als de map is weggehaald
     if (!force && key == m_key && QFileInfo::exists(m_dir + QStringLiteral("/info.json"))) {
         return;
@@ -242,7 +335,7 @@ void MenuBoard::update(bool force)
         }
         const QString label = i == 0 ? QStringLiteral("Vandaag") : i == 1 ? QStringLiteral("Morgen") : nl.dayName(day.dayOfWeek());
         const QString date = (i < 2 ? nl.dayName(day.dayOfWeek()) + QLatin1Char(' ') : QString()) + nl.toString(day, QStringLiteral("d MMMM"));
-        const QImage slide = render(label, date, dish, note, time, photo);
+        const QImage slide = glass ? renderGlass(label, date, dish, note, time, photo) : render(label, date, dish, note, time, photo);
         slide.save(dir.filePath(QStringLiteral("%1.jpg").arg(++count)), "JPG", 90);
     }
     QSaveFile info(dir.filePath(QStringLiteral("info.json")));
@@ -256,5 +349,5 @@ void MenuBoard::update(bool force)
                        .toJson());
         info.commit();
     }
-    qInfo() << "Menu board:" << count << "slides";
+    qInfo() << "Menu board:" << count << "slides" << (glass ? "glass" : "");
 }

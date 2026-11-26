@@ -130,28 +130,11 @@ Rectangle {
         opacity: root.glass ? 0.62 : 0.72
     }
     // Glas-thema: zachte, lichtgevende kleurvlekken die heel langzaam bewegen
-    Item {
+    GlassBackground {
         id: glow
         anchors.fill: parent
         visible: root.glass && root.bgType === "daypart"
-        opacity: 0.75
-        component Blob: Image {
-            id: blob
-            property real fx: 0.5
-            property real fy: 0.5
-            property real dx: 0.08
-            property int period: 40000
-            property real t: 0
-            width: 1100 * root.s; height: width
-            x: (fx + dx * Math.sin(t * 2 * Math.PI)) * root.width - width / 2
-            y: (fy + dx * Math.cos(t * 2 * Math.PI)) * root.height - height / 2
-            smooth: true
-            NumberAnimation on t { from: 0; to: 1; duration: blob.period; loops: Animation.Infinite; running: glow.visible }
-        }
-        Blob { source: "qrc:/glass/violet.png"; fx: 0.15; fy: 0.2; period: 47000 }
-        Blob { source: "qrc:/glass/blauw.png"; fx: 0.85; fy: 0.25; period: 53000; dx: 0.06 }
-        Blob { source: "qrc:/glass/turquoise.png"; fx: 0.3; fy: 0.95; period: 61000 }
-        Blob { source: "qrc:/glass/roze.png"; fx: 0.95; fy: 0.9; period: 43000; dx: 0.05; opacity: 0.7 }
+        animate: visible && root.page === "home"
     }
 
     // ---------- Bovenbalk ----------
@@ -899,6 +882,17 @@ Rectangle {
                 console.info("Stats test: Rooktest " + stats.countOf("tile", "Rooktest"))
             } else if (selfTest === "backup") {
                 admin.backupTest()
+            } else if (selfTest === "glassboard") {
+                agenda.setTestSetting("theme", "glas")
+                root.page = "presentations"
+                pageLoader.item.startNamed("Menu van de week")
+            } else if (selfTest === "glassweek") {
+                agenda.setTestSetting("theme", "glas")
+                root.page = "week"
+            } else if (selfTest === "glasssaver") {
+                agenda.setTestSetting("theme", "glas")
+                root.radioRow = 0
+                root.radioSaver = true
             } else if (selfTest === "glass") {
                 agenda.setTestSetting("theme", "glas")
                 console.info("Theme: " + (root.glass ? "glas" : "anders") + " ink " + root.ink + " card alpha " + root.glassAlpha.toFixed(2))
@@ -1116,6 +1110,7 @@ Rectangle {
             GradientStop { position: 0; color: "#0E1630" }
             GradientStop { position: 1; color: "#05070F" }
         }
+        GlassBackground { anchors.fill: parent; visible: root.glass; animate: saverLayer.visible }
         // Tik ergens: screensaver weg, radio speelt door
         MouseArea { anchors.fill: parent; onPressed: root.radioSaver = false }
 
@@ -1129,9 +1124,9 @@ Rectangle {
             id: floater
             width: 720 * root.s; height: 300 * root.s
             radius: root.r(48)
-            color: "#1B2547"
-            border.color: saverLayer.bounce > 0 ? saverLayer.accents[saverLayer.bounce % saverLayer.accents.length] : saverLayer.accent
-            border.width: 8 * root.s
+            color: root.glass ? Qt.rgba(1, 1, 1, root.glassAlpha) : "#1B2547"
+            border.color: root.glass ? "#66FFFFFF" : saverLayer.bounce > 0 ? saverLayer.accents[saverLayer.bounce % saverLayer.accents.length] : saverLayer.accent
+            border.width: (root.glass ? 2 : 8) * root.s
             x: (saverLayer.width - width) / 2; y: (saverLayer.height - height) / 2
             RowLayout {
                 anchors { fill: parent; margins: 36 * root.s }
