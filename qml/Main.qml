@@ -6,13 +6,30 @@ import QtQuick.Layouts
 
 Rectangle {
     id: root
-    color: "#F7F4EE"
+    color: contrast ? "#000000" : part.bg
+    Behavior on color { ColorAnimation { duration: 2000 } }
     focus: true
 
     readonly property real s: Math.min(width / 1920, height / 1080)
-    readonly property color ink: "#1F2A44"
-    readonly property color soft: "#5B6478"
-    readonly property color green: "#2E8B57"
+    // Instellingen uit de beheerpagina
+    readonly property var cfg: agenda.settings
+    readonly property bool contrast: cfg.contrast === true
+    readonly property real f: s * (cfg.textScale || 1)          // tekstgrootte (grote-tekst-stand)
+    readonly property color ink: contrast ? "#FFFFFF" : "#1F2A44"
+    readonly property color soft: contrast ? "#FFE14D" : "#5B6478"
+    readonly property color green: contrast ? "#7CFC9A" : "#2E8B57"
+    readonly property color card: contrast ? "#000000" : "#FFFFFF"
+    readonly property color line: contrast ? "#FFFFFF" : "#14000000"
+    readonly property int lineWidth: contrast ? 4 : 2
+    function fill(c) { return contrast ? "#000000" : c }
+    // Dagdeel: achtergrond en begroeting
+    readonly property var dayparts: ({
+        ochtend: { bg: "#FFF7E8", hello: "Goedemorgen", icon: "🌅" },
+        middag: { bg: "#F7F4EE", hello: "Goedemiddag", icon: "☀️" },
+        avond: { bg: "#EEF0F8", hello: "Goedenavond", icon: "🌆" },
+        nacht: { bg: "#E6E8F0", hello: "Goedenacht", icon: "🌙" }
+    })
+    readonly property var part: dayparts[agenda.daypart] || dayparts.middag
     readonly property string emojiFont: Qt.platform.os === "windows" ? "Segoe UI Emoji" : "Noto Color Emoji"
     property date now: new Date()
     property string page: "home"     // home, stream, presentations, shortcuts
@@ -38,6 +55,28 @@ Rectangle {
         return "over " + h + " uur" + (m ? " en " + m + " min" : "")
     }
 
+    // Pictogram van een activiteit: eigen plaatje (picto) of anders de emoji
+    component Picto: Item {
+        property var it: null
+        property real size: 64
+        Image {
+            anchors.fill: parent
+            visible: !!(parent.it && parent.it.imageUrl)
+            source: parent.it && parent.it.imageUrl ? parent.it.imageUrl : ""
+            fillMode: Image.PreserveAspectFit
+            sourceSize.width: 512
+            asynchronous: true
+            smooth: true
+        }
+        Text {
+            anchors.centerIn: parent
+            visible: !(parent.it && parent.it.imageUrl)
+            text: parent.it ? (parent.it.icon || "") : ""
+            font.family: root.emojiFont
+            font.pixelSize: parent.size
+        }
+    }
+
     Timer {
         interval: 1000; running: true; repeat: true
         onTriggered: root.now = new Date()
@@ -49,7 +88,7 @@ Rectangle {
     Item {
         id: header
         anchors { left: parent.left; right: parent.right; top: parent.top; leftMargin: 48 * root.s; rightMargin: 48 * root.s; topMargin: 24 * root.s }
-        height: 150 * root.s
+        height: 150 * root.f
 
         Row {
             id: clock
@@ -57,17 +96,17 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             Text {
                 text: Qt.formatTime(root.now, "HH:mm")
-                font.pixelSize: 120 * root.s; font.bold: true; color: root.ink
+                font.pixelSize: 120 * root.f; font.bold: true; color: root.ink
             }
             Column {
                 anchors.verticalCenter: parent.verticalCenter
                 Text {
-                    text: root.now.toLocaleDateString(Qt.locale("nl_NL"), "dddd")
-                    font.pixelSize: 52 * root.s; font.bold: true; color: root.green
+                    text: root.part.hello + ", het is " + root.now.toLocaleDateString(Qt.locale("nl_NL"), "dddd")
+                    font.pixelSize: 52 * root.f; font.bold: true; color: root.green
                 }
                 Text {
                     text: root.now.toLocaleDateString(Qt.locale("nl_NL"), "d MMMM yyyy")
-                    font.pixelSize: 40 * root.s; color: root.soft
+                    font.pixelSize: 40 * root.f; color: root.soft
                 }
             }
             // Lang vasthouden op de klok: beheergegevens tonen (adres, code, QR)
@@ -77,11 +116,28 @@ Rectangle {
             }
         }
 
-        Text {
+        Row {
             anchors { right: parent.right; verticalCenter: parent.verticalCenter }
-            visible: weather.available
-            text: weather.summary
-            font.pixelSize: 48 * root.s; color: root.soft
+            spacing: 20 * root.s
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: weather.available ? weather.icon : root.part.icon
+                font.family: root.emojiFont
+                font.pixelSize: 96 * root.f
+            }
+            Column {
+                anchors.verticalCenter: parent.verticalCenter
+                Text {
+                    visible: weather.available
+                    text: weather.temperature + "°"
+                    font.pixelSize: 64 * root.f; font.bold: true; color: root.ink
+                }
+                Text {
+                    visible: weather.available
+                    text: weather.text
+                    font.pixelSize: 34 * root.f; color: root.soft
+                }
+            }
         }
     }
 
@@ -92,19 +148,69 @@ Rectangle {
         visible: agenda.messages.length > 0
         height: visible ? messageText.implicitHeight + 32 * root.s : 0
         radius: 20 * root.s
-        color: "#FFF4CC"
+        color: root.contrast ? "#000000" : "#FFF4CC"
+        border.color: root.contrast ? "#FFE14D" : "transparent"; border.width: root.lineWidth
         Text {
             id: messageText
             anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: 28 * root.s }
             text: "📢  " + agenda.messages.join("     •     ")
-            font.pixelSize: 38 * root.s; color: root.ink
+            font.pixelSize: 38 * root.f; color: root.ink
             wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight
+        }
+    }
+
+    // ---------- Verjaardag of bijzondere dag ----------
+    Rectangle {
+        id: party
+        anchors { left: parent.left; right: parent.right; top: messageBar.visible ? messageBar.bottom : header.bottom; leftMargin: 48 * root.s; rightMargin: 48 * root.s; topMargin: 12 * root.s }
+        visible: agenda.celebrations.length > 0
+        height: visible ? 96 * root.f : 0
+        radius: 24 * root.s
+        clip: true
+        gradient: Gradient {
+            orientation: Gradient.Horizontal
+            GradientStop { position: 0; color: root.contrast ? "#000000" : "#FF7EB3" }
+            GradientStop { position: 1; color: root.contrast ? "#000000" : "#FFC72C" }
+        }
+        border.color: root.contrast ? "#FFFFFF" : "transparent"; border.width: root.lineWidth
+        // Confetti
+        Repeater {
+            model: party.visible ? 28 : 0
+            delegate: Rectangle {
+                required property int index
+                width: 14 * root.s; height: 22 * root.s; radius: 3 * root.s
+                color: ["#FFFFFF", "#2E8B57", "#5DA9E9", "#DA291C", "#F6C85F", "#C3B1E1"][index % 6]
+                x: (index * 137) % Math.max(1, party.width)
+                rotation: index * 33
+                NumberAnimation on y {
+                    from: -30 * root.s; to: party.height + 10 * root.s
+                    duration: 2400 + (index % 7) * 500; loops: Animation.Infinite
+                }
+            }
+        }
+        Row {
+            anchors.centerIn: parent
+            spacing: 24 * root.s
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: agenda.celebrations.length ? agenda.celebrations[0].icon : ""
+                font.family: root.emojiFont
+                font.pixelSize: 60 * root.f
+            }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                width: Math.min(implicitWidth, party.width - 200 * root.s)
+                text: agenda.celebrations.map(c => c.title).join("   •   ")
+                font.pixelSize: 56 * root.f; font.bold: true; color: root.contrast ? "#FFE14D" : "#FFFFFF"
+                style: Text.Outline; styleColor: root.contrast ? "#000000" : "#55000000"
+                elide: Text.ElideRight
+            }
         }
     }
 
     // ---------- Inhoud ----------
     RowLayout {
-        anchors { left: parent.left; right: parent.right; top: messageBar.visible ? messageBar.bottom : header.bottom; bottom: parent.bottom; margins: 48 * root.s; topMargin: 24 * root.s }
+        anchors { left: parent.left; right: parent.right; top: party.visible ? party.bottom : messageBar.visible ? messageBar.bottom : header.bottom; bottom: parent.bottom; margins: 48 * root.s; topMargin: 24 * root.s }
         spacing: 32 * root.s
 
         // Links: nu, straks en de tegels
@@ -118,14 +224,15 @@ Rectangle {
                 id: nowCard
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                Layout.minimumHeight: 220 * root.f
                 radius: 32 * root.s
-                color: root.current ? root.current.color : "#FFFFFF"
-                border.color: "#14000000"; border.width: 2
+                color: root.current ? root.fill(root.current.color) : root.card
+                border.color: root.line; border.width: root.lineWidth
 
                 Text {
                     anchors { left: parent.left; top: parent.top; margins: 32 * root.s }
                     text: root.current ? "NU" : "NU GEEN ACTIVITEIT"
-                    font.pixelSize: 34 * root.s; font.bold: true; font.letterSpacing: 3 * root.s; color: root.ink; opacity: 0.7
+                    font.pixelSize: 34 * root.f; font.bold: true; font.letterSpacing: 3 * root.s; color: root.ink; opacity: 0.7
                 }
                 RowLayout {
                     anchors { fill: parent; margins: 40 * root.s; topMargin: 76 * root.s }
@@ -137,12 +244,11 @@ Rectangle {
                         Layout.preferredHeight: side
                         Layout.alignment: Qt.AlignVCenter
                         radius: 40 * root.s
-                        color: "#AAFFFFFF"
-                        Text {
-                            anchors.centerIn: parent
-                            text: root.current ? root.current.icon : ""
-                            font.family: root.emojiFont
-                            font.pixelSize: parent.side * 0.66
+                        color: root.contrast ? "#FFFFFF" : "#AAFFFFFF"
+                        Picto {
+                            anchors { fill: parent; margins: parent.side * 0.1 }
+                            it: root.current
+                            size: parent.side * 0.66
                         }
                     }
                     ColumnLayout {
@@ -151,18 +257,18 @@ Rectangle {
                         Text {
                             Layout.fillWidth: true
                             text: root.current ? root.current.title : ""
-                            font.pixelSize: 80 * root.s; font.bold: true; color: root.ink
+                            font.pixelSize: Math.min(80 * root.f, nowCard.height * 0.26); font.bold: true; color: root.ink
                             wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight
                         }
                         Text {
                             text: root.current ? root.timeRange(root.current) : ""
-                            font.pixelSize: 52 * root.s; color: root.ink
+                            font.pixelSize: Math.min(52 * root.f, nowCard.height * 0.15); color: root.ink
                         }
                         Text {
                             Layout.fillWidth: true
-                            visible: text !== ""
+                            visible: text !== "" && nowCard.height > 380 * root.s
                             text: root.current ? (root.current.note || "") : ""
-                            font.pixelSize: 38 * root.s; color: root.ink; opacity: 0.8
+                            font.pixelSize: 38 * root.f; color: root.ink; opacity: 0.8
                             wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight
                         }
                         // Hoe ver is de activiteit (balk vult zich)
@@ -181,63 +287,105 @@ Rectangle {
                         }
                     }
                 }
+                TapHandler {
+                    onTapped: if (root.cfg.speak && root.current) speaker.say("Nu: " + root.current.title)
+                }
                 Text {
                     anchors.centerIn: parent
                     visible: root.current === null
                     text: root.next ? "Vrije tijd" : "De dag zit erop 🌙"
-                    font.pixelSize: 72 * root.s; color: root.soft
+                    font.pixelSize: 72 * root.f; color: root.soft
                 }
             }
 
-            // STRAKS
+            // STRAKS en VANDAAG ETEN naast elkaar
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 136 * root.f
+                Layout.maximumHeight: 136 * root.f
+                Layout.minimumHeight: 112 * root.f
+                visible: root.next !== null || !!agenda.todayMenu.dish
+                spacing: 24 * root.s
+
             Rectangle {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 160 * root.s
-                Layout.maximumHeight: 160 * root.s
+                Layout.preferredWidth: 3
+                Layout.fillHeight: true
                 radius: 28 * root.s
-                color: "#FFFFFF"
-                border.color: "#14000000"; border.width: 2
+                color: root.card
+                border.color: root.line; border.width: root.lineWidth
                 visible: root.next !== null
                 RowLayout {
-                    anchors { fill: parent; leftMargin: 32 * root.s; rightMargin: 32 * root.s }
-                    spacing: 28 * root.s
-                    Text {
-                        text: "STRAKS"
-                        font.pixelSize: 30 * root.s; font.bold: true; font.letterSpacing: 3 * root.s; color: root.soft
-                    }
+                    anchors { fill: parent; leftMargin: 28 * root.s; rightMargin: 28 * root.s }
+                    spacing: 22 * root.s
                     Rectangle {
-                        Layout.preferredWidth: 120 * root.s; Layout.preferredHeight: 120 * root.s
+                        Layout.preferredWidth: 104 * root.s; Layout.preferredHeight: 104 * root.s
                         radius: 24 * root.s
-                        color: root.next ? root.next.color : "transparent"
-                        Text {
-                            anchors.centerIn: parent
-                            text: root.next ? root.next.icon : ""
-                            font.family: root.emojiFont
-                            font.pixelSize: 76 * root.s
+                        color: root.next ? (root.contrast ? "#FFFFFF" : root.next.color) : "transparent"
+                        Picto {
+                            anchors { fill: parent; margins: 12 * root.s }
+                            it: root.next
+                            size: 76 * root.s
                         }
                     }
                     Column {
                         Layout.fillWidth: true
                         Text {
-                            width: parent.width
-                            text: root.next ? root.next.title : ""
-                            font.pixelSize: 52 * root.s; font.bold: true; color: root.ink
-                            elide: Text.ElideRight
+                            text: "STRAKS  " + (root.next ? root.next.start + "  " + root.untilText(root.next) : "")
+                            font.pixelSize: 28 * root.f; font.bold: true; color: root.soft
+                            width: parent.width; elide: Text.ElideRight
                         }
                         Text {
-                            text: root.next ? root.next.start + "   " + root.untilText(root.next) : ""
-                            font.pixelSize: 36 * root.s; color: root.soft
+                            width: parent.width
+                            text: root.next ? root.next.title : ""
+                            font.pixelSize: 50 * root.f; font.bold: true; color: root.ink
+                            elide: Text.ElideRight
                         }
                     }
                 }
+            }
+
+            // VANDAAG ETEN (uit het weekmenu)
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredWidth: 2
+                Layout.fillHeight: true
+                radius: 28 * root.s
+                color: root.card
+                border.color: root.line; border.width: root.lineWidth
+                visible: !!agenda.todayMenu.dish
+                RowLayout {
+                    anchors { fill: parent; leftMargin: 24 * root.s; rightMargin: 24 * root.s }
+                    spacing: 18 * root.s
+                    Picto {
+                        Layout.preferredWidth: 84 * root.s; Layout.preferredHeight: 84 * root.s
+                        it: ({ icon: "🍽️", imageUrl: agenda.todayMenu.imageUrl })
+                        size: 64 * root.s
+                    }
+                    Column {
+                        Layout.fillWidth: true
+                        Text {
+                            text: "VANDAAG ETEN"
+                            font.pixelSize: 28 * root.f; font.bold: true; color: root.soft
+                        }
+                        Text {
+                            width: parent.width
+                            text: (agenda.todayMenu.dish || "") + (agenda.todayMenu.note ? " " + agenda.todayMenu.note : "")
+                            font.pixelSize: 38 * root.f; font.bold: true; color: root.ink
+                            wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight
+                        }
+                    }
+                }
+                TapHandler { onTapped: if (root.cfg.speak) speaker.say("Vandaag eten we " + agenda.todayMenu.dish + " " + (agenda.todayMenu.note || "")) }
+            }
             }
 
             // Tegels naar de andere onderdelen
             RowLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: false
-                Layout.preferredHeight: 160 * root.s
-                Layout.maximumHeight: 160 * root.s
+                Layout.preferredHeight: (root.f > root.s ? 120 : 160) * root.s
+                Layout.maximumHeight: (root.f > root.s ? 120 : 160) * root.s
                 spacing: 24 * root.s
                 Repeater {
                     model: [
@@ -258,12 +406,12 @@ Rectangle {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: modelData.icon
                                 font.family: root.emojiFont
-                                font.pixelSize: 56 * root.s
+                                font.pixelSize: (root.f > root.s ? 44 : 56) * root.s
                             }
                             Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: modelData.title
-                                font.pixelSize: 36 * root.s; font.bold: true; color: "#FFFFFF"
+                                font.pixelSize: 36 * root.f; font.bold: true; color: "#FFFFFF"
                             }
                         }
                         TapHandler {
@@ -283,14 +431,14 @@ Rectangle {
             Layout.preferredWidth: 620 * root.s
             Layout.fillHeight: true
             radius: 32 * root.s
-            color: "#FFFFFF"
-            border.color: "#14000000"; border.width: 2
+            color: root.card
+            border.color: root.line; border.width: root.lineWidth
 
             Text {
                 id: dayTitle
                 anchors { left: parent.left; top: parent.top; margins: 32 * root.s }
                 text: "Mijn dag"
-                font.pixelSize: 48 * root.s; font.bold: true; color: root.ink
+                font.pixelSize: 48 * root.f; font.bold: true; color: root.ink
             }
 
             ListView {
@@ -313,8 +461,8 @@ Rectangle {
                     width: ListView.view.width
                     height: (isNow ? 130 : 104) * root.s
                     radius: 22 * root.s
-                    color: isNow ? modelData.color : "transparent"
-                    border.color: modelData.state === "next" ? modelData.color : "transparent"
+                    color: isNow ? root.fill(modelData.color) : "transparent"
+                    border.color: modelData.state === "next" ? (root.contrast ? "#FFE14D" : modelData.color) : (isNow && root.contrast ? "#FFFFFF" : "transparent")
                     border.width: 4 * root.s
                     opacity: isPast ? 0.45 : 1
 
@@ -324,30 +472,29 @@ Rectangle {
                         Text {
                             Layout.preferredWidth: 110 * root.s
                             text: modelData.start
-                            font.pixelSize: 36 * root.s; font.bold: isNow; color: root.ink
+                            font.pixelSize: 36 * root.f; font.bold: isNow; color: root.ink
                         }
                         Rectangle {
                             Layout.preferredWidth: 76 * root.s; Layout.preferredHeight: 76 * root.s
                             radius: 18 * root.s
-                            color: isNow ? "#AAFFFFFF" : modelData.color
-                            Text {
-                                anchors.centerIn: parent
-                                text: modelData.icon
-                                font.family: root.emojiFont
-                                font.pixelSize: 46 * root.s
+                            color: root.contrast ? "#FFFFFF" : isNow ? "#AAFFFFFF" : modelData.color
+                            Picto {
+                                anchors { fill: parent; margins: 8 * root.s }
+                                it: modelData
+                                size: 46 * root.s
                             }
                         }
                         Text {
                             Layout.fillWidth: true
                             text: modelData.title
-                            font.pixelSize: (isNow ? 40 : 36) * root.s; font.bold: isNow; color: root.ink
+                            font.pixelSize: (isNow ? 40 : 36) * root.f; font.bold: isNow; color: root.ink
                             font.strikeout: isPast
                             elide: Text.ElideRight
                         }
                         Text {
                             visible: isPast
                             text: "✓"
-                            font.pixelSize: 40 * root.s; color: root.green
+                            font.pixelSize: 40 * root.f; color: root.green
                         }
                     }
                 }
@@ -359,7 +506,7 @@ Rectangle {
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.WordWrap
                     text: "Vandaag staat er niets op de planning."
-                    font.pixelSize: 36 * root.s; color: root.soft
+                    font.pixelSize: 36 * root.f; color: root.soft
                 }
             }
         }
@@ -478,11 +625,83 @@ Rectangle {
                 root.page = "shortcuts"
             } else if (selfTest === "upload") {
                 admin.uploadTest()
+            } else if (selfTest === "menu") {
+                console.info("Menu today: " + (agenda.todayMenu.dish ? "yes" : "no") + " daypart " + agenda.daypart)
+            } else if (selfTest === "speak") {
+                speaker.announce("Het is tijd voor: Test", true)
+            } else if (selfTest === "screensaver") {
+                root.page = "presentations"
+                if (pageLoader.item.startNamed("")) { root.screensaver = true; console.info("Screensaver started") }
             } else if (selfTest === "admin") {
                 adminPanel.visible = true
                 admin.selfTest()
             }
             console.info("Self test " + selfTest + " ok")
         }
+    }
+
+    // ---------- Voorlezen bij het begin van een activiteit ----------
+    Connections {
+        target: agenda
+        function onActivityStarted(title, note) {
+            if (root.cfg.speak && !root.night)
+                speaker.announce("Het is tijd voor: " + title + (note ? ". " + note : ""), root.cfg.chime !== false)
+        }
+    }
+
+    // ---------- Screensaver: na een tijd zonder aanraking een presentatie ----------
+    property bool screensaver: false
+    Timer {
+        interval: 5000; running: true; repeat: true
+        onTriggered: {
+            const min = root.cfg.screensaverMinutes || 0
+            if (min > 0 && !root.screensaver && !root.night && root.page === "home" && !adminPanel.visible
+                    && activity.idleSeconds() >= min * 60 && presentations.list.length > 0) {
+                root.page = "presentations"
+                if (pageLoader.item && pageLoader.item.startNamed(root.cfg.screensaverPresentation || "")) {
+                    root.screensaver = true
+                    console.info("Screensaver started")
+                } else {
+                    root.page = "home"
+                }
+            }
+        }
+    }
+    Connections {
+        target: activity
+        function onTouched() {
+            if (root.screensaver) {
+                root.screensaver = false
+                root.page = "home"
+                console.info("Screensaver stopped")
+            }
+            root.wakeUntil = Date.now() + 2 * 60 * 1000
+        }
+    }
+
+    // ---------- Nachtstand: scherm dimmen of zwart ----------
+    property double wakeUntil: 0
+    function inRange(t, a, b) { return a <= b ? (t >= a && t < b) : (t >= a || t < b) }
+    readonly property bool night: !!(cfg.nightFrom && cfg.nightTo)
+                                   && inRange(Qt.formatTime(now, "HH:mm"), cfg.nightFrom, cfg.nightTo)
+                                   && now.getTime() > wakeUntil
+    onNightChanged: {
+        console.info("Night mode " + night)
+        if (night) { root.screensaver = false; root.page = "home" }
+    }
+    Rectangle {
+        anchors.fill: parent
+        visible: root.night
+        color: "#000000"
+        opacity: root.cfg.nightMode === "black" ? 1 : 0.88
+        z: 100
+        Text {
+            anchors.centerIn: parent
+            visible: root.cfg.nightMode !== "black"
+            text: "🌙  " + Qt.formatTime(root.now, "HH:mm")
+            font.family: root.emojiFont
+            font.pixelSize: 140 * root.s; color: "#8090B0"
+        }
+        TapHandler { onTapped: root.wakeUntil = Date.now() + 2 * 60 * 1000 }
     }
 }

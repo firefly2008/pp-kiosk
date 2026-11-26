@@ -125,6 +125,9 @@ public:
     Q_INVOKABLE void move(int from, int to);
     Q_INVOKABLE bool addTile(const QString &name, const QString &target);
     Q_INVOKABLE void restoreHidden();
+    // Beheerpagina: alle diensten van dit tabblad (name, url, on) en kiezen welke zichtbaar zijn
+    QVariantList webCatalog() const;
+    void setWebShown(const QStringList &urls);
     Q_INVOKABLE bool setCustomIcon(int row, const QUrl &imageFile);
     Q_INVOKABLE void clearCustomIcon(int row);
 

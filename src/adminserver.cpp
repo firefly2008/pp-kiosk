@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "adminserver.h"
 #include "agenda.h"
+#include "appmodel.h"
+#include "radiomodel.h"
 #include "presentations.h"
 #include "shortcuts.h"
 #include "paths.h"
@@ -14,7 +16,12 @@
 #include <QHostInfo>
 #include <QImage>
 #include <QJsonDocument>
+#include <QJsonArray>
 #include <QJsonObject>
+#include <QDir>
+#include <QImage>
+#include <QRegularExpression>
+#include <QSaveFile>
 #include <QNetworkInterface>
 #include <QPainter>
 #include <QPdfWriter>
@@ -29,6 +36,18 @@ namespace {
 constexpr quint16 firstPort = 8642;
 constexpr qint64 maxBody = 1024 * 1024;
 constexpr qint64 maxUpload = 400LL * 1024 * 1024;   // grote PowerPoint met video's
+constexpr qint64 maxPicto = 8LL * 1024 * 1024;
+
+QString cleanPictoName(const QString &name)
+{
+    QString n = QFileInfo(name).fileName();
+    n.replace(QRegularExpression(QStringLiteral("[^A-Za-z0-9 ._-]")), QStringLiteral("_"));
+    while (n.startsWith(QLatin1Char('.')) || n.startsWith(QLatin1Char(' ')) || n.startsWith(QLatin1Char('_'))) {
+        n.remove(0, 1);
+    }
+    static const QRegularExpression ok(QStringLiteral("^[A-Za-z0-9][A-Za-z0-9 ._-]{0,80}\\.(png|jpg|jpeg|webp|svg)$"), QRegularExpression::CaseInsensitiveOption);
+    return ok.match(n).hasMatch() ? n : QString();
+}
 
 bool sameCode(const QString &a, const QString &b)
 {
@@ -170,14 +189,20 @@ void AdminServer::makeQr()
 
 void AdminServer::respond(QTcpSocket *socket, int status, const QByteArray &type, const QByteArray &body, const QByteArray &extraHeaders)
 {
-    m_pending[socket].done = true;
-    const QByteArray reason = status == 200 ? "OK" : status == 403 ? "Forbidden" : status == 404 ? "Not Found"
+    Pending &p = m_pending[socket];
+    p.done = true;
+    // Beheer van meerdere kiosken: de beheerpagina van een andere kiosk mag deze kiosk aanspreken (met code)
+    QByteArray cors;
+    if (!p.origin.isEmpty()) {
+        cors = "Access-Control-Allow-Origin: " + p.origin + "\r\nVary: Origin\r\n";
+    }
+    const QByteArray reason = status == 200 ? "OK" : status == 204 ? "No Content" : status == 403 ? "Forbidden" : status == 404 ? "Not Found"
                               : status == 413 ? "Payload Too Large" : status == 415 ? "Unsupported Media Type" : status == 429 ? "Too Many Requests" : "Bad Request";
     QByteArray head = "HTTP/1.1 " + QByteArray::number(status) + ' ' + reason + "\r\n";
     head += "Content-Type: " + type + "\r\nContent-Length: " + QByteArray::number(body.size())
-            + "\r\nCache-Control: no-store\r\nConnection: close\r\n" + extraHeaders
+            + "\r\nCache-Control: no-store\r\nConnection: close\r\n" + cors + extraHeaders
             + "X-Content-Type-Options: nosniff\r\nX-Frame-Options: DENY\r\nReferrer-Policy: no-referrer"
-              "\r\nContent-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'"
+              "\r\nContent-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: http:; connect-src 'self' http:; frame-ancestors 'none'"
               "\r\n\r\n";
     socket->write(head + body);
     socket->disconnectFromHost();
@@ -214,6 +239,13 @@ void AdminServer::handle(QTcpSocket *socket)
                 host = line.mid(5).trimmed().toLower();
             } else if (lower.startsWith("x-code:")) {
                 code = QString::fromLatin1(line.mid(7).trimmed());
+            } else if (lower.startsWith("origin:")) {
+                p.origin = line.mid(7).trimmed();
+                if (!QRegularExpression(QStringLiteral("^https?://[A-Za-z0-9.:\\[\\]-]{1,100}$")).match(QString::fromLatin1(p.origin)).hasMatch()) {
+                    p.origin.clear();
+                    code.clear();
+                    host = "?";   // vreemde Origin: weigeren
+                }
             }
         }
         p.method = request.value(0);
@@ -222,13 +254,26 @@ void AdminServer::handle(QTcpSocket *socket)
         p.buffer.clear();
         p.headersDone = true;
 
-        // Eerst controleren (host, code), pas daarna de inhoud aannemen
-        if (!checkAccess(socket, host, code, p.url.path())) {
+        // Voorcontrole van de browser (beheer vanaf een andere kiosk): toestaan, de echte aanvraag vraagt de code
+        if (p.method == "OPTIONS") {
+            respond(socket, 204, "text/plain", {},
+                    "Access-Control-Allow-Methods: GET, POST, PUT, DELETE\r\nAccess-Control-Allow-Headers: X-Code, Content-Type\r\n"
+                    "Access-Control-Allow-Private-Network: true\r\nAccess-Control-Max-Age: 600\r\n");
             return;
         }
-        const bool upload = p.method == "POST" && p.url.path() == QLatin1String("/api/upload");
-        if (p.length < 0 || p.length > (upload ? maxUpload : maxBody)) {
-            respond(socket, 413, "text/plain; charset=utf-8", upload ? "bestand is te groot (max. 400 MB)" : "te groot");
+        // Plaatjes op de beheerpagina (<img>) sturen de code mee als ?c=
+        if (code.isEmpty() && p.url.path().startsWith(QLatin1String("/pictos/"))) {
+            code = QUrlQuery(p.url).queryItemValue(QStringLiteral("c"));
+        }
+        // Eerst controleren (host, code), pas daarna de inhoud aannemen
+        if (!checkAccess(socket, host, code, p.url.path(), p.origin)) {
+            return;
+        }
+        const bool picto = p.method == "POST" && p.url.path() == QLatin1String("/api/picto");
+        const bool upload = (p.method == "POST" && p.url.path() == QLatin1String("/api/upload")) || picto;
+        const qint64 limit = picto ? maxPicto : upload ? maxUpload : maxBody;
+        if (p.length < 0 || p.length > limit) {
+            respond(socket, 413, "text/plain; charset=utf-8", picto ? "plaatje is te groot (max. 8 MB)" : upload ? "bestand is te groot (max. 400 MB)" : "te groot");
             return;
         }
         if (upload) {
@@ -258,11 +303,14 @@ void AdminServer::handle(QTcpSocket *socket)
     dispatch(socket, p);
 }
 
-bool AdminServer::checkAccess(QTcpSocket *socket, const QByteArray &host, const QString &code, const QString &path)
+bool AdminServer::checkAccess(QTcpSocket *socket, const QByteArray &host, const QString &code, const QString &path, const QByteArray &origin)
 {
     const QHostAddress peer = socket->peerAddress();
     const QString ip = peer.toString();
-    const bool local = peer.isLoopback() || peer == QHostAddress(QStringLiteral("::ffff:127.0.0.1"));
+    // Zonder code alleen vanaf deze pc zelf, en alleen vanaf de eigen beheerpagina:
+    // een aanvraag van een andere website (Origin hoort niet bij deze server) moet de code hebben
+    const bool sameOrigin = origin.isEmpty() || origin == "http://" + host;
+    const bool local = sameOrigin && (peer.isLoopback() || peer == QHostAddress(QStringLiteral("::ffff:127.0.0.1")));
     const qint64 now = QDateTime::currentSecsSinceEpoch();
 
     // Alleen aanvragen voor een IP-adres, localhost of de naam van deze pc (tegen "DNS rebinding")
@@ -283,7 +331,7 @@ bool AdminServer::checkAccess(QTcpSocket *socket, const QByteArray &host, const 
         }
     }
     // De pagina zelf mag iedereen ophalen; gegevens alleen met de code (of op deze pc zelf)
-    if (!path.startsWith(QLatin1String("/api/"))) {
+    if (!path.startsWith(QLatin1String("/api/")) && !path.startsWith(QLatin1String("/pictos/"))) {
         return true;
     }
     if (local) {
@@ -405,11 +453,200 @@ void AdminServer::dispatch(QTcpSocket *socket, Pending &p)
             return;
         }
     }
+    // ---------- Picto's ----------
+    const QString pictoDir = m_agenda->pictoDir();
+    if (path == QLatin1String("/api/pictos") && method == "GET") {
+        QJsonArray names;
+        for (const QString &f : QDir(pictoDir).entryList({QStringLiteral("*.png"), QStringLiteral("*.jpg"), QStringLiteral("*.jpeg"),
+                                                          QStringLiteral("*.webp"), QStringLiteral("*.svg")}, QDir::Files, QDir::Name | QDir::IgnoreCase)) {
+            names.append(f);
+        }
+        respond(socket, 200, "application/json", QJsonDocument(QJsonObject{{QStringLiteral("items"), names}}).toJson(QJsonDocument::Compact));
+        return;
+    }
+    if (path == QLatin1String("/api/picto") && method == "POST" && p.file) {
+        const QString name = cleanPictoName(query.queryItemValue(QStringLiteral("file"), QUrl::FullyDecoded));
+        p.file->close();
+        const bool svg = name.endsWith(QLatin1String(".svg"), Qt::CaseInsensitive);
+        if (name.isEmpty() || (!svg && QImage(p.file->fileName()).isNull())) {
+            error(QStringLiteral("Dit plaatje kan niet: gebruik .png, .jpg, .webp of .svg."));
+            return;
+        }
+        if (svg) {
+            QFile f(p.file->fileName());
+            f.open(QIODevice::ReadOnly);
+            const QByteArray head = f.read(4096).toLower();
+            if (!head.contains("<svg") || head.contains("<script")) {
+                error(QStringLiteral("Dit SVG-bestand kan niet."));
+                return;
+            }
+        }
+        const QString target = pictoDir + QLatin1Char('/') + name;
+        QFile::remove(target);
+        if (!QFile::rename(p.file->fileName(), target) && !QFile::copy(p.file->fileName(), target)) {
+            error(QStringLiteral("Opslaan mislukt."));
+            return;
+        }
+        qInfo() << "Admin: picto saved" << name;
+        respond(socket, 200, "application/json", QJsonDocument(QJsonObject{{QStringLiteral("ok"), true}, {QStringLiteral("name"), name}}).toJson(QJsonDocument::Compact));
+        return;
+    }
+    if (path == QLatin1String("/api/picto") && method == "DELETE") {
+        const QString name = cleanPictoName(query.queryItemValue(QStringLiteral("file"), QUrl::FullyDecoded));
+        if (!name.isEmpty() && QFile::remove(pictoDir + QLatin1Char('/') + name)) {
+            respond(socket, 200, "application/json", okJson.toByteArray());
+        } else {
+            error(QStringLiteral("Verwijderen lukt niet."));
+        }
+        return;
+    }
+    if (path.startsWith(QLatin1String("/pictos/")) && method == "GET") {
+        const QString name = cleanPictoName(path.mid(8));
+        QFile f(pictoDir + QLatin1Char('/') + name);
+        if (name.isEmpty() || !f.open(QIODevice::ReadOnly)) {
+            respond(socket, 404, "text/plain; charset=utf-8", "niet gevonden");
+            return;
+        }
+        const QString ext = QFileInfo(name).suffix().toLower();
+        const QByteArray type = ext == QLatin1String("svg") ? "image/svg+xml" : ext == QLatin1String("png") ? "image/png"
+                              : ext == QLatin1String("webp") ? "image/webp" : "image/jpeg";
+        respond(socket, 200, type, f.readAll(), "Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'\r\n");
+        return;
+    }
+
+    // ---------- Weekoverzicht ----------
+    if (path == QLatin1String("/api/week") && method == "GET") {
+        QDate start = QDate::fromString(query.queryItemValue(QStringLiteral("start")), Qt::ISODate);
+        if (!start.isValid()) {
+            start = QDate::currentDate().addDays(1 - QDate::currentDate().dayOfWeek());
+        }
+        QJsonArray days;
+        for (int i = 0; i < 7; ++i) {
+            const QDate d = start.addDays(i);
+            QJsonArray items;
+            for (const QVariant &v : m_agenda->itemsFor(d)) {
+                const QVariantMap m = v.toMap();
+                items.append(QJsonObject{{QStringLiteral("start"), m.value(QStringLiteral("start")).toString()},
+                                         {QStringLiteral("title"), m.value(QStringLiteral("title")).toString()},
+                                         {QStringLiteral("icon"), m.value(QStringLiteral("icon")).toString()},
+                                         {QStringLiteral("image"), m.value(QStringLiteral("image")).toString()},
+                                         {QStringLiteral("color"), m.value(QStringLiteral("color")).toString()},
+                                         {QStringLiteral("once"), !m.value(QStringLiteral("date")).toString().isEmpty()}});
+            }
+            days.append(QJsonObject{{QStringLiteral("date"), d.toString(Qt::ISODate)}, {QStringLiteral("items"), items}});
+        }
+        respond(socket, 200, "application/json", QJsonDocument(QJsonObject{{QStringLiteral("days"), days}}).toJson(QJsonDocument::Compact));
+        return;
+    }
+
+    // ---------- Diensten en radiozenders ----------
+    if (path == QLatin1String("/api/media")) {
+        if (method == "GET") {
+            respond(socket, 200, "application/json", mediaJson());
+            return;
+        }
+        if (method == "PUT" || method == "POST") {
+            if (setMediaJson(body)) {
+                respond(socket, 200, "application/json", okJson.toByteArray());
+            } else {
+                error(QStringLiteral("Geen geldige gegevens"));
+            }
+            return;
+        }
+    }
+
+    // ---------- Andere kiosken (adres en code, voor beheer vanaf één pagina) ----------
+    if (path == QLatin1String("/api/kiosks")) {
+        const QString file = m_dataDir + QStringLiteral("/kiosken.json");
+        if (method == "GET") {
+            QFile f(file);
+            QByteArray data = f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
+            if (!QJsonDocument::fromJson(data).isObject()) {
+                data = R"({"items":[]})";
+            }
+            respond(socket, 200, "application/json", data);
+            return;
+        }
+        if (method == "PUT" || method == "POST") {
+            QJsonArray out;
+            static const QRegularExpression addr(QStringLiteral("^https?://[A-Za-z0-9.-]{1,100}(:\\d{1,5})?$"));
+            for (const QJsonValue &v : QJsonDocument::fromJson(body).object().value(QStringLiteral("items")).toArray()) {
+                const QJsonObject o = v.toObject();
+                QString address = o.value(QStringLiteral("address")).toString().trimmed();
+                if (!address.contains(QLatin1String("://"))) {
+                    address.prepend(QStringLiteral("http://"));
+                }
+                while (address.endsWith(QLatin1Char('/'))) {
+                    address.chop(1);
+                }
+                const QString name = o.value(QStringLiteral("name")).toString().trimmed().left(40);
+                const QString c = o.value(QStringLiteral("code")).toString().trimmed().left(6);
+                if (name.isEmpty() || !addr.match(address).hasMatch() || out.size() >= 30) {
+                    error(QStringLiteral("Kiosk \"%1\": vul een naam en een adres als 192.168.1.20:8642 in.").arg(name));
+                    return;
+                }
+                out.append(QJsonObject{{QStringLiteral("name"), name}, {QStringLiteral("address"), address}, {QStringLiteral("code"), c}});
+            }
+            QSaveFile f(file);
+            if (f.open(QIODevice::WriteOnly)) {
+                f.write(QJsonDocument(QJsonObject{{QStringLiteral("items"), out}}).toJson());
+                f.commit();
+            }
+            respond(socket, 200, "application/json", okJson.toByteArray());
+            return;
+        }
+    }
     if (path == QLatin1String("/api/check") && method == "GET") {
         respond(socket, 200, "application/json", okJson.toByteArray());
         return;
     }
     respond(socket, 404, "text/plain; charset=utf-8", "niet gevonden");
+}
+
+QByteArray AdminServer::mediaJson() const
+{
+    QJsonObject out;
+    for (AppModel *m : m_web) {
+        out.insert(m->category(), QJsonArray::fromVariantList(m->webCatalog()));
+    }
+    if (m_radio) {
+        QJsonArray radio;
+        for (const QVariant &v : m_radio->catalog()) {
+            const QVariantMap m = v.toMap();
+            radio.append(QJsonObject{{QStringLiteral("name"), m.value(QStringLiteral("name")).toString()},
+                                     {QStringLiteral("on"), m.value(QStringLiteral("on")).toBool()}});
+        }
+        out.insert(QStringLiteral("radio"), radio);
+    }
+    return QJsonDocument(out).toJson(QJsonDocument::Compact);
+}
+
+bool AdminServer::setMediaJson(const QByteArray &json)
+{
+    const QJsonDocument doc = QJsonDocument::fromJson(json);
+    if (!doc.isObject()) {
+        return false;
+    }
+    const QJsonObject in = doc.object();
+    auto chosen = [](const QJsonArray &list, const QString &field) {
+        QStringList out;
+        for (const QJsonValue &v : list) {
+            if (v.toObject().value(QStringLiteral("on")).toBool()) {
+                out << v.toObject().value(field).toString();
+            }
+        }
+        return out;
+    };
+    for (AppModel *m : m_web) {
+        if (in.contains(m->category())) {
+            m->setWebShown(chosen(in.value(m->category()).toArray(), QStringLiteral("url")));
+        }
+    }
+    if (m_radio && in.contains(QStringLiteral("radio"))) {
+        m_radio->setChosen(chosen(in.value(QStringLiteral("radio")).toArray(), QStringLiteral("name")));
+    }
+    qInfo() << "Admin: media choices saved";
+    return true;
 }
 
 void AdminServer::selfTest()

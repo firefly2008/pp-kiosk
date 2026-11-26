@@ -654,6 +654,40 @@ void AppModel::move(int from, int to)
     saveOrder();
 }
 
+QVariantList AppModel::webCatalog() const
+{
+    QVariantList list;
+    for (const WebDefault &entry : webDefaults) {
+        if (QString::fromUtf8(entry.category) != m_category) {
+            continue;
+        }
+        const QString url = QString::fromUtf8(entry.url);
+        list.append(QVariantMap{{QStringLiteral("name"), QString::fromUtf8(entry.name)}, {QStringLiteral("url"), url},
+                                {QStringLiteral("on"), !m_hidden.contains(url)}});
+    }
+    for (const App &tile : customTiles()) {
+        if (tile.category == m_category) {
+            list.append(QVariantMap{{QStringLiteral("name"), tile.name}, {QStringLiteral("url"), tile.path},
+                                    {QStringLiteral("on"), !m_hidden.contains(tile.path)}});
+        }
+    }
+    return list;
+}
+
+void AppModel::setWebShown(const QStringList &urls)
+{
+    m_hidden = m_settings.value(key("hiddenApps")).toStringList();
+    for (const QVariant &v : webCatalog()) {
+        const QString url = v.toMap().value(QStringLiteral("url")).toString();
+        m_hidden.removeAll(url);
+        if (!urls.contains(url)) {
+            m_hidden.append(url);
+        }
+    }
+    m_settings.setValue(key("hiddenApps"), m_hidden);
+    refresh();
+}
+
 void AppModel::restoreHidden()
 {
     m_hidden.clear();

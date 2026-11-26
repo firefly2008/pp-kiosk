@@ -74,6 +74,7 @@ void Presentations::installDemo()
         info.write(QJsonDocument(QJsonObject{
                                      {QStringLiteral("title"), QStringLiteral("Diner van de dag")},
                                      {QStringLiteral("interval"), 12},
+                                     {QStringLiteral("menu"), true},
                                      {QStringLiteral("captions"), QJsonObject{{QStringLiteral("01.jpg"), caption}}},
                                  })
                        .toJson());
@@ -108,6 +109,8 @@ void Presentations::refresh()
         item.insert(QStringLiteral("count"), images.size());
         item.insert(QStringLiteral("cover"), QUrl::fromLocalFile(dir.filePath(images.first())).toString());
         item.insert(QStringLiteral("interval"), qBound(3, info.value(QStringLiteral("interval")).toInt(10), 300));
+        // Tekst op de dia uit het weekmenu ("Diner van de dag")
+        item.insert(QStringLiteral("menu"), info.value(QStringLiteral("menu")).toBool(folder == QLatin1String("Diner van de dag")));
         m_list.append(item);
         m_watcher.addPath(dir.absolutePath());
     }
