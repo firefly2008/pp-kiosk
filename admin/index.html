@@ -236,8 +236,10 @@ progress{width:100%;height:16px}
 
     <label for="sTheme">Thema</label>
     <div>
-      <select id="sTheme"><option value="standaard">Vrolijk (standaard)</option><option value="volwassen">Volwassen: rustige kleuren, strakke vormen</option></select>
-      <p class="hint">Volwassen: donkerblauw, zand en salie, minder ronde hoeken en lijn-pictogrammen op de tegels.</p>
+      <select id="sTheme"><option value="standaard">Vrolijk (standaard)</option><option value="volwassen">Volwassen: rustige kleuren, strakke vormen</option><option value="glas">Glas: donker, doorschijnend glas en zachte gloed</option></select>
+      <p class="hint">Volwassen: donkerblauw, zand en salie, minder ronde hoeken en lijn-pictogrammen op de tegels.<br>Glas: donkere achtergrond met langzaam bewegende kleurgloed, doorschijnende kaarten, grote klok en ronde zwevende knoppen.</p>
+      <label id="glassRow" style="margin-top:8px">Doorzichtigheid van de glaskaarten: <b id="glassVal">80%</b>
+        <input type="range" id="sGlass" min="50" max="95" step="5" style="width:100%"></label>
     </div>
 
     <label for="sBgType">Achtergrond</label>
@@ -572,9 +574,9 @@ $('addSpecial').onclick = () => { data.special.push({title: '', date: '', icon: 
 
 // ---------- Scherm ----------
 const S = {sName: 'name', sSpeak: 'speak', sChime: 'chime', sScale: 'textScale', sContrast: 'contrast', sSaver: 'screensaverMinutes',
-           sSaverPres: 'screensaverPresentation', sNightFrom: 'nightFrom', sNightTo: 'nightTo', sNightMode: 'nightMode', sDinner: 'dinnerTime', sNews: 'news', sGames: 'games', sTheme: 'theme', sWeek: 'week', sVoice: 'voice'};
+           sSaverPres: 'screensaverPresentation', sNightFrom: 'nightFrom', sNightTo: 'nightTo', sNightMode: 'nightMode', sDinner: 'dinnerTime', sNews: 'news', sGames: 'games', sTheme: 'theme', sWeek: 'week', sVoice: 'voice', sGlass: 'glassTransparency'};
 async function renderScreen(){
-  const s = data.settings = Object.assign({speak: false, chime: true, textScale: 1, contrast: false, screensaverMinutes: 5, screensaverPresentation: 'Menu van de week', dinnerTime: '17:00', news: true, games: true, week: true, voice: false, theme: 'standaard', nightFrom: '', nightTo: '', nightMode: 'dim', name: ''}, data.settings || {});
+  const s = data.settings = Object.assign({speak: false, chime: true, textScale: 1, contrast: false, screensaverMinutes: 5, screensaverPresentation: 'Menu van de week', dinnerTime: '17:00', news: true, games: true, week: true, voice: false, glassTransparency: 80, theme: 'standaard', nightFrom: '', nightTo: '', nightMode: 'dim', name: ''}, data.settings || {});
   try {
     const p = await api('GET', null, '/api/presentations');
     $('sSaverPres').innerHTML = '<option value="">De eerste presentatie</option>' + p.items.map(x => `<option value="${esc(x.name)}">${esc(x.title)}</option>`).join('');
@@ -584,15 +586,15 @@ async function renderScreen(){
     if (el.type === 'checkbox') el.checked = !!s[k];
     else el.value = String(s[k] ?? '');
   }
-  renderLook();
+  renderLook(); showGlass();
   $('sScale').value = [1, 1.2, 1.4].reduce((a, b) => Math.abs(b - s.textScale) < Math.abs(a - s.textScale) ? b : a, 1);
   showName();
 }
 for (const [id, k] of Object.entries(S)) {
   $(id).addEventListener('input', () => {
     const el = $(id);
-    data.settings[k] = el.type === 'checkbox' ? el.checked : (k === 'textScale' || k === 'screensaverMinutes') ? +el.value : el.value;
-    changed(); if (k === 'name') showName();
+    data.settings[k] = el.type === 'checkbox' ? el.checked : (k === 'textScale' || k === 'screensaverMinutes' || k === 'glassTransparency') ? +el.value : el.value;
+    changed(); if (k === 'name') showName(); showGlass();
   });
 }
 // Achtergrond en muziek per dagdeel
@@ -612,6 +614,10 @@ async function renderLook(){
     $(id).value = cur || '';
   }
   $('sMusAuto').checked = !!s.music.auto;
+}
+function showGlass(){
+  $('glassRow').hidden = $('sTheme').value !== 'glas';
+  $('glassVal').textContent = $('sGlass').value + '%';
 }
 function showBg(){
   const b = data.settings.background;

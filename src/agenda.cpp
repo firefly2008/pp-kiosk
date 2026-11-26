@@ -285,8 +285,10 @@ bool Agenda::setJson(const QByteArray &json, QString *error)
         {QStringLiteral("news"), si.value(QStringLiteral("news")).toBool(true)},
         {QStringLiteral("games"), si.value(QStringLiteral("games")).toBool(true)},
         {QStringLiteral("week"), si.value(QStringLiteral("week")).toBool(true)},
+        {QStringLiteral("glassTransparency"), qBound(50, si.value(QStringLiteral("glassTransparency")).toInt(80), 95)},
         {QStringLiteral("voice"), si.value(QStringLiteral("voice")).toBool(false)},
-        {QStringLiteral("theme"), si.value(QStringLiteral("theme")).toString() == QLatin1String("volwassen") ? QStringLiteral("volwassen") : QStringLiteral("standaard")},
+        {QStringLiteral("theme"), (si.value(QStringLiteral("theme")).toString() == QLatin1String("volwassen") || si.value(QStringLiteral("theme")).toString() == QLatin1String("glas"))
+                                          ? si.value(QStringLiteral("theme")).toString() : QStringLiteral("standaard")},
         {QStringLiteral("background"), QJsonObject{
              {QStringLiteral("type"), (bgType == QLatin1String("color") || bgType == QLatin1String("photo")) ? bgType : QStringLiteral("daypart")},
              {QStringLiteral("color"), colorRe.match(bgColor).hasMatch() ? bgColor : QStringLiteral("#ECE6DA")},

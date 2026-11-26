@@ -66,6 +66,7 @@ qt_add_resources(ppkiosk "admin" PREFIX "/" FILES admin/index.html)
 qt_add_resources(ppkiosk "demo" PREFIX "/" FILES demo/diner-van-de-dag.jpg)
 # Foto's voor het menubord (gemaakt met Figma AI)
 qt_add_resources(ppkiosk "food" PREFIX "/food" BASE assets/food FILES assets/food/aardappel-vlees.jpg assets/food/burger.jpg assets/food/friet.jpg assets/food/kip-rijst.jpg assets/food/nasi.jpg assets/food/pannenkoek.jpg assets/food/pasta.jpg assets/food/pizza.jpg assets/food/salade.jpg assets/food/soep.jpg assets/food/stamppot.jpg assets/food/vis.jpg)
+qt_add_resources(ppkiosk "glass" PREFIX "/glass" BASE assets/glass FILES assets/glass/violet.png assets/glass/blauw.png assets/glass/turquoise.png assets/glass/roze.png)
 qt_add_resources(ppkiosk "lineicons" PREFIX "/icons" BASE assets/icons FILES assets/icons/presentaties.png assets/icons/stream.png assets/icons/snelkoppelingen.png assets/icons/spelletjes.png assets/icons/muziek.png assets/icons/week.png)
 # PowerPoint omzetten (Windows): komt in de resources als :/scripts/ppt-export.ps1
 set_source_files_properties(src/ppt-export.ps1 PROPERTIES QT_RESOURCE_ALIAS ppt-export.ps1)
