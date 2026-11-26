@@ -38,20 +38,22 @@ jobs:
         run: |
           Add-Type -AssemblyName System.Windows.Forms, System.Drawing
           $log = "$env:LOCALAPPDATA\PPKiosk\ppkiosk.log"
-          $checks = @{ 'home' = 'Home screen ready' }
+          $checks = [ordered]@{ 'home' = 'Home screen ready'; 'agenda' = 'Agenda test: now 2 title Dagbesteding next Lunch'; 'admin' = 'Admin test local 200 items' }
           foreach ($mode in $checks.Keys) {
             $env:BIGSCREEN_SELFTEST = $mode
+            New-Item -ItemType Directory -Force shots | Out-Null
+            $env:PPKIOSK_SHOT = "$PWD\shots\$mode-app.png"
             $p = Start-Process dist\PPKiosk.exe -PassThru
             Start-Sleep 14
             $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
             $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
             [System.Drawing.Graphics]::FromImage($bmp).CopyFromScreen(0, 0, 0, 0, $bmp.Size)
-            New-Item -ItemType Directory -Force shots | Out-Null
             $bmp.Save("shots\$mode.png", [System.Drawing.Imaging.ImageFormat]::Png)
             if ($p.HasExited) { "RESULT: EXITED code {0} (0x{0:X8})" -f $p.ExitCode } else { "RESULT: RUNNING"; Stop-Process -Id $p.Id -Force }
             if (Test-Path $log) { "--- log ---"; Get-Content $log } else { "NO LOG FILE" }
             if (-not (Test-Path $log) -or -not (Select-String -Path $log -Pattern "Window shown" -Quiet)) { throw "Rooktest mislukt: venster niet getoond" }
             if (-not (Select-String -Path $log -Pattern $checks[$mode] -SimpleMatch -Quiet)) { throw "Rooktest mislukt: $mode ($($checks[$mode]) niet in het log)" }
+            if ($mode -eq 'admin' -and (Select-String -Path $log -Pattern "Admin test lan-wrong 200" -SimpleMatch -Quiet)) { throw "Rooktest mislukt: beheer zonder goede code werd toegelaten" }
             if (Select-String -Path $log -Pattern "TypeError|ReferenceError" -Quiet) { throw "Rooktest mislukt: QML-fout in het log ($mode)" }
           }
       - name: Schermafbeeldingen bewaren

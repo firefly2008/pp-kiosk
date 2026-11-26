@@ -30,8 +30,10 @@ qt_add_executable(ppkiosk WIN32
     src/systemtools.h
     src/securestore.cpp
     src/securestore.h
-    src/remoteserver.cpp
-    src/remoteserver.h
+    src/agenda.cpp
+    src/agenda.h
+    src/adminserver.cpp
+    src/adminserver.h
     src/thirdparty/qrcodegen.cpp
     src/thirdparty/qrcodegen.hpp
     src/paths.h
@@ -42,6 +44,7 @@ target_compile_definitions(ppkiosk PRIVATE PPKIOSK_VERSION="${PPKIOSK_VERSION}")
 
 qt_add_resources(ppkiosk "icons" PREFIX "/" FILES assets/ppkiosk-256.png assets/web-192.png assets/web-512.png assets/web-maskable-512.png assets/logos/nlziet.png assets/logos/simone-fm.png)
 qt_add_resources(ppkiosk "releasenotes" PREFIX "/" FILES releasenotes.json)
+qt_add_resources(ppkiosk "admin" PREFIX "/" FILES admin/index.html)
 
 if(WIN32)
     target_sources(ppkiosk PRIVATE
