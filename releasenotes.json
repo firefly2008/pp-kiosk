@@ -1,5 +1,19 @@
 [
   {
+    "version": "0.6.0",
+    "date": "2026-11-26",
+    "notes": [
+      "Menu van de week: de kiosk maakt zelf vrolijke menubord-dia's uit het weekmenu, met foto, dag en tijd van het diner (standaard 17:00).",
+      "Screensaver staat standaard aan: na 5 minuten zonder aanraken speelt het menu van de week. Aanraken = terug naar het startscherm.",
+      "Radio: als de radio speelt en niemand het scherm aanraakt, zweeft de naam van de zender over het scherm."
+    ],
+    "notes_en": [
+      "Automatic menu-board slides from the weekly menu.",
+      "Screensaver on by default after 5 minutes.",
+      "Floating radio station screensaver."
+    ]
+  },
+  {
     "version": "0.5.0",
     "date": "2026-11-26",
     "notes": [

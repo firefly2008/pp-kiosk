@@ -144,7 +144,11 @@ progress{width:100%;height:16px}
 
  <section id="tab-food" hidden>
   <h2>Menu van de week</h2>
-  <p class="hint">Staat op het startscherm onder "Vandaag eten" en op de dia "Diner van de dag".</p>
+  <p class="hint">Staat op het startscherm onder "Vandaag eten". De kiosk maakt er ook automatisch een presentatie van: "Menu van de week", met een foto, de dag en de tijd van het diner.</p>
+  <div class="card">
+    <label for="sDinner">Tijd van het diner</label>
+    <input type="time" id="sDinner" style="width:auto">
+  </div>
   <div class="card" id="menu"></div>
   <div class="grid2">
     <div>
@@ -219,7 +223,7 @@ progress{width:100%;height:16px}
       </select>
       <label for="sSaverPres" style="margin-top:8px">Presentatie</label>
       <select id="sSaverPres"></select>
-      <p class="hint">Na zoveel minuten zonder aanraken start de presentatie. Aanraken = terug naar het startscherm.</p>
+      <p class="hint">Na zoveel minuten zonder aanraken start de presentatie. Aanraken = terug naar het startscherm. Speelt de radio, dan zweeft de naam van de zender over het scherm.</p>
     </div>
 
     <span>Nachtstand</span>
@@ -487,9 +491,9 @@ $('addSpecial').onclick = () => { data.special.push({title: '', date: '', icon: 
 
 // ---------- Scherm ----------
 const S = {sName: 'name', sSpeak: 'speak', sChime: 'chime', sScale: 'textScale', sContrast: 'contrast', sSaver: 'screensaverMinutes',
-           sSaverPres: 'screensaverPresentation', sNightFrom: 'nightFrom', sNightTo: 'nightTo', sNightMode: 'nightMode'};
+           sSaverPres: 'screensaverPresentation', sNightFrom: 'nightFrom', sNightTo: 'nightTo', sNightMode: 'nightMode', sDinner: 'dinnerTime'};
 async function renderScreen(){
-  const s = data.settings = Object.assign({speak: false, chime: true, textScale: 1, contrast: false, screensaverMinutes: 0, screensaverPresentation: '', nightFrom: '', nightTo: '', nightMode: 'dim', name: ''}, data.settings || {});
+  const s = data.settings = Object.assign({speak: false, chime: true, textScale: 1, contrast: false, screensaverMinutes: 5, screensaverPresentation: 'Menu van de week', dinnerTime: '17:00', nightFrom: '', nightTo: '', nightMode: 'dim', name: ''}, data.settings || {});
   try {
     const p = await api('GET', null, '/api/presentations');
     $('sSaverPres').innerHTML = '<option value="">De eerste presentatie</option>' + p.items.map(x => `<option value="${esc(x.name)}">${esc(x.title)}</option>`).join('');

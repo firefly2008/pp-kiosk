@@ -39,6 +39,7 @@
 #include "agenda.h"
 #include "presentations.h"
 #include "shortcuts.h"
+#include "menuboard.h"
 #include "speaker.h"
 #include "activity.h"
 
@@ -292,6 +293,7 @@ int main(int argc, char *argv[])
     ctx->setContextProperty(QStringLiteral("agenda"), &agenda);
     Presentations presentations(appDataDir());
     ctx->setContextProperty(QStringLiteral("presentations"), &presentations);
+    MenuBoard menuBoard(&agenda, presentations.root());
     Shortcuts shortcuts(appDataDir());
     ctx->setContextProperty(QStringLiteral("shortcuts"), &shortcuts);
     AdminServer admin(appDataDir(), &agenda, &presentations, &shortcuts);

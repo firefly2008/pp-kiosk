@@ -629,6 +629,16 @@ Rectangle {
                 console.info("Menu today: " + (agenda.todayMenu.dish ? "yes" : "no") + " daypart " + agenda.daypart)
             } else if (selfTest === "speak") {
                 speaker.announce("Het is tijd voor: Test", true)
+            } else if (selfTest === "menuboard") {
+                const board = presentations.list.find(x => x.folder === "Menu van de week")
+                console.info("Menu board presentation: " + (board ? board.count : 0) + " slides")
+                root.page = "presentations"
+                pageLoader.item.startNamed("Menu van de week")
+            } else if (selfTest === "radiosaver") {
+                root.page = "stream"
+                pageLoader.item.section = "radio"
+                pageLoader.item.radioRow = 0
+                pageLoader.item.saver = true
             } else if (selfTest === "screensaver") {
                 root.page = "presentations"
                 if (pageLoader.item.startNamed("")) { root.screensaver = true; console.info("Screensaver started") }
@@ -655,7 +665,10 @@ Rectangle {
         interval: 5000; running: true; repeat: true
         onTriggered: {
             const min = root.cfg.screensaverMinutes || 0
-            if (min > 0 && !root.screensaver && !root.night && root.page === "home" && !adminPanel.visible
+            // Niet tijdens een presentatie of als de radio speelt (die heeft een eigen screensaver)
+            const item = pageLoader.item
+            const busy = item && ((item.show !== undefined && item.show !== null) || (item.radioRow !== undefined && item.radioRow >= 0))
+            if (min > 0 && !root.screensaver && !root.night && !busy && !adminPanel.visible
                     && activity.idleSeconds() >= min * 60 && presentations.list.length > 0) {
                 root.page = "presentations"
                 if (pageLoader.item && pageLoader.item.startNamed(root.cfg.screensaverPresentation || "")) {
