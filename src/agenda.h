@@ -4,6 +4,7 @@
 #pragma once
 
 #include <QDate>
+#include <QJsonArray>
 #include <QJsonObject>
 #include <QObject>
 #include <QTimer>
@@ -40,6 +41,8 @@ public:
     QVariantList celebrations() const { return m_celebrations; }
     QString daypart() const { return m_daypart; }
     QString pictoDir() const { return m_pictoDir; }
+    // Weekmenu: 7 objecten (maandag eerst) met dish, note, image
+    QJsonArray weekMenu() const { return m_data.value(QStringLiteral("menu")).toArray(); }
     // Activiteiten van een andere dag (weekoverzicht op de beheerpagina)
     QVariantList itemsFor(const QDate &date) const;
 

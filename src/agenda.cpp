@@ -72,7 +72,7 @@ QJsonObject Agenda::defaultAgenda()
 {
     // Voorbeeld-dag, zodat het scherm na installatie niet leeg is
     return QJsonObject{
-        {QStringLiteral("version"), 1},
+        {QStringLiteral("version"), 3},
         {QStringLiteral("items"), QJsonArray{
              item("07:30", "08:00", "Opstaan en aankleden", "👕", "#A7D8F0"),
              item("08:00", "08:45", "Ontbijt", "🍞", "#F6C85F"),
@@ -95,6 +95,11 @@ QJsonObject Agenda::defaultAgenda()
              QJsonObject{{QStringLiteral("dish"), QStringLiteral("Pannenkoeken")}, {QStringLiteral("note"), QString()}},
              QJsonObject{{QStringLiteral("dish"), QStringLiteral("Hutspot")}, {QStringLiteral("note"), QStringLiteral("met gehaktbal")}},
          }},
+        {QStringLiteral("settings"), QJsonObject{
+             {QStringLiteral("screensaverMinutes"), 5},
+             {QStringLiteral("screensaverPresentation"), QStringLiteral("Menu van de week")},
+             {QStringLiteral("dinnerTime"), QStringLiteral("17:00")},
+         }},
     };
 }
 
@@ -106,6 +111,23 @@ void Agenda::load()
         if (doc.isObject() && doc.object().value(QStringLiteral("items")).isArray()) {
             m_data = doc.object();
             qInfo() << "Agenda: loaded" << m_data.value(QStringLiteral("items")).toArray().size() << "items";
+            // Versie 3: screensaver standaard na 5 minuten met het menu van de week, diner om 17:00
+            if (m_data.value(QStringLiteral("version")).toInt() < 3) {
+                QJsonObject settings = m_data.value(QStringLiteral("settings")).toObject();
+                if (settings.value(QStringLiteral("screensaverMinutes")).toInt() <= 0) {
+                    settings.insert(QStringLiteral("screensaverMinutes"), 5);
+                }
+                if (settings.value(QStringLiteral("screensaverPresentation")).toString().isEmpty()) {
+                    settings.insert(QStringLiteral("screensaverPresentation"), QStringLiteral("Menu van de week"));
+                }
+                if (!settings.contains(QStringLiteral("dinnerTime"))) {
+                    settings.insert(QStringLiteral("dinnerTime"), QStringLiteral("17:00"));
+                }
+                m_data.insert(QStringLiteral("settings"), settings);
+                m_data.insert(QStringLiteral("version"), 3);
+                save();
+                qInfo() << "Agenda: upgraded to version 3";
+            }
             return;
         }
         qWarning() << "Agenda: file unreadable, using example day";
@@ -230,6 +252,7 @@ bool Agenda::setJson(const QByteArray &json, QString *error)
     const QString nightTo = si.value(QStringLiteral("nightTo")).toString();
     const double scale = si.value(QStringLiteral("textScale")).toDouble(1.0);
     const QString nightMode = si.value(QStringLiteral("nightMode")).toString();
+    const QString dinnerTime = si.value(QStringLiteral("dinnerTime")).toString();
     const QJsonObject settings{
         {QStringLiteral("name"), si.value(QStringLiteral("name")).toString().trimmed().left(40)},
         {QStringLiteral("speak"), si.value(QStringLiteral("speak")).toBool(false)},
@@ -241,8 +264,9 @@ bool Agenda::setJson(const QByteArray &json, QString *error)
         {QStringLiteral("nightFrom"), validTime(nightFrom) ? nightFrom : QString()},
         {QStringLiteral("nightTo"), validTime(nightTo) ? nightTo : QString()},
         {QStringLiteral("nightMode"), nightMode == QLatin1String("black") ? nightMode : QStringLiteral("dim")},
+        {QStringLiteral("dinnerTime"), validTime(dinnerTime) ? dinnerTime : QStringLiteral("17:00")},
     };
-    m_data = QJsonObject{{QStringLiteral("version"), 2}, {QStringLiteral("items"), items}, {QStringLiteral("messages"), messages},
+    m_data = QJsonObject{{QStringLiteral("version"), 3}, {QStringLiteral("items"), items}, {QStringLiteral("messages"), messages},
                          {QStringLiteral("menu"), menu}, {QStringLiteral("birthdays"), birthdays}, {QStringLiteral("special"), special},
                          {QStringLiteral("settings"), settings}};
     save();
@@ -273,6 +297,13 @@ QVariantMap Agenda::settings() const
     }
     if (!m.contains(QStringLiteral("nightMode"))) {
         m.insert(QStringLiteral("nightMode"), QStringLiteral("dim"));
+    }
+    if (!m.contains(QStringLiteral("dinnerTime"))) {
+        m.insert(QStringLiteral("dinnerTime"), QStringLiteral("17:00"));
+    }
+    if (!m.contains(QStringLiteral("screensaverMinutes"))) {
+        m.insert(QStringLiteral("screensaverMinutes"), 5);
+        m.insert(QStringLiteral("screensaverPresentation"), QStringLiteral("Menu van de week"));
     }
     return m;
 }
