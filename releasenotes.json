@@ -5,12 +5,16 @@
     "notes": [
       "Menu van de week: de kiosk maakt zelf vrolijke menubord-dia's uit het weekmenu, met foto, dag en tijd van het diner (standaard 17:00).",
       "Screensaver staat standaard aan: na 5 minuten zonder aanraken speelt het menu van de week. Aanraken = terug naar het startscherm.",
-      "Radio: als de radio speelt en niemand het scherm aanraakt, zweeft de naam van de zender over het scherm."
+      "Radio: als de radio speelt en niemand het scherm aanraakt, zweeft de naam van de zender over het scherm.",
+      "Nieuwsbalk op het startscherm met de laatste koppen van de NOS (uit te zetten bij Scherm).",
+      "Nieuw PP Kiosk-pictogram; de voorbeeldmelding over de beheerpagina is weg."
     ],
     "notes_en": [
       "Automatic menu-board slides from the weekly menu.",
       "Screensaver on by default after 5 minutes.",
-      "Floating radio station screensaver."
+      "Floating radio station screensaver.",
+      "News ticker with NOS headlines.",
+      "New PP Kiosk icon."
     ]
   },
   {

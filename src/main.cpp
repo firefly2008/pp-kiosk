@@ -31,6 +31,7 @@
 #include "appmodel.h"
 #include "paths.h"
 #include "radiomodel.h"
+#include "news.h"
 #include "weather.h"
 #include "updater.h"
 #include "homebridge.h"
@@ -279,11 +280,14 @@ int main(int argc, char *argv[])
     ctx->setContextProperty(QStringLiteral("radio"), &radio);
     Weather weather;
     ctx->setContextProperty(QStringLiteral("weather"), &weather);
+    News news;
+    ctx->setContextProperty(QStringLiteral("news"), &news);
     Updater updater;
     ctx->setContextProperty(QStringLiteral("updater"), &updater);
     const QString selfTestMode = qEnvironmentVariable("BIGSCREEN_SELFTEST");
     if (selfTestMode.isEmpty()) {
         QTimer::singleShot(4000, &weather, &Weather::refresh);
+        QTimer::singleShot(6000, &news, &News::refresh);
         updater.startAutomatic();
     }
     view.engine()->setNetworkAccessManagerFactory(new CachingNetworkFactory(appDataDir() + QStringLiteral("/imagecache")));

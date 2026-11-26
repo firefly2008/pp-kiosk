@@ -141,21 +141,72 @@ Rectangle {
         }
     }
 
-    // ---------- Mededelingen ----------
+    // ---------- Mededelingen en nieuws (wisselen om de 9 seconden) ----------
+    readonly property var tickerItems: {
+        const out = agenda.messages.map(m => ({ kind: "message", title: m, time: "" }))
+        if (root.cfg.news !== false)
+            for (const h of news.headlines) out.push({ kind: "news", title: h.title, time: h.time })
+        return out
+    }
+    property int tickerIndex: 0
+    readonly property var tickerItem: tickerItems.length > 0 ? tickerItems[tickerIndex % tickerItems.length] : null
+    Timer {
+        interval: 9000; repeat: true; running: root.tickerItems.length > 1
+        onTriggered: tickerFade.restart()
+    }
+    SequentialAnimation {
+        id: tickerFade
+        NumberAnimation { target: tickerRow; property: "opacity"; to: 0; duration: 350 }
+        ScriptAction { script: root.tickerIndex = (root.tickerIndex + 1) % Math.max(1, root.tickerItems.length) }
+        NumberAnimation { target: tickerRow; property: "opacity"; to: 1; duration: 350 }
+    }
     Rectangle {
         id: messageBar
         anchors { left: parent.left; right: parent.right; top: header.bottom; leftMargin: 48 * root.s; rightMargin: 48 * root.s; topMargin: 8 * root.s }
-        visible: agenda.messages.length > 0
-        height: visible ? messageText.implicitHeight + 32 * root.s : 0
+        visible: root.tickerItem !== null
+        readonly property bool isNews: visible && root.tickerItem.kind === "news"
+        height: visible ? 84 * root.f : 0
         radius: 20 * root.s
-        color: root.contrast ? "#000000" : "#FFF4CC"
+        color: root.contrast ? "#000000" : isNews ? "#1F2A44" : "#FFF4CC"
         border.color: root.contrast ? "#FFE14D" : "transparent"; border.width: root.lineWidth
-        Text {
-            id: messageText
-            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: 28 * root.s }
-            text: "📢  " + agenda.messages.join("     •     ")
-            font.pixelSize: 38 * root.f; color: root.ink
-            wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight
+        Behavior on color { ColorAnimation { duration: 300 } }
+        RowLayout {
+            id: tickerRow
+            anchors { fill: parent; leftMargin: 20 * root.s; rightMargin: 28 * root.s }
+            spacing: 20 * root.s
+            Rectangle {
+                visible: messageBar.isNews
+                Layout.preferredHeight: 56 * root.f
+                Layout.preferredWidth: newsLabel.implicitWidth + 32 * root.s
+                radius: 12 * root.s
+                color: "#E1251B"
+                Text {
+                    id: newsLabel
+                    anchors.centerIn: parent
+                    text: "NOS NIEUWS"
+                    font.pixelSize: 30 * root.f; font.bold: true; font.letterSpacing: 2 * root.s; color: "#FFFFFF"
+                }
+            }
+            Text {
+                visible: !messageBar.isNews
+                text: "📢"
+                font.family: root.emojiFont
+                font.pixelSize: 38 * root.f
+            }
+            Text {
+                id: messageText
+                Layout.fillWidth: true
+                text: root.tickerItem ? root.tickerItem.title : ""
+                font.pixelSize: 38 * root.f
+                font.bold: messageBar.isNews
+                color: root.contrast ? "#FFFFFF" : messageBar.isNews ? "#FFFFFF" : root.ink
+                elide: Text.ElideRight
+            }
+            Text {
+                visible: messageBar.isNews && root.tickerItem.time !== ""
+                text: root.tickerItem ? root.tickerItem.time : ""
+                font.pixelSize: 32 * root.f; color: "#AEB8D6"
+            }
         }
     }
 
@@ -629,6 +680,9 @@ Rectangle {
                 console.info("Menu today: " + (agenda.todayMenu.dish ? "yes" : "no") + " daypart " + agenda.daypart)
             } else if (selfTest === "speak") {
                 speaker.announce("Het is tijd voor: Test", true)
+            } else if (selfTest === "news") {
+                news.loadSample()
+                console.info("News ticker: " + root.tickerItems.length + " items, shown " + (root.tickerItem ? root.tickerItem.title : "-"))
             } else if (selfTest === "menuboard") {
                 const board = presentations.list.find(x => x.folder === "Menu van de week")
                 console.info("Menu board presentation: " + (board ? board.count : 0) + " slides")
