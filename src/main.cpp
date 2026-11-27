@@ -32,6 +32,10 @@
 #include "paths.h"
 #include "radiomodel.h"
 #include "news.h"
+#include "watchdog.h"
+#include "messageboard.h"
+#include "calendarfeed.h"
+#include "transit.h"
 #include "weather.h"
 #include "updater.h"
 #include "homebridge.h"
@@ -283,6 +287,8 @@ int main(int argc, char *argv[])
     Weather weather;
     ctx->setContextProperty(QStringLiteral("weather"), &weather);
     News news;
+    Watchdog watchdog;
+    ctx->setContextProperty(QStringLiteral("watchdog"), &watchdog);
     ctx->setContextProperty(QStringLiteral("news"), &news);
     Updater updater;
     ctx->setContextProperty(QStringLiteral("updater"), &updater);
@@ -308,6 +314,15 @@ int main(int argc, char *argv[])
     Stats stats(appDataDir());
     ctx->setContextProperty(QStringLiteral("stats"), &stats);
     admin.setStats(&stats);
+    MessageBoard board;
+    ctx->setContextProperty(QStringLiteral("board"), &board);
+    admin.setBoard(&board);
+    CalendarFeed calendar(&agenda);
+    ctx->setContextProperty(QStringLiteral("calendar"), &calendar);
+    admin.setCalendar(&calendar);
+    Transit transit(&agenda);
+    ctx->setContextProperty(QStringLiteral("transit"), &transit);
+    admin.setTransit(&transit);
     QObject::connect(&app, &QCoreApplication::aboutToQuit, &stats, &Stats::flush);
     Listener listener;
     ctx->setContextProperty(QStringLiteral("listener"), &listener);

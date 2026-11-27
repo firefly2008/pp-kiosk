@@ -26,6 +26,9 @@ class Agenda : public QObject
     Q_PROPERTY(QVariantMap todayMenu READ todayMenu NOTIFY changed)
     // Verjaardagen en bijzondere dagen van vandaag: title, icon
     Q_PROPERTY(QVariantList celebrations READ celebrations NOTIFY changed)
+    // Ontspanning: links per groep (zingen, verhalen, dieren, gym) en muziek-favorieten met hoes
+    Q_PROPERTY(QVariantList relaxLinks READ relaxLinks NOTIFY changed)
+    Q_PROPERTY(QVariantList favorites READ favorites NOTIFY changed)
     // Dagdeel: "ochtend", "middag", "avond" of "nacht"
     Q_PROPERTY(QString daypart READ daypart NOTIFY changed)
 
@@ -39,6 +42,9 @@ public:
     QVariantMap settings() const;
     QVariantMap todayMenu() const { return m_menu; }
     QVariantList celebrations() const { return m_celebrations; }
+    QVariantList relaxLinks() const;
+    QVariantList favorites() const;
+    static QPair<QString, QString> holidayFor(const QDate &d);
     QString daypart() const { return m_daypart; }
     QString pictoDir() const { return m_pictoDir; }
     // Weekmenu: 7 objecten (maandag eerst) met dish, note, image
@@ -53,8 +59,13 @@ public:
     // Rooktest en beheer: tijd vastzetten ("HH:mm"), leeg = echte tijd
     Q_INVOKABLE void setTestTime(const QString &time);
     // Alleen voor de rooktest: instelling tijdelijk veranderen (wordt niet opgeslagen)
+    // Foto van de dag: nieuwe achtergrondfoto (bestand in de picto-map) met de naam van de fotograaf
+    void setBackgroundPhoto(const QString &name, const QString &credit);
+    // Afspraken uit een gekoppelde agenda (Google Agenda): alleen-lezen, per datum
+    void setExternal(const QList<QJsonObject> &items);
     Q_INVOKABLE void setTestSetting(const QString &key, const QVariant &value);
     Q_INVOKABLE QString testPhoto();
+    Q_INVOKABLE QString holidayName(const QString &isoDate) const { return holidayFor(QDate::fromString(isoDate, Qt::ISODate)).first; }
     // Kleine dingen die het scherm onthoudt (bijvoorbeeld het radiovolume), in settings.ini onder "ui/"
     Q_INVOKABLE QVariant uiValue(const QString &key, const QVariant &fallback) const;
     Q_INVOKABLE void setUiValue(const QString &key, const QVariant &value);
@@ -82,6 +93,7 @@ private:
     bool m_first = true;
     QVariantMap m_menu;
     QVariantList m_celebrations;
+    QList<QJsonObject> m_external;
     QString m_daypart;
     QTimer m_timer;
 };

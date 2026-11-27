@@ -54,9 +54,15 @@ dialog{border:0;border-radius:16px;max-width:640px;width:calc(100% - 32px)}
 #pickSearch{width:100%;padding:8px 10px;font-size:16px}
 .picker button.on{outline:3px solid var(--groen)}
 .hint{color:var(--grijs);font-size:15px}
-nav.tabs{display:flex;gap:8px;max-width:1100px;margin:0 auto;padding:16px 16px 0;flex-wrap:wrap}
-nav.tabs button{border-radius:999px;font-weight:600}
-nav.tabs button.on{background:var(--groen);color:#fff;border-color:var(--groen)}
+nav.cats{display:flex;gap:8px;max-width:1100px;margin:0 auto;padding:16px 16px 0;flex-wrap:wrap}
+nav.cats button{border-radius:12px;font-weight:700}
+nav.cats button.on{background:var(--groen);color:#fff;border-color:var(--groen)}
+nav.tabs{display:flex;gap:6px;max-width:1100px;margin:10px auto 0;padding:8px 16px;flex-wrap:wrap;border-bottom:1px solid var(--lijn)}
+nav.tabs.single{display:none}
+nav.tabs button{border-radius:999px;font-weight:600;min-height:38px;padding:4px 14px;background:transparent}
+nav.tabs button.on{background:var(--groen-licht);color:var(--groen);border-color:var(--groen)}
+.srow2{display:flex;flex-direction:column;gap:2px;padding:10px 0;border-bottom:1px solid var(--lijn)}.srow2:last-child{border:none}
+.ok{color:var(--groen);font-weight:700}
 .pres{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
 .pres h3{margin:0 0 4px;font-size:19px}
 .pres .tools{flex-direction:row;flex-wrap:wrap}
@@ -106,12 +112,28 @@ progress{width:100%;height:16px}
 .media label{display:flex;gap:8px;align-items:center;background:#fff;border:1px solid var(--lijn);border-radius:10px;padding:8px 10px;color:var(--tekst);font-size:16px;cursor:pointer}
 .media input{width:20px;height:20px}
 .krow{display:grid;grid-template-columns:1fr 1.3fr 120px auto auto;gap:8px;align-items:center;margin-bottom:8px}
+.frow{display:grid;grid-template-columns:64px 1fr 1fr 1.2fr auto auto;gap:8px;align-items:center;margin-bottom:8px}
+.frow .cover{width:64px;height:64px;border-radius:8px;background:var(--groen-licht);display:flex;align-items:center;justify-content:center;font-size:30px;overflow:hidden}
+.frow .cover img{width:100%;height:100%;object-fit:cover}
+.rrow{display:grid;grid-template-columns:60px 190px 1fr 1.4fr auto auto;gap:8px;align-items:center;margin-bottom:8px}
+.rrow input.icon{text-align:center;font-size:22px}
+.bmsg{padding:10px 12px;border:1px solid var(--lijn);border-radius:10px;margin:6px 0;background:#fff}
+.bmsg.alert{background:#FDECEA;border-color:#F5B7B1}
+.pickres{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.pickres button{font-size:15px;min-height:40px}
 .remote{background:#FFF4CC;border:1px solid #F6C85F;border-radius:12px;padding:10px 14px;margin-bottom:12px}
 @media (max-width:900px){.week{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}}
 @media (max-width:700px){.lrow{grid-template-columns:56px 1fr}.lrow>*:nth-child(n+3){grid-column:1/-1}.pres{grid-template-columns:1fr}
   .fields{grid-template-columns:1fr 1fr}.fields>div:nth-child(3){grid-column:1/-1}.row{grid-template-columns:48px 1fr}.tools{grid-column:1/-1;flex-direction:row;flex-wrap:wrap}
   .set{grid-template-columns:1fr}.mrow{grid-template-columns:90px 56px 1fr}.mrow>*:nth-child(4){grid-column:1/-1}
-  .krow,.srow,.brow{grid-template-columns:1fr 1fr}.week{grid-template-columns:1fr}}
+  .krow,.srow,.brow{grid-template-columns:1fr 1fr}
+  .frow{grid-template-columns:64px 1fr 1fr}.frow>input[data-k=url]{grid-column:1/-1}
+  .rrow{grid-template-columns:60px 1fr}.rrow>input[data-k=url]{grid-column:1/-1}.week{grid-template-columns:1fr}
+  nav.cats,nav.tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  nav.cats button,nav.tabs button{flex:0 0 auto;min-height:48px}
+  header h1{font-size:18px}main{padding:10px 10px 120px}.card{padding:14px}
+  button,select,input[type=text],input[type=password],input[type=number]{min-height:46px;font-size:17px}
+  .bar button{flex:1}}
 </style>
 </head>
 <body>
@@ -136,18 +158,38 @@ progress{width:100%;height:16px}
   <p id="loginErr" class="hint"></p>
 </div>
 
+<nav class="cats" id="cats" hidden>
+  <button data-cat="dag" class="on">📅 Dagstructuur</button>
+  <button data-cat="media">🎧 Media</button>
+  <button data-cat="spel">🧩 Spellen &amp; ontspanning</button>
+  <button data-cat="com">💬 Communicatie</button>
+  <button data-cat="info">ℹ️ Info</button>
+  <button data-cat="scherm">🎨 Scherm &amp; thema</button>
+  <button data-cat="tech">⚙️ Techniek</button>
+</nav>
 <nav class="tabs" id="tabs" hidden>
-  <button data-tab="agenda" class="on">📅 Dagplanning</button>
-  <button data-tab="food">🍽️ Eten &amp; feest</button>
-  <button data-tab="pres">🖼️ Presentaties</button>
-  <button data-tab="media">🎧 Kijk &amp; luister</button>
-  <button data-tab="links">⭐ Snelkoppelingen</button>
-  <button data-tab="screen">🖥️ Scherm</button>
-  <button data-tab="live">📺 Live</button>
-  <button data-tab="stats">📊 Gebruik</button>
-  <button data-tab="backup">💾 Back-up</button>
-  <button data-tab="access">🔑 Toegang</button>
-  <button data-tab="kiosks">🏠 Kiosken</button>
+  <button data-tab="agenda" data-cat="dag" class="on">Dagplanning</button>
+  <button data-tab="food" data-cat="dag">Eten &amp; feest</button>
+  <button data-tab="remind" data-cat="dag">Herinneren &amp; voorlezen</button>
+  <button data-tab="gcal" data-cat="dag">Google Agenda</button>
+  <button data-tab="pres" data-cat="media">Presentaties</button>
+  <button data-tab="media" data-cat="media">Kijk &amp; luister</button>
+  <button data-tab="music" data-cat="media">Muziek</button>
+  <button data-tab="links" data-cat="media">Snelkoppelingen</button>
+  <button data-tab="relax" data-cat="media">Ontspanning</button>
+  <button data-tab="play" data-cat="spel">Spellen &amp; ontspanning</button>
+  <button data-tab="comm" data-cat="com">Spraak &amp; berichten</button>
+  <button data-tab="info" data-cat="info">Nieuws, weer &amp; kalender</button>
+  <button data-tab="look" data-cat="scherm">Uiterlijk</button>
+  <button data-tab="home" data-cat="scherm">Startscherm</button>
+  <button data-tab="saver" data-cat="scherm">Screensaver &amp; nacht</button>
+  <button data-tab="live" data-cat="tech">Live</button>
+  <button data-tab="status" data-cat="tech">Status kiosken</button>
+  <button data-tab="stats" data-cat="tech">Gebruik</button>
+  <button data-tab="backup" data-cat="tech">Back-up</button>
+  <button data-tab="access" data-cat="tech">Toegang</button>
+  <button data-tab="kiosks" data-cat="tech">Kiosken</button>
+  <button data-tab="system" data-cat="tech">Systeem</button>
 </nav>
 
 <main id="app" hidden>
@@ -230,12 +272,9 @@ progress{width:100%;height:16px}
   <button id="addLink">+ Snelkoppeling toevoegen</button>
  </section>
 
- <section id="tab-screen" hidden>
-  <h2>Scherm</h2>
+ <section id="tab-remind" hidden>
+  <h2>Herinneren &amp; voorlezen</h2>
   <div class="card set">
-    <label for="sName">Naam van deze kiosk</label>
-    <input type="text" id="sName" maxlength="40" placeholder="Bijvoorbeeld: Woonkamer">
-
     <span>Voorlezen</span>
     <div>
       <label class="toggle"><input type="checkbox" id="sSpeak"> Activiteit hardop zeggen als hij begint</label>
@@ -243,22 +282,143 @@ progress{width:100%;height:16px}
       <p class="hint">Tikken op "Nu" of "Vandaag eten" leest ook voor. Gebruikt de Nederlandse stem van Windows.</p>
     </div>
 
-    <label for="sScale">Tekstgrootte</label>
-    <select id="sScale"><option value="1">Normaal</option><option value="1.2">Groot</option><option value="1.4">Extra groot</option></select>
+    <label for="sRemind">Herinnering vooraf</label>
+    <div>
+      <select id="sRemind"><option value="0">Uit</option><option value="5">5 minuten van tevoren</option><option value="10">10 minuten van tevoren</option><option value="15">15 minuten van tevoren</option></select>
+      <label class="toggle" style="margin-top:8px"><input type="checkbox" id="sRemindSound"> Met een geluidje</label>
+      <p class="hint">Een grote melding op het scherm: "Over 5 minuten: Lunch". Tik om hem weg te halen.</p>
+    </div>
+    <span>Voorlezen bij tikken</span>
+    <div>
+      <label class="toggle"><input type="checkbox" id="sReadAloud"> Tik op een activiteit, "Nu", het eten, het nieuws of een bericht: de kiosk leest het voor</label>
+      <p class="hint">Ook de quiz leest de vragen voor. Gebruikt de Nederlandse stem van Windows.</p>
+    </div>
+  </div>
+ </section>
 
-    <span>Nieuws</span>
-    <label class="toggle"><input type="checkbox" id="sNews"> Laatste nieuws van de NOS op het startscherm (wisselt met de mededelingen)</label>
+ <section id="tab-music" hidden>
+  <h2>Muziek</h2>
+  <div class="card set">
+    <span>Muziek per dagdeel</span>
+    <div>
+      <div class="when">
+        <label>Ochtend <select id="sMusOchtend" style="width:auto"></select></label>
+        <label>Middag <select id="sMusMiddag" style="width:auto"></select></label>
+        <label>Avond <select id="sMusAvond" style="width:auto"></select></label>
+      </div>
+      <label class="toggle" style="margin-top:8px"><input type="checkbox" id="sMusAuto"> Vanzelf aanzetten als het dagdeel begint ('s nachts uit)</label>
+      <p class="hint">Bovenin het startscherm staat een knop om de zender van nu aan of uit te zetten.</p>
+    </div>
+    <label for="sRadioRegion">Lokale radio</label>
+    <div>
+      <select id="sRadioRegion"><option value="">Geen (alleen de gekozen zenders)</option></select>
+      <p class="hint">De regionale omroep staat dan altijd vooraan bij de radio.</p>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Mijn muziek (favorieten met grote hoes)</h3>
+    <p class="hint">Staat op het scherm bij Ontspanning &gt; Mijn muziek. Vul artiest en titel in en tik op 🔍: de kiosk zoekt de albumhoes erbij. Link mag leeg: dan zoekt de kiosk het nummer op YouTube.</p>
+    <div id="favs"></div>
+    <p><button id="addFav">＋ Favoriet toevoegen</button></p>
+  </div>
+ </section>
 
+ <section id="tab-relax" hidden>
+  <h2>Ontspanning</h2>
+  <div class="card set">
+    <span>Tegel</span>
+    <label class="toggle"><input type="checkbox" id="sRelax"> Tegel "Ontspanning" op het startscherm: ademhalen, natuurgeluiden, stoelgym, mijn muziek, meezingen, verhalen en dieren live</label>
+  </div>
+  <div class="card">
+    <h3>Links bij Ontspanning</h3>
+    <p class="hint">Meezingen en karaoke, verhalen en luisterboeken (voor kinderen of volwassenen), dieren-webcams en een stoelgym-video. Tik op het scherm opent de link schermvullend. Ademhalen, natuurgeluiden en de stoelgym-oefeningen werken ook zonder internet.</p>
+    <div id="relaxList"></div>
+    <p><button id="addRelax">＋ Link toevoegen</button> <button id="resetRelax">Standaardlinks terugzetten</button></p>
+  </div>
+ </section>
+
+ <section id="tab-play" hidden>
+  <h2>Spellen &amp; ontspanning</h2>
+  <div class="card set">
+    <span>Spelletjes</span>
+    <label class="toggle"><input type="checkbox" id="sGames"> Tegel "Spelletjes" op het startscherm (memory en puzzel)</label>
+  </div>
+ </section>
+
+ <section id="tab-gcal" hidden>
+  <h2>Google Agenda</h2>
+  <div class="card">
+    <p class="hint">Afspraken uit Google Agenda (of een andere agenda met een iCal-link) komen vanzelf in de dagplanning, met een 📅. Ze worden elk kwartier opgehaald en staan ook op het scherm als er even geen internet is. Afspraken voor de hele dag komen bij de mededelingen.</p>
+    <p class="hint"><b>Zo vind je de link:</b> open Google Agenda op een computer &gt; tandwiel &gt; Instellingen &gt; kies links de agenda &gt; "Agenda integreren" &gt; kopieer <b>Geheim adres in iCal-indeling</b>.</p>
+    <div class="usearch"><input type="password" id="gcalUrl" autocomplete="off" placeholder="https://calendar.google.com/calendar/ical/.../basic.ics"><button id="gcalSave" class="primary">Koppelen</button><button id="gcalOff" class="danger">Ontkoppelen</button></div>
+    <p id="gcalInfo" class="hint"></p>
+  </div>
+ </section>
+
+ <section id="tab-comm" hidden>
+  <h2>Spraak &amp; berichten</h2>
+  <div class="card set">
     <span>Spraakbediening</span>
     <div>
       <label class="toggle"><input type="checkbox" id="sVoice"> Microfoonknop bovenin: tik en zeg bijvoorbeeld "wat doen we nu?" of "zet de radio aan"</label>
       <p class="hint">Werkt zonder internet, met de Nederlandse spraakherkenning van Windows. Nodig: een microfoon, en in Windows bij Tijd en taal &gt; Taal de taal Nederlands met spraak. Ook: Privacy &gt; Microfoon &gt; bureaublad-apps toestaan.<br>
       Zinnen: zet de radio aan/uit · volgende zender · wat doen we nu · wat doen we straks · wat eten we vandaag · hoe laat is het · welke dag is het · spelletjes · presentaties · terug.</p>
     </div>
+    <span>Praatkaart</span>
+    <div>
+      <label class="toggle"><input type="checkbox" id="sTalkTile"> Tegel "Praatkaart" op het startscherm: grote plaatjes zoals "Ik wil drinken" en "Ik heb pijn"</label>
+      <label class="toggle"><input type="checkbox" id="sTalkAlert"> Bij pijn, niet goed voelen, wc, "kun je even komen" en help: melding hieronder bij het berichtenbord</label>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Berichtenbord</h3>
+    <p class="hint">Stuur een kort bericht naar het scherm. Het blijft groot in beeld tot iemand op "Gelezen" tikt; hieronder zie je wanneer. Meldingen van de praatkaart staan hier ook (🔔). Deze pagina kijkt elke 15 tellen of er iets nieuws is.</p>
+    <div class="usearch"><input type="text" id="boardFrom" maxlength="40" placeholder="Van (je naam)" style="max-width:200px"><input type="text" id="boardText" maxlength="300" placeholder="Bijvoorbeeld: Om 15:00 komt je zus op bezoek!"><button id="boardSend" class="primary">Versturen</button></div>
+    <div id="boardList"></div>
+    <p><button id="boardClear">Lijst leegmaken</button></p>
+  </div>
+ </section>
 
-    <span>Spelletjes</span>
-    <label class="toggle"><input type="checkbox" id="sGames"> Tegel "Spelletjes" op het startscherm (memory en puzzel)</label>
+ <section id="tab-info" hidden>
+  <h2>Nieuws, weer &amp; kalender</h2>
+  <div class="card set">
+    <span>Nieuws</span>
+    <label class="toggle"><input type="checkbox" id="sNews"> Laatste nieuws van de NOS op het startscherm (wisselt met de mededelingen)</label>
 
+    <span>Weer</span>
+    <label class="toggle"><input type="checkbox" id="sWeatherTile"> Tegel "Weer" op het startscherm (vandaag en de komende dagen)</label>
+
+    <span>Feestdagen</span>
+    <label class="toggle"><input type="checkbox" id="sHolidays"> Nederlandse feestdagen vanzelf tonen (Pasen, Koningsdag, Sinterklaas, Kerst en meer)</label>
+  </div>
+  <div class="card set">
+    <span>Onderweg</span>
+    <label class="toggle"><input type="checkbox" id="sTravelTile"> Tegel "Onderweg" op het startscherm: vertrektijden dichtbij en verkeersinformatie</label>
+    <label>Bus, tram, metro</label>
+    <div>
+      <p class="hint">Gekozen halte: <b id="ovStopShow">geen</b></p>
+      <div class="usearch"><input type="search" id="ovQuery" placeholder="Zoek halte: plaats en naam, bijv. Utrecht Neude"><button id="ovGo">Zoeken</button></div>
+      <div id="ovResults" class="pickres"></div>
+    </div>
+    <label>Trein (NS)</label>
+    <div>
+      <p class="hint">Gekozen station: <b id="nsShow">geen</b>. Hiervoor is een gratis NS-sleutel nodig: maak een account op apiportal.ns.nl, abonneer op "Ns-App" en plak de <b>Primary key</b>.</p>
+      <div class="usearch"><input type="text" id="nsKey" autocomplete="off" placeholder="NS-sleutel"><button id="nsKeySave">Sleutel opslaan</button></div>
+      <p id="nsKeyInfo" class="hint"></p>
+      <div class="usearch"><input type="search" id="nsQuery" placeholder="Zoek station, bijv. Amersfoort"><button id="nsGo">Zoeken</button></div>
+      <div id="nsResults" class="pickres"></div>
+    </div>
+    <label for="sTrafficUrl">Verkeersinformatie</label>
+    <div>
+      <input type="text" id="sTrafficUrl" maxlength="300" placeholder="https://www.anwb.nl/verkeer/nederland/verkeersinformatie">
+      <p class="hint">Website die opent bij "Verkeer en files" (leeg = ANWB).</p>
+    </div>
+  </div>
+ </section>
+
+ <section id="tab-look" hidden>
+  <h2>Uiterlijk</h2>
+  <div class="card set">
     <label for="sTheme">Thema</label>
     <div>
       <select id="sTheme"><option value="standaard">Vrolijk (standaard)</option><option value="volwassen">Volwassen: rustige kleuren, strakke vormen</option><option value="glas">Glas: donker, doorschijnend glas en zachte gloed</option></select>
@@ -266,10 +426,14 @@ progress{width:100%;height:16px}
       <label id="glassRow" style="margin-top:8px">Doorzichtigheid van de glaskaarten: <b id="glassVal">80%</b>
         <input type="range" id="sGlass" min="50" max="95" step="5" style="width:100%"></label>
     </div>
-
     <label for="sBgType">Achtergrond</label>
     <div>
-      <select id="sBgType"><option value="daypart">Wisselt met het dagdeel</option><option value="color">Eén kleur</option><option value="photo">Eigen foto</option></select>
+      <select id="sBgType"><option value="daypart">Wisselt met het dagdeel</option><option value="color">Eén kleur</option><option value="photo">Eigen foto</option><option value="daily">Foto van de dag (Unsplash, elke dag een nieuwe)</option></select>
+      <div id="bgDailyRow" style="margin-top:8px">
+        <label>Onderwerp <input type="text" id="sBgTopic" maxlength="60" placeholder="bijvoorbeeld natuur, bloemen, zee, bergen"></label>
+        <p class="hint">Elke dag haalt de kiosk zelf een nieuwe foto bij dit onderwerp. Hiervoor is een gratis Unsplash-sleutel nodig (kies even "Eigen foto" om de sleutel in te vullen). <span id="dailyInfo"></span></p>
+        <button id="dailyNow">Nu een nieuwe foto</button>
+      </div>
       <div id="bgColorRow" class="when" style="margin-top:8px"><label>Kleur <input type="color" id="sBgColor" style="width:64px;height:40px;padding:2px"></label></div>
       <div id="bgPhotoRow" style="margin-top:8px">
         <img id="bgPreview" alt="" style="max-width:240px;max-height:135px;border-radius:8px;display:none">
@@ -292,21 +456,44 @@ progress{width:100%;height:16px}
         </div>
       </div>
     </div>
-
-    <span>Muziek per dagdeel</span>
-    <div>
-      <div class="when">
-        <label>Ochtend <select id="sMusOchtend" style="width:auto"></select></label>
-        <label>Middag <select id="sMusMiddag" style="width:auto"></select></label>
-        <label>Avond <select id="sMusAvond" style="width:auto"></select></label>
-      </div>
-      <label class="toggle" style="margin-top:8px"><input type="checkbox" id="sMusAuto"> Vanzelf aanzetten als het dagdeel begint ('s nachts uit)</label>
-      <p class="hint">Bovenin het startscherm staat een knop om de zender van nu aan of uit te zetten.</p>
-    </div>
-
+    <label for="sScale">Tekstgrootte</label>
+    <select id="sScale"><option value="1">Normaal</option><option value="1.2">Groot</option><option value="1.4">Extra groot</option></select>
     <span>Hoog contrast</span>
     <label class="toggle"><input type="checkbox" id="sContrast"> Zwarte achtergrond, witte en gele tekst (voor slechtzienden)</label>
 
+    <span>Grote knoppen</span>
+    <label class="toggle"><input type="checkbox" id="sBigButtons"> Extra grote tegels en knoppen (makkelijker raken)</label>
+
+    <span>Seizoen</span>
+    <label class="toggle"><input type="checkbox" id="sSeasonDecor"> Versiering bij het seizoen en de feestdagen (Sinterklaas, Kerst, lente, zomer, herfst)</label>
+  </div>
+ </section>
+
+ <section id="tab-home" hidden>
+  <h2>Startscherm</h2>
+  <p class="hint">Welke tegels en onderdelen op het startscherm staan. Spelletjes, weer, ontspanning, praatkaart en onderweg zet je aan bij hun eigen onderdeel. Elke kiosk heeft eigen instellingen: kies bovenin welke kiosk je beheert, dan kan elk scherm andere inhoud hebben.</p>
+  <div class="card set">
+    <span>Tegels</span>
+    <div>
+      <label class="toggle"><input type="checkbox" id="sTilePres"> Presentaties</label>
+      <label class="toggle"><input type="checkbox" id="sTileStream"> Kijk &amp; luister</label>
+      <label class="toggle"><input type="checkbox" id="sTileLinks"> Snelkoppelingen</label>
+    </div>
+
+    <label for="sClock">Klok</label>
+    <select id="sClock"><option value="digitaal">Cijfers (09:30)</option><option value="analoog">Wijzerklok (groot, met wijzers)</option></select>
+
+    <span>Dag en seizoen</span>
+    <label class="toggle"><input type="checkbox" id="sDayBig"> Dag, datum en seizoen groot bovenaan ("Vrijdag 27 november · herfst")</label>
+
+    <span>Verjaardagen</span>
+    <label class="toggle"><input type="checkbox" id="sParty"> Feestbalk met confetti op een verjaardag of feestdag</label>
+  </div>
+ </section>
+
+ <section id="tab-saver" hidden>
+  <h2>Screensaver &amp; nacht</h2>
+  <div class="card set">
     <label for="sSaver">Screensaver</label>
     <div>
       <select id="sSaver">
@@ -316,13 +503,14 @@ progress{width:100%;height:16px}
       <label for="sSaverPres" style="margin-top:8px">Presentatie</label>
       <select id="sSaverPres"></select>
       <p class="hint">Na zoveel minuten zonder aanraken start de presentatie. Aanraken = terug naar het startscherm.</p>
+      <label class="toggle" style="margin-top:8px"><input type="checkbox" id="sSaverFade"> Als fotoalbum: foto's vloeien rustig in elkaar over en zoomen langzaam in</label>
+      <p class="hint">Tip: maak bij Media &gt; Presentaties een presentatie "Foto-album" met eigen foto's en kies die hierboven.</p>
       <label for="sRadioSaver" style="margin-top:8px">Als de radio speelt</label>
       <select id="sRadioSaver">
         <option value="0">Geen screensaver</option><option value="1">Zender zweeft over het scherm na 1 minuut</option><option value="2">Na 2 minuten</option>
         <option value="5">Na 5 minuten</option><option value="10">Na 10 minuten</option>
       </select>
     </div>
-
     <span>Nachtstand</span>
     <div>
       <div class="when">
@@ -330,10 +518,30 @@ progress{width:100%;height:16px}
         <label>tot <input type="time" id="sNightTo"></label>
         <select id="sNightMode" style="width:auto"><option value="dim">Dimmen (klok blijft zichtbaar)</option><option value="black">Helemaal zwart</option></select>
       </div>
+      <label style="margin-top:8px">Hoe donker bij dimmen: <b id="nightDimVal">88%</b>
+        <input type="range" id="sNightDim" min="50" max="95" step="5" style="width:100%"></label>
       <p class="hint">Leeg = geen nachtstand. Aanraken = 2 minuten wakker.</p>
     </div>
   </div>
  </section>
+
+ <section id="tab-system" hidden>
+  <h2>Systeem</h2>
+  <div class="card set">
+    <label for="sName">Naam van deze kiosk</label>
+    <input type="text" id="sName" maxlength="40" placeholder="Bijvoorbeeld: Woonkamer">
+
+    <span>Vastlopen</span>
+    <label class="toggle"><input type="checkbox" id="sWatchdog"> PP Kiosk vanzelf opnieuw starten als hij vastloopt of afsluit</label>
+
+    <span>Zonder internet</span>
+    <div>
+      <label class="toggle"><input type="checkbox" id="sOffline"> Offline-modus: niets van internet ophalen (geen nieuws, weer, updates of online radio)</label>
+      <p class="hint">Agenda, eten, presentaties, spelletjes en eigen foto's werken gewoon. Valt internet even weg, dan laat de kiosk het laatste nieuws en weer zien dat hij nog had.</p>
+    </div>
+  </div>
+ </section>
+
 
  <section id="tab-live" hidden>
   <h2>Live: zo ziet de kiosk er nu uit</h2>
@@ -386,6 +594,13 @@ progress{width:100%;height:16px}
     <p><button class="primary" id="accSave">Opslaan</button> <button id="accClear">Vaste inlog uitzetten</button></p>
     <p id="accInfo" class="hint"></p>
   </div>
+ </section>
+
+ <section id="tab-status" hidden>
+  <h2>Status van de kiosken</h2>
+  <p class="hint">Staat elke kiosk aan, en welke versie draait er? De lijst met kiosken stel je in bij Kiosken.</p>
+  <div class="card" id="statusList"></div>
+  <button id="statusRefresh">Opnieuw kijken</button>
  </section>
 
  <section id="tab-kiosks" hidden>
@@ -475,14 +690,14 @@ async function api(method, body, path = '/api/agenda'){
 async function start(){
   try {
     data = await api('GET');
-    $('login').hidden = true; $('app').hidden = false; $('bar').hidden = false; $('tabs').hidden = false;
+    $('login').hidden = true; $('app').hidden = false; $('bar').hidden = false; $('tabs').hidden = false; $('cats').hidden = false;
     if (!base) { ownCode = code; await loadKiosks(); }
     links = null; media = null;
     render(); renderFood(); renderScreen(); loadPictos(); loadWeek();
     showTab(tab);
   } catch (e) {
     if (base) { alert(e.message); switchTarget(''); return; }
-    $('login').hidden = false; $('app').hidden = true; $('bar').hidden = true; $('tabs').hidden = true;
+    $('login').hidden = false; $('app').hidden = true; $('bar').hidden = true; $('tabs').hidden = true; $('cats').hidden = true;
     $('loginErr').textContent = code ? e.message : '';
   }
 }
@@ -687,9 +902,9 @@ $('addSpecial').onclick = () => { data.special.push({title: '', date: '', icon: 
 
 // ---------- Scherm ----------
 const S = {sName: 'name', sSpeak: 'speak', sChime: 'chime', sScale: 'textScale', sContrast: 'contrast', sSaver: 'screensaverMinutes', sRadioSaver: 'radioSaverMinutes',
-           sSaverPres: 'screensaverPresentation', sNightFrom: 'nightFrom', sNightTo: 'nightTo', sNightMode: 'nightMode', sDinner: 'dinnerTime', sNews: 'news', sGames: 'games', sTheme: 'theme', sVoice: 'voice', sGlass: 'glassTransparency'};
+           sSaverPres: 'screensaverPresentation', sNightFrom: 'nightFrom', sNightTo: 'nightTo', sNightMode: 'nightMode', sDinner: 'dinnerTime', sNews: 'news', sGames: 'games', sRemind: 'remindMinutes', sRemindSound: 'remindSound', sWeatherTile: 'weatherTile', sHolidays: 'holidays', sBigButtons: 'bigButtons', sSeasonDecor: 'seasonDecor', sClock: 'clockStyle', sDayBig: 'dayBig', sParty: 'party', sNightDim: 'nightDim', sWatchdog: 'watchdog', sOffline: 'offline', sRelax: 'relax', sSaverFade: 'saverFade', sRadioRegion: 'radioRegion', sReadAloud: 'readAloud', sTalkTile: 'talkTile', sTalkAlert: 'talkAlert', sTravelTile: 'travelTile', sTrafficUrl: 'trafficUrl', sTilePres: 'tilePres', sTileStream: 'tileStream', sTileLinks: 'tileLinks', sTheme: 'theme', sVoice: 'voice', sGlass: 'glassTransparency'};
 async function renderScreen(){
-  const s = data.settings = Object.assign({speak: false, chime: true, textScale: 1, contrast: false, screensaverMinutes: 5, radioSaverMinutes: 1, screensaverPresentation: 'Menu van de week', dinnerTime: '17:00', news: true, games: true, week: true, voice: false, glassTransparency: 80, theme: 'standaard', nightFrom: '', nightTo: '', nightMode: 'dim', name: ''}, data.settings || {});
+  const s = data.settings = Object.assign({speak: false, chime: true, textScale: 1, contrast: false, screensaverMinutes: 5, radioSaverMinutes: 1, screensaverPresentation: 'Menu van de week', dinnerTime: '17:00', news: true, games: true, voice: false, remindMinutes: 0, remindSound: true, weatherTile: false, holidays: true, bigButtons: false, seasonDecor: false, clockStyle: 'digitaal', dayBig: false, party: true, nightDim: 88, watchdog: true, offline: false, relax: true, saverFade: true, radioRegion: '', readAloud: true, talkTile: false, talkAlert: true, travelTile: false, trafficUrl: '', tilePres: true, tileStream: true, tileLinks: true, ovStop: '', ovStopName: '', nsStation: '', nsStationName: '', glassTransparency: 80, theme: 'standaard', nightFrom: '', nightTo: '', nightMode: 'dim', name: ''}, data.settings || {});
   try {
     const p = await api('GET', null, '/api/presentations');
     $('sSaverPres').innerHTML = '<option value="">De eerste presentatie</option>' + p.items.map(x => `<option value="${esc(x.name)}">${esc(x.title)}</option>`).join('');
@@ -699,15 +914,15 @@ async function renderScreen(){
     if (el.type === 'checkbox') el.checked = !!s[k];
     else el.value = String(s[k] ?? '');
   }
-  renderLook(); showGlass();
+  renderLook(); showGlass(); $('nightDimVal').textContent = $('sNightDim').value + '%';
   $('sScale').value = [1, 1.2, 1.4].reduce((a, b) => Math.abs(b - s.textScale) < Math.abs(a - s.textScale) ? b : a, 1);
   showName();
 }
 for (const [id, k] of Object.entries(S)) {
   $(id).addEventListener('input', () => {
     const el = $(id);
-    data.settings[k] = el.type === 'checkbox' ? el.checked : (k === 'textScale' || k === 'screensaverMinutes' || k === 'radioSaverMinutes' || k === 'glassTransparency') ? +el.value : el.value;
-    changed(); if (k === 'name') showName(); showGlass();
+    data.settings[k] = el.type === 'checkbox' ? el.checked : (k === 'textScale' || k === 'screensaverMinutes' || k === 'radioSaverMinutes' || k === 'glassTransparency' || k === 'remindMinutes' || k === 'nightDim') ? +el.value : el.value;
+    changed(); if (k === 'name') showName(); showGlass(); $('nightDimVal').textContent = $('sNightDim').value + '%';
   });
 }
 // Achtergrond en muziek per dagdeel
@@ -727,7 +942,55 @@ async function renderLook(){
     $(id).value = cur || '';
   }
   $('sMusAuto').checked = !!s.music.auto;
+  renderFavs(); renderRelax();
 }
+const REGIONS = [['Omrop Fryslân Radio', 'Friesland'], ['Radio Noord', 'Groningen'], ['Radio Drenthe', 'Drenthe'], ['Radio Oost', 'Overijssel'], ['Radio Gelderland', 'Gelderland'],
+  ['Radio M Utrecht', 'Utrecht'], ['NH Radio', 'Noord-Holland'], ['Radio Rijnmond', 'Zuid-Holland (Rijnmond)'], ['Omroep Zeeland Radio', 'Zeeland'], ['Omroep Brabant Radio', 'Brabant'], ['L1 Radio', 'Limburg']];
+$('sRadioRegion').insertAdjacentHTML('beforeend', REGIONS.map(r => `<option value="${esc(r[0])}">${esc(r[1])}: ${esc(r[0])}</option>`).join(''));
+// ---------- Mijn muziek ----------
+function renderFavs(){
+  data.favorites = data.favorites || [];
+  $('favs').innerHTML = data.favorites.map((f, k) => `
+    <div class="frow" data-f="${k}">
+      <div class="cover">${f.cover ? `<img src="${pictoUrl(f.cover)}" alt="">` : '💿'}</div>
+      <input type="text" data-k="artist" value="${esc(f.artist)}" maxlength="80" placeholder="Artiest" aria-label="Artiest">
+      <input type="text" data-k="title" value="${esc(f.title)}" maxlength="80" placeholder="Titel (album of nummer)" aria-label="Titel">
+      <input type="text" data-k="url" value="${esc(f.url)}" maxlength="600" placeholder="Link (mag leeg)" aria-label="Link">
+      <button data-act="cover" title="Hoes zoeken" aria-label="Hoes zoeken">🔍</button>
+      <button class="danger" data-act="del" aria-label="Verwijderen">✕</button>
+    </div>`).join('') || '<p class="hint">Nog geen favorieten.</p>';
+}
+$('favs').addEventListener('input', e => { const r = e.target.closest('[data-f]'); if (r && e.target.dataset.k) { data.favorites[r.dataset.f][e.target.dataset.k] = e.target.value; changed(); } });
+$('favs').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  const k = +b.closest('[data-f]').dataset.f, f = data.favorites[k];
+  if (b.dataset.act === 'del') { data.favorites.splice(k, 1); changed(); renderFavs(); return; }
+  b.textContent = '…';
+  try {
+    const j = await api('GET', null, '/api/cover?q=' + encodeURIComponent(((f.artist || '') + ' ' + (f.title || '')).trim()));
+    f.cover = j.name; if (!f.artist) f.artist = j.artist; if (!f.title) f.title = j.album;
+    changed(); renderFavs();
+  } catch (err) { alert(err.message); b.textContent = '🔍'; }
+});
+$('addFav').onclick = () => { data.favorites.push({artist: '', title: '', url: '', cover: ''}); changed(); renderFavs(); };
+// ---------- Ontspanning: links ----------
+const RELAX_GROUPS = [['zingen', 'Meezingen / karaoke'], ['verhalen', 'Verhalen / luisterboeken'], ['dieren', 'Dieren live'], ['gym', 'Stoelgym-video']];
+function renderRelax(){
+  data.relax = data.relax || [];
+  $('relaxList').innerHTML = data.relax.map((l, k) => `
+    <div class="rrow" data-r="${k}">
+      <input class="icon" type="text" data-k="icon" value="${esc(l.icon)}" maxlength="8" placeholder="🎵" aria-label="Pictogram">
+      <select data-k="group" aria-label="Soort">${RELAX_GROUPS.map(g => `<option value="${g[0]}"${g[0] === l.group ? ' selected' : ''}>${g[1]}</option>`).join('')}</select>
+      <input type="text" data-k="title" value="${esc(l.title)}" maxlength="80" placeholder="Naam op het scherm" aria-label="Naam">
+      <input type="text" data-k="url" value="${esc(l.url)}" maxlength="600" placeholder="https://..." aria-label="Link">
+      <label class="toggle" title="Bij verhalen: voor kinderen"><input type="checkbox" data-k="kids"${l.kids ? ' checked' : ''}> kind</label>
+      <button class="danger" data-act="del" aria-label="Verwijderen">✕</button>
+    </div>`).join('') || '<p class="hint">Nog geen links.</p>';
+}
+$('relaxList').addEventListener('input', e => { const r = e.target.closest('[data-r]'); const k = e.target.dataset.k; if (r && k) { data.relax[r.dataset.r][k] = e.target.type === 'checkbox' ? e.target.checked : e.target.value; changed(); } });
+$('relaxList').addEventListener('click', e => { const b = e.target.closest('button[data-act=del]'); if (!b) return; data.relax.splice(+b.closest('[data-r]').dataset.r, 1); changed(); renderRelax(); });
+$('addRelax').onclick = () => { data.relax.push({group: 'zingen', icon: '🎵', title: '', url: '', kids: false}); changed(); renderRelax(); };
+$('resetRelax').onclick = () => { if (!confirm('De standaardlinks terugzetten? Eigen links blijven staan.')) return; delete data.relax; api('PUT', {...data, relax: undefined}).then(() => api('GET')).then(j => { data = j; renderRelax(); dirty = false; $('status').textContent = 'Opgeslagen'; }).catch(e => alert(e.message)); };
 function showGlass(){
   $('glassRow').hidden = $('sTheme').value !== 'glas';
   $('glassVal').textContent = $('sGlass').value + '%';
@@ -778,11 +1041,19 @@ function showBg(){
   const b = data.settings.background;
   $('bgColorRow').hidden = b.type !== 'color';
   $('bgPhotoRow').hidden = b.type !== 'photo';
+  $('bgDailyRow').hidden = b.type !== 'daily';
+  $('sBgTopic').value = b.topic || '';
   if (b.type === 'photo') uKeyState();
+  if (b.type === 'daily') api('GET', null, '/api/unsplash/key').then(j => { $('dailyInfo').textContent = j.set ? 'Er is een sleutel ingesteld.' : 'Let op: nog geen sleutel ingesteld.'; }).catch(() => {});
   $('bgPreview').style.display = b.photo ? 'block' : 'none';
   if (b.photo) $('bgPreview').src = pictoUrl(b.photo);
 }
 $('sBgType').addEventListener('input', () => { data.settings.background.type = $('sBgType').value; showBg(); changed(); });
+$('sBgTopic').addEventListener('input', () => { data.settings.background.topic = $('sBgTopic').value; changed(); });
+$('dailyNow').onclick = async () => {
+  if (dirty) { alert('Druk eerst op Opslaan.'); return; }
+  try { await api('POST', {}, '/api/daily'); $('dailyInfo').textContent = 'Nieuwe foto wordt opgehaald; over een paar tellen staat hij op het scherm.'; } catch (e) { alert(e.message); }
+};
 $('sBgColor').addEventListener('input', () => { data.settings.background.color = $('sBgColor').value; changed(); });
 $('bgFile').addEventListener('change', async () => {
   const f = $('bgFile').files[0]; if (!f) return;
@@ -891,33 +1162,132 @@ $('save').onclick = async () => {
   } catch (e) { $('status').textContent = e.message; $('status').className = 'err'; }
 };
 
-// ---------- Tabbladen ----------
+// ---------- Tabbladen: eerst een onderdeel (bovenste rij), dan het tabblad ----------
+const OWN_SAVE = ['links', 'media', 'kiosks'];                 // tabbladen met een eigen opslag
+const NO_BAR = ['pres', 'live', 'stats', 'backup', 'access', 'status', 'gcal'];
+function catOf(t){ const b = $('tabs').querySelector(`button[data-tab="${t}"]`); return b ? b.dataset.cat : 'dag'; }
 function showTab(t){
+  if (!$('tab-' + t)) t = 'agenda';
   tab = t;
-  for (const b of $('tabs').querySelectorAll('button')) b.classList.toggle('on', b.dataset.tab === t);
+  const cat = catOf(t);
+  try { localStorage.setItem('pptab', t); } catch (e) {}
+  for (const b of $('cats').querySelectorAll('button')) b.classList.toggle('on', b.dataset.cat === cat);
+  for (const b of $('tabs').querySelectorAll('button')) { b.hidden = b.dataset.cat !== cat; b.classList.toggle('on', b.dataset.tab === t); }
+  $('tabs').classList.toggle('single', $('tabs').querySelectorAll(`button[data-cat="${cat}"]`).length < 2);
   for (const s of document.querySelectorAll('main > section')) s.hidden = s.id !== 'tab-' + t;
-  $('bar').hidden = ['pres', 'live', 'stats', 'backup', 'access'].includes(t);
+  for (const b of document.querySelectorAll('#cats button.on, #tabs button.on')) { const n = b.parentElement; n.scrollLeft = b.offsetLeft - (n.clientWidth - b.offsetWidth) / 2; }
+  $('bar').hidden = NO_BAR.includes(t);
   if (t === 'stats') loadStats();
   if (t === 'access') loadAccess();
+  if (t === 'status') loadStatus();
+  if (t === 'gcal') loadGcal();
+  if (t === 'info') loadTravel();
+  clearInterval(boardTimer); boardTimer = null;
+  if (t === 'comm') { loadBoard(); boardTimer = setInterval(loadBoard, 15000); }
   clearInterval(liveTimer); liveTimer = null;
   if (t === 'live') { liveShot(); liveTimer = setInterval(liveShot, 3000); }
   if (t === 'pres') loadPres();
   if (t === 'links' && !links) api('GET', null, '/api/shortcuts').then(j => { links = j.items; renderLinks(); }).catch(e => alert(e.message));
   if (t === 'media' && !media) api('GET', null, '/api/media').then(j => { media = j; renderMedia(); }).catch(e => alert(e.message));
   if (t === 'kiosks') renderKiosks();
+  window.scrollTo(0, 0);
 }
-$('tabs').addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b || b.dataset.tab === tab) return;
-  const agendaTabs = ['agenda', 'food', 'screen'];
-  const leavingOwnSave = !(agendaTabs.includes(tab) && agendaTabs.includes(b.dataset.tab));
+function switchTo(t){
+  if (t === tab) return;
+  const leavingOwnSave = OWN_SAVE.includes(tab) || OWN_SAVE.includes(t);
   if (dirty && leavingOwnSave) {
     if (!confirm('Wijzigingen zijn nog niet opgeslagen. Toch wisselen?')) return;
     dirty = false; $('status').textContent = '';
     if (tab === 'links') links = null; else if (tab === 'media') media = null; else if (tab === 'kiosks') loadKiosks();
     else api('GET').then(j => { data = j; render(); renderFood(); renderScreen(); });
   }
-  showTab(b.dataset.tab);
+  showTab(t);
+}
+$('statusRefresh').onclick = () => loadStatus();
+$('tabs').addEventListener('click', e => { const b = e.target.closest('button[data-tab]'); if (b) switchTo(b.dataset.tab); });
+$('cats').addEventListener('click', e => {
+  const b = e.target.closest('button[data-cat]'); if (!b) return;
+  const first = $('tabs').querySelector(`button[data-cat="${b.dataset.cat}"]`);
+  if (first) switchTo(first.dataset.tab);
 });
+try { const t = localStorage.getItem('pptab'); if (t) tab = t; } catch (e) {}
+
+// ---------- Google Agenda ----------
+async function loadGcal(){
+  try { const j = await api('GET', null, '/api/calendar'); $('gcalInfo').textContent = j.set ? `Gekoppeld (${j.host}). ${j.status || ''}` : 'Nog niet gekoppeld.'; } catch (e) { $('gcalInfo').textContent = e.message; }
+}
+$('gcalSave').onclick = async () => {
+  const url = $('gcalUrl').value.trim();
+  if (!/^(https?|webcal):\/\//.test(url)) { alert('Plak de hele link, die begint met https://'); return; }
+  try { await api('PUT', {url}, '/api/calendar'); $('gcalUrl').value = ''; $('gcalInfo').textContent = 'Gekoppeld. Ophalen…'; setTimeout(loadGcal, 4000); } catch (e) { alert(e.message); }
+};
+$('gcalOff').onclick = async () => { if (!confirm('Google Agenda loskoppelen?')) return; try { await api('PUT', {url: ''}, '/api/calendar'); loadGcal(); } catch (e) { alert(e.message); } };
+// ---------- Berichtenbord ----------
+let boardTimer = null, boardSeen = null;
+function hhmm(iso){ return iso ? iso.substring(11, 16) : ''; }
+async function loadBoard(){
+  try {
+    const j = await api('GET', null, '/api/board');
+    const items = j.items.slice().reverse();
+    $('boardList').innerHTML = items.map(m => m.kind === 'alert'
+      ? `<div class="bmsg alert"><b>🔔 ${esc(hhmm(m.time))}</b> Melding van het scherm: <b>${esc(m.text)}</b></div>`
+      : `<div class="bmsg"><b>💬 ${esc(hhmm(m.time))}</b> ${m.from ? esc(m.from) + ': ' : ''}${esc(m.text)} <span class="${m.read ? 'ok' : 'hint'}">${m.read ? '✓ gelezen om ' + esc(hhmm(m.readAt)) : 'nog niet gelezen'}</span></div>`).join('') || '<p class="hint">Nog geen berichten.</p>';
+    const lastAlert = items.find(m => m.kind === 'alert');
+    if (boardSeen !== null && lastAlert && lastAlert.id !== boardSeen) { beep(); document.title = '🔔 ' + lastAlert.text; }
+    boardSeen = lastAlert ? lastAlert.id : '';
+  } catch (e) {}
+}
+function beep(){ try { const a = new AudioContext(), o = a.createOscillator(), g = a.createGain(); o.frequency.value = 880; o.connect(g); g.connect(a.destination); g.gain.value = 0.2; o.start(); setTimeout(() => { o.stop(); a.close(); }, 400); } catch (e) {} }
+try { $('boardFrom').value = localStorage.getItem('ppfrom') || ''; } catch (e) {}
+$('boardSend').onclick = async () => {
+  const text = $('boardText').value.trim(); if (!text) return;
+  try { localStorage.setItem('ppfrom', $('boardFrom').value.trim()); } catch (e) {}
+  try { await api('POST', {text, from: $('boardFrom').value.trim()}, '/api/board'); $('boardText').value = ''; loadBoard(); } catch (e) { alert(e.message); }
+};
+$('boardText').addEventListener('keydown', e => { if (e.key === 'Enter') $('boardSend').click(); });
+$('boardClear').onclick = async () => { if (!confirm('Alle berichten en meldingen uit de lijst halen?')) return; try { await api('DELETE', null, '/api/board'); loadBoard(); } catch (e) { alert(e.message); } };
+// ---------- Onderweg ----------
+function showTravel(){ const s = data.settings; $('ovStopShow').textContent = s.ovStopName || 'geen'; $('nsShow').textContent = s.nsStationName || 'geen'; }
+async function loadTravel(){
+  showTravel();
+  try { const j = await api('GET', null, '/api/ns/key'); $('nsKeyInfo').textContent = j.set ? 'Er is een NS-sleutel ingesteld.' : 'Nog geen NS-sleutel.'; } catch (e) {}
+}
+async function travelSearch(kind){
+  const q = $(kind + 'Query').value.trim(), box = $(kind + 'Results');
+  box.innerHTML = '<p class="hint">Zoeken…</p>';
+  try {
+    const j = await api('GET', null, `/api/${kind}/search?q=` + encodeURIComponent(q));
+    box.innerHTML = j.results.map(r => `<button data-code="${esc(r.code)}" data-name="${esc((r.town ? r.town + ', ' : '') + r.name)}">${esc((r.town ? r.town + ', ' : '') + r.name)}</button>`).join('') || '<p class="hint">Niets gevonden.</p>';
+  } catch (e) { box.innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+}
+for (const kind of ['ov', 'ns']) {
+  $(kind + 'Go').onclick = () => travelSearch(kind);
+  $(kind + 'Query').addEventListener('keydown', e => { if (e.key === 'Enter') travelSearch(kind); });
+  $(kind + 'Results').addEventListener('click', e => {
+    const b = e.target.closest('button[data-code]'); if (!b) return;
+    if (kind === 'ov') { data.settings.ovStop = b.dataset.code; data.settings.ovStopName = b.dataset.name; }
+    else { data.settings.nsStation = b.dataset.code; data.settings.nsStationName = b.dataset.name; }
+    $(kind + 'Results').innerHTML = ''; showTravel(); changed();
+  });
+}
+$('nsKeySave').onclick = async () => { try { const j = await api('PUT', {key: $('nsKey').value.trim()}, '/api/ns/key'); $('nsKey').value = ''; $('nsKeyInfo').textContent = j.set ? 'Opgeslagen.' : 'Sleutel verwijderd.'; } catch (e) { alert(e.message); } };
+
+// ---------- Status van de kiosken ----------
+async function loadStatus(){
+  const rows = [{name: 'Deze kiosk', base: '', code: ownCode}].concat(kiosks.filter(k => k.address).map(k => ({name: k.name || k.address, base: kioskBase(k), code: k.code})));
+  $('statusList').innerHTML = rows.map((r, i) => `<div class="srow2" id="st${i}"><b>${esc(r.name)}</b><span class="hint">bezig…</span></div>`).join('');
+  rows.forEach(async (r, i) => {
+    const el = $('st' + i).querySelector('span');
+    try {
+      const ctl = new AbortController(); setTimeout(() => ctl.abort(), 5000);
+      const x = await fetch(r.base + '/api/status', {headers: {'X-Code': r.code}, signal: ctl.signal});
+      if (!x.ok) throw new Error(x.status === 403 ? 'code klopt niet' : 'fout ' + x.status);
+      const j = await x.json();
+      const up = j.uptime > 86400 ? Math.floor(j.uptime / 86400) + ' dagen' : j.uptime > 3600 ? Math.floor(j.uptime / 3600) + ' uur' : Math.floor(j.uptime / 60) + ' min';
+      el.innerHTML = `<span class="ok">● Aan</span> · versie ${esc(j.version)}${j.name ? ' · ' + esc(j.name) : ''} · draait ${up}${j.offline ? ' · offline-modus' : ''}${j.radio ? ' · radio: ' + esc(j.radio) : ''}`;
+    } catch (e) { el.innerHTML = `<span class="err">● Niet bereikbaar</span> (${esc(e.name === 'AbortError' ? 'geen antwoord' : e.message)})`; }
+  });
+}
 
 // ---------- Presentaties ----------
 let presTimer = null;
@@ -1112,7 +1482,7 @@ $('copyAll').onclick = async () => {
     try {
       const h = {'X-Code': kc, 'Content-Type': 'application/json'};
       const cur = await (await fetch(kb + '/api/agenda', {headers: h})).json();
-      const r = await fetch(kb + '/api/agenda', {method: 'PUT', headers: h, body: JSON.stringify({...src, settings: cur.settings || {}})});
+      const r = await fetch(kb + '/api/agenda', {method: 'PUT', headers: h, body: JSON.stringify({...cur, ...src, settings: cur.settings || {}})});
       out.push(k.name + (r.ok ? ': ✓' : ': mislukt'));
     } catch (e) { out.push(k.name + ': niet bereikbaar'); }
   }

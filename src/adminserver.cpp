@@ -12,13 +12,20 @@
 #include "stats.h"
 #include "backup.h"
 #include "menuboard.h"
+#include "messageboard.h"
+#include "calendarfeed.h"
+#include "transit.h"
 #include <QCoreApplication>
 #include <QProcess>
 #include "paths.h"
+#ifndef PPKIOSK_VERSION
+#define PPKIOSK_VERSION "0.0.0"
+#endif
 #include "thirdparty/qrcodegen.hpp"
 
 #include <QBuffer>
 #include <QDateTime>
+#include <QDate>
 #include <QFile>
 #include <QFileInfo>
 #include <QTemporaryFile>
@@ -89,6 +96,11 @@ AdminServer::AdminServer(const QString &dataDir, Agenda *agenda, Presentations *
         m_code = QString::number(QRandomGenerator::system()->bounded(100000, 1000000));
         QSettings(appSettingsFile(), QSettings::IniFormat).setValue(QStringLiteral("admin/code"), m_code);
     }
+    // Foto van de dag: kort na de start en daarna elk half uur kijken of er een nieuwe nodig is
+    m_dailyTimer.setInterval(30 * 60 * 1000);
+    connect(&m_dailyTimer, &QTimer::timeout, this, &AdminServer::dailyPhoto);
+    m_dailyTimer.start();
+    QTimer::singleShot(20000, this, &AdminServer::dailyPhoto);
     connect(&m_server, &QTcpServer::newConnection, this, [this] {
         while (QTcpSocket *socket = m_server.nextPendingConnection()) {
             if (m_open >= 32) {
@@ -512,6 +524,131 @@ void AdminServer::unsplashUse(QTcpSocket *socket, const QString &idOrLink)
     });
 }
 
+void AdminServer::dailyPhoto()
+{
+    if (!m_agenda) {
+        return;
+    }
+    const QVariantMap cfg = m_agenda->settings();
+    const QVariantMap bg = cfg.value(QStringLiteral("background")).toMap();
+    if (bg.value(QStringLiteral("type")).toString() != QLatin1String("daily") || cfg.value(QStringLiteral("offline")).toBool()) {
+        return;
+    }
+    QSettings st(appSettingsFile(), QSettings::IniFormat);
+    const QString today = QDate::currentDate().toString(Qt::ISODate);
+    const QString topic = bg.value(QStringLiteral("topic")).toString().trimmed();
+    const QString stamp = today + QLatin1Char('|') + topic;
+    if (st.value(QStringLiteral("unsplash/dailyStamp")).toString() == stamp && bg.value(QStringLiteral("photo")).toString() == st.value(QStringLiteral("unsplash/dailyFile")).toString()) {
+        return;
+    }
+    const QString key = unsplashKey();
+    if (key.isEmpty()) {
+        qInfo() << "Unsplash: photo of the day needs a key";
+        return;
+    }
+    QUrl url(QStringLiteral("https://api.unsplash.com/photos/random"));
+    QUrlQuery uq;
+    uq.addQueryItem(QStringLiteral("orientation"), QStringLiteral("landscape"));
+    uq.addQueryItem(QStringLiteral("content_filter"), QStringLiteral("high"));
+    uq.addQueryItem(QStringLiteral("query"), topic.isEmpty() ? QStringLiteral("nature landscape") : topic);
+    url.setQuery(uq);
+    const QString pictoDir = m_agenda->pictoDir();
+    QNetworkReply *reply = m_network.get(unsplashRequest(url, key));
+    connect(reply, &QNetworkReply::finished, this, [this, reply, key, pictoDir, stamp] {
+        reply->deleteLater();
+        const QJsonObject o = QJsonDocument::fromJson(reply->readAll()).object();
+        const QString raw = o.value(QStringLiteral("urls")).toObject().value(QStringLiteral("raw")).toString();
+        const QString id = o.value(QStringLiteral("id")).toString();
+        if (reply->error() != QNetworkReply::NoError || raw.isEmpty() || id.isEmpty()) {
+            qInfo() << "Unsplash: photo of the day failed" << reply->errorString();
+            return;
+        }
+        const QString ping = o.value(QStringLiteral("links")).toObject().value(QStringLiteral("download_location")).toString();
+        if (!ping.isEmpty()) {
+            QNetworkReply *p = m_network.get(unsplashRequest(QUrl(ping), key));
+            connect(p, &QNetworkReply::finished, p, &QObject::deleteLater);
+        }
+        const QString credit = o.value(QStringLiteral("user")).toObject().value(QStringLiteral("name")).toString();
+        QNetworkReply *img = m_network.get(unsplashRequest(QUrl(raw + QStringLiteral("&w=1920&h=1080&fit=crop&q=85&fm=jpg")), QString()));
+        connect(img, &QNetworkReply::finished, this, [this, img, id, pictoDir, credit, stamp] {
+            img->deleteLater();
+            QImage image;
+            if (img->error() != QNetworkReply::NoError || !image.loadFromData(img->readAll())) {
+                qInfo() << "Unsplash: photo of the day download failed" << img->errorString();
+                return;
+            }
+            QDir().mkpath(pictoDir);
+            const QString name = QStringLiteral("unsplash-%1.jpg").arg(id);
+            image.save(pictoDir + QLatin1Char('/') + name, "JPG", 88);
+            QSettings st(appSettingsFile(), QSettings::IniFormat);
+            const QString old = st.value(QStringLiteral("unsplash/dailyFile")).toString();
+            if (!old.isEmpty() && old != name) {
+                QFile::remove(pictoDir + QLatin1Char('/') + old);   // gisteren: weg, de map blijft klein
+            }
+            st.setValue(QStringLiteral("unsplash/dailyFile"), name);
+            st.setValue(QStringLiteral("unsplash/dailyStamp"), stamp);
+            m_agenda->setBackgroundPhoto(name, credit);
+            qInfo() << "Unsplash: photo of the day" << name << credit;
+        });
+    });
+}
+
+void AdminServer::findCover(QTcpSocket *socket, const QString &query)
+{
+    if (query.trimmed().isEmpty()) {
+        respond(socket, 400, "application/json", R"({"error":"Typ de artiest en/of de titel."})");
+        return;
+    }
+    QUrl url(QStringLiteral("https://itunes.apple.com/search"));
+    QUrlQuery uq;
+    uq.addQueryItem(QStringLiteral("term"), query.trimmed());
+    uq.addQueryItem(QStringLiteral("country"), QStringLiteral("NL"));
+    uq.addQueryItem(QStringLiteral("media"), QStringLiteral("music"));
+    uq.addQueryItem(QStringLiteral("entity"), QStringLiteral("album"));
+    uq.addQueryItem(QStringLiteral("limit"), QStringLiteral("1"));
+    url.setQuery(uq);
+    QNetworkRequest request(url);
+    request.setTransferTimeout(10000);
+    QPointer<QTcpSocket> sock(socket);
+    const QString pictoDir = m_agenda->pictoDir();
+    QNetworkReply *reply = m_network.get(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply, sock, pictoDir] {
+        reply->deleteLater();
+        const QJsonObject hit = QJsonDocument::fromJson(reply->readAll()).object().value(QStringLiteral("results")).toArray().at(0).toObject();
+        QString art = hit.value(QStringLiteral("artworkUrl100")).toString();
+        if (reply->error() != QNetworkReply::NoError || art.isEmpty()) {
+            if (sock) {
+                respond(sock, 404, "application/json", R"({"error":"Geen hoes gevonden (of geen internet). Probeer andere woorden."})");
+            }
+            return;
+        }
+        art.replace(QStringLiteral("100x100bb"), QStringLiteral("600x600bb"));
+        const QString artist = hit.value(QStringLiteral("artistName")).toString();
+        const QString album = hit.value(QStringLiteral("collectionName")).toString();
+        QNetworkRequest r2{QUrl(art)};
+        r2.setTransferTimeout(15000);
+        QNetworkReply *img = m_network.get(r2);
+        connect(img, &QNetworkReply::finished, this, [this, img, sock, pictoDir, artist, album, art] {
+            img->deleteLater();
+            QImage image;
+            if (img->error() != QNetworkReply::NoError || !image.loadFromData(img->readAll())) {
+                if (sock) {
+                    respond(sock, 502, "application/json", R"({"error":"De hoes ophalen lukt niet. Is er internet?"})");
+                }
+                return;
+            }
+            QDir().mkpath(pictoDir);
+            const QString name = QStringLiteral("cover-%1.jpg").arg(QString::fromLatin1(QCryptographicHash::hash(art.toUtf8(), QCryptographicHash::Md5).toHex().left(10)));
+            image.save(pictoDir + QLatin1Char('/') + name, "JPG", 90);
+            qInfo() << "Cover saved" << name << artist << album;
+            if (sock) {
+                respond(sock, 200, "application/json", QJsonDocument(QJsonObject{{QStringLiteral("name"), name}, {QStringLiteral("artist"), artist},
+                                                                               {QStringLiteral("album"), album}}).toJson(QJsonDocument::Compact));
+            }
+        });
+    });
+}
+
 void AdminServer::countFailure(const QString &ip)
 {
     const qint64 now = QDateTime::currentSecsSinceEpoch();
@@ -621,6 +758,7 @@ void AdminServer::dispatch(QTcpSocket *socket, Pending &p)
             QString message;
             if (m_agenda->setJson(body, &message)) {
                 respond(socket, 200, "application/json", okJson.toByteArray());
+                QTimer::singleShot(500, this, &AdminServer::dailyPhoto);   // net gekozen: foto van de dag ophalen
             } else {
                 error(message);
             }
@@ -979,6 +1117,82 @@ void AdminServer::dispatch(QTcpSocket *socket, Pending &p)
             respond(socket, 200, "application/json", okJson.toByteArray());
             return;
         }
+    }
+    if (m_transit && (path == QLatin1String("/api/ov/search") || path == QLatin1String("/api/ns/search")) && method == "GET") {
+        const QString q = QUrlQuery(p.url).queryItemValue(QStringLiteral("q"), QUrl::FullyDecoded).trimmed().left(60);
+        if (q.size() < 2) {
+            error(QStringLiteral("Typ minstens 2 letters."));
+            return;
+        }
+        QPointer<QTcpSocket> sock(socket);
+        auto done = [this, sock](int status, const QByteArray &json) {
+            if (sock) respond(sock, status, "application/json", json);
+        };
+        if (path == QLatin1String("/api/ov/search")) m_transit->searchStops(q, done);
+        else m_transit->searchStations(q, done);
+        return;
+    }
+    if (m_transit && path == QLatin1String("/api/ns/key")) {
+        if (method == "PUT" || method == "POST") {
+            m_transit->setNsKey(QJsonDocument::fromJson(body).object().value(QStringLiteral("key")).toString());
+        }
+        respond(socket, 200, "application/json", QJsonDocument(QJsonObject{{QStringLiteral("set"), !m_transit->nsKey().isEmpty()}}).toJson(QJsonDocument::Compact));
+        return;
+    }
+    if (path == QLatin1String("/api/calendar") && m_calendar) {
+        if (method == "PUT" || method == "POST") {
+            m_calendar->setUrl(QJsonDocument::fromJson(body).object().value(QStringLiteral("url")).toString().left(1000));
+        }
+        const QString u = m_calendar->url();
+        respond(socket, 200, "application/json", QJsonDocument(QJsonObject{
+            {QStringLiteral("set"), !u.isEmpty()},
+            {QStringLiteral("host"), QUrl(u).host()},
+            {QStringLiteral("status"), m_calendar->status()},
+            {QStringLiteral("count"), m_calendar->count()}}).toJson(QJsonDocument::Compact));
+        return;
+    }
+    if (path == QLatin1String("/api/board") && m_board) {
+        if (method == "GET") {
+            respond(socket, 200, "application/json", QJsonDocument(QJsonObject{{QStringLiteral("items"), m_board->list()}}).toJson(QJsonDocument::Compact));
+            return;
+        }
+        if (method == "POST") {
+            const QJsonObject o = QJsonDocument::fromJson(body).object();
+            const QString text = o.value(QStringLiteral("text")).toString().trimmed();
+            if (text.isEmpty()) {
+                error(QStringLiteral("Typ eerst een bericht."));
+                return;
+            }
+            respond(socket, 200, "application/json", QJsonDocument(m_board->post(text, o.value(QStringLiteral("from")).toString())).toJson(QJsonDocument::Compact));
+            return;
+        }
+        if (method == "DELETE") {
+            m_board->clear();
+            respond(socket, 200, "application/json", okJson.toByteArray());
+            return;
+        }
+    }
+    if (path == QLatin1String("/api/cover") && method == "GET") {
+        findCover(socket, QUrlQuery(p.url).queryItemValue(QStringLiteral("q"), QUrl::FullyDecoded).left(120));
+        return;
+    }
+    if (path == QLatin1String("/api/daily") && method == "POST") {
+        QSettings(appSettingsFile(), QSettings::IniFormat).remove(QStringLiteral("unsplash/dailyStamp"));
+        dailyPhoto();
+        respond(socket, 200, "application/json", okJson.toByteArray());
+        return;
+    }
+    if (path == QLatin1String("/api/status") && method == "GET") {
+        const QVariantMap cfg = m_agenda ? m_agenda->settings() : QVariantMap();
+        const QJsonObject st{
+            {QStringLiteral("version"), QStringLiteral(PPKIOSK_VERSION)},
+            {QStringLiteral("name"), cfg.value(QStringLiteral("name")).toString()},
+            {QStringLiteral("uptime"), QDateTime::currentSecsSinceEpoch() - m_startedAt},
+            {QStringLiteral("offline"), cfg.value(QStringLiteral("offline")).toBool()},
+            {QStringLiteral("host"), QHostInfo::localHostName()},
+        };
+        respond(socket, 200, "application/json", QJsonDocument(st).toJson(QJsonDocument::Compact));
+        return;
     }
     if (path == QLatin1String("/api/check") && method == "GET") {
         respond(socket, 200, "application/json", okJson.toByteArray());

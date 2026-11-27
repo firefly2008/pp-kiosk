@@ -2,6 +2,11 @@
 #include "news.h"
 
 #include <QDateTime>
+#include <QFile>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QSaveFile>
+#include "paths.h"
 #include <QDebug>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -40,6 +45,7 @@ News::News(QObject *parent)
     m_timer.setInterval(10 * 60 * 1000);
     connect(&m_timer, &QTimer::timeout, this, &News::refresh);
     m_timer.start();
+    loadCache();
 }
 
 QVariantList News::parse(const QByteArray &xml, int max)
@@ -92,8 +98,47 @@ QVariantList News::parse(const QByteArray &xml, int max)
     return out;
 }
 
+void News::setOffline(bool on)
+{
+    if (m_offline == on) {
+        return;
+    }
+    m_offline = on;
+    qInfo() << "News: offline" << on;
+    Q_EMIT changed();
+    if (!on) {
+        refresh();
+    }
+}
+
+void News::saveCache() const
+{
+    QSaveFile f(appDataDir() + QStringLiteral("/news-cache.json"));
+    if (f.open(QIODevice::WriteOnly)) {
+        f.write(QJsonDocument(QJsonArray::fromVariantList(m_headlines)).toJson(QJsonDocument::Compact));
+        f.commit();
+    }
+}
+
+// Laatst bewaarde koppen: zo staat er ook zonder internet nieuws op het scherm
+void News::loadCache()
+{
+    QFile f(appDataDir() + QStringLiteral("/news-cache.json"));
+    if (m_headlines.isEmpty() && f.open(QIODevice::ReadOnly)) {
+        m_headlines = QJsonDocument::fromJson(f.readAll()).array().toVariantList();
+        if (!m_headlines.isEmpty()) {
+            qInfo() << "News:" << m_headlines.size() << "headlines from cache";
+            Q_EMIT changed();
+        }
+    }
+}
+
 void News::refresh()
 {
+    if (m_offline) {
+        loadCache();
+        return;
+    }
     QNetworkRequest request{QUrl(QString::fromLatin1(feedUrl))};
     request.setTransferTimeout(20000);
     QNetworkReply *reply = m_network.get(request);
@@ -101,12 +146,14 @@ void News::refresh()
         reply->deleteLater();
         if (reply->error() != QNetworkReply::NoError) {
             qInfo() << "News: not available" << reply->errorString();
+            loadCache();
             return;
         }
         const QVariantList list = parse(reply->readAll());
         if (!list.isEmpty()) {
             m_headlines = list;
             qInfo() << "News:" << list.size() << "headlines";
+            saveCache();
             Q_EMIT changed();
         }
     });

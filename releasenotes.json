@@ -1,5 +1,33 @@
 [
   {
+    "version": "0.11.0",
+    "date": "2026-11-27",
+    "notes": [
+      "Beheer: het menu is opnieuw ingedeeld in 7 duidelijke categorieën (Dagstructuur, Media, Spellen & ontspanning, Communicatie, Info, Scherm & thema, Techniek) met tabbladen eronder. Werkt nu ook fijn op de telefoon.",
+      "Startscherm: grote wijzerklok in glasstijl, dag/datum/seizoen extra groot, grote knoppen, weer-tegel met weerpagina, en per kiosk kiezen welke tegels er staan.",
+      "Herinnering: een paar minuten voor een activiteit een grote melding met geluid. Voorlezen bij tikken op een activiteit, het eten, het nieuws of een bericht.",
+      "Feest: Nederlandse feestdagen komen vanzelf in beeld; op een verjaardag stijgen er ballonnen op. Seizoensversiering (Sinterklaas, Kerst, lente, zomer, herfst). Nachtstand met instelbaar dimniveau.",
+      "Ontspanning (nieuwe tegel): ademhalingsoefening, natuurgeluiden (regen, zee, bos, beekje, ook zonder internet), stoelgym met voorlezen, eigen muziek met grote albumhoezen, meezingen en karaoke, verhalen en luisterboeken, dieren live.",
+      "Radio: lokale omroep per regio vooraan. Achtergrond: elke dag een nieuwe foto van Unsplash. Screensaver als fotoalbum: overvloeien en langzaam inzoomen.",
+      "Spelletjes: quiz van de dag, woordzoeker, makkelijke sudoku en kleurplaat erbij.",
+      "Communicatie: berichtenbord (de begeleiding stuurt een bericht naar het scherm en ziet wanneer het gelezen is) en praatkaart met grote plaatjes; bij pijn of hulp komt er een melding op de beheerpagina.",
+      "Info: Google Agenda koppelen (afspraken komen vanzelf in de dagplanning) en Onderweg: vertrektijden van bus, tram, metro en trein dichtbij, met een knop naar de verkeersinformatie.",
+      "Techniek: statusoverzicht van alle kiosken, automatisch herstarten als het scherm vastloopt, en een offline-modus die het laatste nieuws, weer en de agenda bewaart."
+    ],
+    "notes_en": [
+      "Admin: the menu is reorganised into 7 clear categories (Day structure, Media, Games & relaxation, Communication, Info, Screen & theme, Technical) with tabs below. Now also works well on a phone.",
+      "Home screen: large analog clock in glass style, extra large day/date/season, big buttons, weather tile with weather page, and per kiosk which tiles are shown.",
+      "Reminder: a large notice with sound a few minutes before an activity. Read aloud when tapping an activity, the meal, the news or a message.",
+      "Celebrations: Dutch public holidays appear automatically; balloons rise on a birthday. Seasonal decoration (Sinterklaas, Christmas, spring, summer, autumn). Night mode with adjustable dim level.",
+      "Relaxation (new tile): breathing exercise, nature sounds (rain, sea, forest, brook, also offline), chair exercises with spoken guidance, own music with large album covers, sing-along and karaoke, stories and audiobooks, live animal cams.",
+      "Radio: local station per region shown first. Background: a new Unsplash photo every day. Screensaver as photo album: crossfade and slow zoom.",
+      "Games: quiz of the day, word search, easy sudoku and colouring added.",
+      "Communication: message board (staff send a message to the screen and see when it was read) and a talk card with large pictures; pain or help requests notify the admin page.",
+      "Info: link Google Calendar (appointments appear in the day plan automatically) and On the way: nearby bus, tram, metro and train departures, with a button to traffic information.",
+      "Technical: status overview of all kiosks, automatic restart when the screen freezes, and an offline mode that keeps the latest news, weather and calendar."
+    ]
+  },
+  {
     "version": "0.10.0",
     "date": "2026-11-27",
     "notes": [

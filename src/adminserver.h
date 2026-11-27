@@ -6,13 +6,18 @@
 
 #include <QHash>
 #include <QNetworkAccessManager>
+#include <QDateTime>
 #include <QObject>
+#include <QTimer>
 #include <QTcpServer>
 #include <QUrl>
 
 class Agenda;
 class AppModel;
 class RadioModel;
+class MessageBoard;
+class CalendarFeed;
+class Transit;
 class Presentations;
 class Shortcuts;
 class Stats;
@@ -49,6 +54,9 @@ public:
     void setWindow(QQuickWindow *window) { m_window = window; }
     // Gebruiksstatistiek (tabblad Gebruik)
     void setStats(Stats *stats) { m_stats = stats; }
+    void setBoard(MessageBoard *board) { m_board = board; }
+    void setCalendar(CalendarFeed *calendar) { m_calendar = calendar; }
+    void setTransit(Transit *transit) { m_transit = transit; }
     // Rooktest: back-up maken en meteen terugzetten (zonder herstart)
     Q_INVOKABLE void backupTest();
     // Rooktest: vaste inlog instellen, goed en fout proberen, weer weghalen
@@ -86,6 +94,11 @@ private:
     // Unsplash: zoeken (met eigen gratis sleutel) en een foto als achtergrond binnenhalen
     void unsplashSearch(QTcpSocket *socket, const QString &query, int page);
     void unsplashUse(QTcpSocket *socket, const QString &idOrLink);
+    // Foto van de dag (achtergrond "daily"): eens per dag een nieuwe foto van Unsplash
+    void dailyPhoto();
+    // Albumhoes zoeken (iTunes) en bewaren in de picto-map
+    void findCover(QTcpSocket *socket, const QString &query);
+    QTimer m_dailyTimer;
     QString unsplashKey() const;
     void countFailure(const QString &ip);
 
@@ -96,6 +109,10 @@ private:
     QHash<QTcpSocket *, Pending> m_pending;
     QList<AppModel *> m_web;
     RadioModel *m_radio = nullptr;
+    MessageBoard *m_board = nullptr;
+    CalendarFeed *m_calendar = nullptr;
+    Transit *m_transit = nullptr;
+    qint64 m_startedAt = QDateTime::currentSecsSinceEpoch();
     Stats *m_stats = nullptr;
     QQuickWindow *m_window = nullptr;
     QTcpServer m_server;

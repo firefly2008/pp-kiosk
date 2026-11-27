@@ -4,6 +4,7 @@
 #pragma once
 
 #include <QNetworkAccessManager>
+#include <QJsonObject>
 #include <QObject>
 #include "paths.h"
 #include <QSettings>
@@ -22,6 +23,7 @@ class Weather : public QObject
     Q_PROPERTY(QString summary READ summary NOTIFY changed)   // "8° bewolkt"
     Q_PROPERTY(QVariantList days READ days NOTIFY changed)    // vandaag, morgen, overmorgen
     Q_PROPERTY(QVariantList places READ places NOTIFY placesChanged)
+    Q_PROPERTY(bool offline READ offline WRITE setOffline NOTIFY changed)
 
 public:
     explicit Weather(QObject *parent = nullptr);
@@ -36,6 +38,8 @@ public:
     QString summary() const;
     QVariantList days() const { return m_days; }
     QVariantList places() const { return m_places; }
+    bool offline() const { return m_offline; }
+    void setOffline(bool on);
 
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void searchPlaces(const QString &query);
@@ -51,6 +55,9 @@ Q_SIGNALS:
 private:
     void locate();
     void fetch();
+    bool apply(const QJsonObject &o);
+    void loadCache();
+    bool m_offline = false;
 
     QSettings m_settings{appSettingsFile(), QSettings::IniFormat};
     QNetworkAccessManager m_network;
