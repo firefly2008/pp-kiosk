@@ -2,6 +2,7 @@
 #include "agenda.h"
 #include "menuboard.h"
 #include "paths.h"
+#include <tuple>
 #include <QSettings>
 
 #include <QDateTime>
@@ -292,6 +293,18 @@ bool Agenda::setJson(const QByteArray &json, QString *error)
         {QStringLiteral("games"), si.value(QStringLiteral("games")).toBool(true)},
         {QStringLiteral("glassTransparency"), qBound(50, si.value(QStringLiteral("glassTransparency")).toInt(80), 95)},
         {QStringLiteral("voice"), si.value(QStringLiteral("voice")).toBool(false)},
+        {QStringLiteral("remindMinutes"), qBound(0, si.value(QStringLiteral("remindMinutes")).toInt(0), 60)},
+        {QStringLiteral("remindSound"), si.value(QStringLiteral("remindSound")).toBool(true)},
+        {QStringLiteral("weatherTile"), si.value(QStringLiteral("weatherTile")).toBool(false)},
+        {QStringLiteral("holidays"), si.value(QStringLiteral("holidays")).toBool(true)},
+        {QStringLiteral("bigButtons"), si.value(QStringLiteral("bigButtons")).toBool(false)},
+        {QStringLiteral("seasonDecor"), si.value(QStringLiteral("seasonDecor")).toBool(false)},
+        {QStringLiteral("clockStyle"), si.value(QStringLiteral("clockStyle")).toString() == QLatin1String("analoog") ? QStringLiteral("analoog") : QStringLiteral("digitaal")},
+        {QStringLiteral("dayBig"), si.value(QStringLiteral("dayBig")).toBool(false)},
+        {QStringLiteral("party"), si.value(QStringLiteral("party")).toBool(true)},
+        {QStringLiteral("nightDim"), qBound(50, si.value(QStringLiteral("nightDim")).toInt(88), 95)},
+        {QStringLiteral("watchdog"), si.value(QStringLiteral("watchdog")).toBool(true)},
+        {QStringLiteral("offline"), si.value(QStringLiteral("offline")).toBool(false)},
         {QStringLiteral("theme"), (si.value(QStringLiteral("theme")).toString() == QLatin1String("volwassen") || si.value(QStringLiteral("theme")).toString() == QLatin1String("glas"))
                                           ? si.value(QStringLiteral("theme")).toString() : QStringLiteral("standaard")},
         {QStringLiteral("background"), QJsonObject{
@@ -365,6 +378,14 @@ QVariantMap Agenda::settings() const
     if (!m.contains(QStringLiteral("dinnerTime"))) {
         m.insert(QStringLiteral("dinnerTime"), QStringLiteral("17:00"));
     }
+    static const QList<QPair<QString, QVariant>> extraDefaults{
+        {QStringLiteral("remindMinutes"), 0}, {QStringLiteral("remindSound"), true}, {QStringLiteral("weatherTile"), false},
+        {QStringLiteral("holidays"), true}, {QStringLiteral("bigButtons"), false}, {QStringLiteral("seasonDecor"), false},
+        {QStringLiteral("clockStyle"), QStringLiteral("digitaal")}, {QStringLiteral("dayBig"), false}, {QStringLiteral("party"), true},
+        {QStringLiteral("nightDim"), 88}, {QStringLiteral("watchdog"), true}, {QStringLiteral("offline"), false}};
+    for (const auto &d : extraDefaults) {
+        if (!m.contains(d.first)) m.insert(d.first, d.second);
+    }
     if (!m.contains(QStringLiteral("radioSaverMinutes"))) {
         m.insert(QStringLiteral("radioSaverMinutes"), 1);
     }
@@ -373,6 +394,48 @@ QVariantMap Agenda::settings() const
         m.insert(QStringLiteral("screensaverPresentation"), QStringLiteral("Menu van de week"));
     }
     return m;
+}
+
+// Nederlandse feestdagen en bekende dagen. Pasen berekend met het algoritme van Meeus.
+QPair<QString, QString> Agenda::holidayFor(const QDate &d)
+{
+    const int y = d.year();
+    const int a = y % 19, b = y / 100, c = y % 100, dd = b / 4, e = b % 4, f = (b + 8) / 25, g = (b - f + 1) / 3;
+    const int h = (19 * a + b - dd - g + 15) % 30, i = c / 4, k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7;
+    const int m = (a + 11 * h + 22 * l) / 451;
+    const QDate easter(y, (h + l - 7 * m + 114) / 31, ((h + l - 7 * m + 114) % 31) + 1);
+    QDate king(y, 4, 27);
+    if (king.dayOfWeek() == 7) king = king.addDays(-1);
+    QDate mother(y, 5, 1);
+    mother = mother.addDays((7 - mother.dayOfWeek()) % 7 + 7);
+    QDate father(y, 6, 1);
+    father = father.addDays((7 - father.dayOfWeek()) % 7 + 14);
+    const QList<std::tuple<QDate, QString, QString>> list{
+        {QDate(y, 1, 1), QStringLiteral("Gelukkig nieuwjaar!"), QStringLiteral("🎆")},
+        {QDate(y, 2, 14), QStringLiteral("Valentijnsdag"), QStringLiteral("❤️")},
+        {easter.addDays(-2), QStringLiteral("Goede Vrijdag"), QStringLiteral("✝️")},
+        {easter, QStringLiteral("Eerste Paasdag"), QStringLiteral("🐣")},
+        {easter.addDays(1), QStringLiteral("Tweede Paasdag"), QStringLiteral("🐣")},
+        {king, QStringLiteral("Koningsdag"), QStringLiteral("👑")},
+        {QDate(y, 5, 4), QStringLiteral("Dodenherdenking"), QStringLiteral("🕯️")},
+        {QDate(y, 5, 5), QStringLiteral("Bevrijdingsdag"), QStringLiteral("🇳🇱")},
+        {mother, QStringLiteral("Moederdag"), QStringLiteral("💐")},
+        {easter.addDays(39), QStringLiteral("Hemelvaartsdag"), QStringLiteral("☁️")},
+        {easter.addDays(49), QStringLiteral("Eerste Pinksterdag"), QStringLiteral("🕊️")},
+        {easter.addDays(50), QStringLiteral("Tweede Pinksterdag"), QStringLiteral("🕊️")},
+        {father, QStringLiteral("Vaderdag"), QStringLiteral("👔")},
+        {QDate(y, 10, 31), QStringLiteral("Halloween"), QStringLiteral("🎃")},
+        {QDate(y, 11, 11), QStringLiteral("Sint-Maarten"), QStringLiteral("🏮")},
+        {QDate(y, 12, 5), QStringLiteral("Sinterklaasavond"), QStringLiteral("🎁")},
+        {QDate(y, 12, 24), QStringLiteral("Kerstavond"), QStringLiteral("🎄")},
+        {QDate(y, 12, 25), QStringLiteral("Eerste Kerstdag"), QStringLiteral("🎄")},
+        {QDate(y, 12, 26), QStringLiteral("Tweede Kerstdag"), QStringLiteral("🎄")},
+        {QDate(y, 12, 31), QStringLiteral("Oudejaarsavond"), QStringLiteral("🎆")},
+    };
+    for (const auto &t : list) {
+        if (std::get<0>(t) == d) return {std::get<1>(t), std::get<2>(t)};
+    }
+    return {};
 }
 
 QVariantList Agenda::itemsFor(const QDate &date) const
@@ -472,7 +535,15 @@ void Agenda::recompute()
         const QJsonObject o = v.toObject();
         if (o.value(QStringLiteral("date")).toString() == md) {
             m_celebrations.append(QVariantMap{{QStringLiteral("title"), QStringLiteral("Gefeliciteerd %1!").arg(o.value(QStringLiteral("name")).toString())},
-                                              {QStringLiteral("icon"), QStringLiteral("🎂")}});
+                                              {QStringLiteral("icon"), QStringLiteral("🎂")}, {QStringLiteral("kind"), QStringLiteral("birthday")}});
+        }
+    }
+    // Nederlandse feestdagen
+    if (m_data.value(QStringLiteral("settings")).toObject().value(QStringLiteral("holidays")).toBool(true)) {
+        const auto h = holidayFor(today);
+        if (!h.first.isEmpty()) {
+            m_celebrations.append(QVariantMap{{QStringLiteral("title"), h.first}, {QStringLiteral("icon"), h.second},
+                                              {QStringLiteral("kind"), QStringLiteral("holiday")}});
         }
     }
     for (const QJsonValue &v : m_data.value(QStringLiteral("special")).toArray()) {

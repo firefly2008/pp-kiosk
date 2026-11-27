@@ -15,6 +15,9 @@
 #include <QCoreApplication>
 #include <QProcess>
 #include "paths.h"
+#ifndef PPKIOSK_VERSION
+#define PPKIOSK_VERSION "0.0.0"
+#endif
 #include "thirdparty/qrcodegen.hpp"
 
 #include <QBuffer>
@@ -979,6 +982,18 @@ void AdminServer::dispatch(QTcpSocket *socket, Pending &p)
             respond(socket, 200, "application/json", okJson.toByteArray());
             return;
         }
+    }
+    if (path == QLatin1String("/api/status") && method == "GET") {
+        const QVariantMap cfg = m_agenda ? m_agenda->settings() : QVariantMap();
+        const QJsonObject st{
+            {QStringLiteral("version"), QStringLiteral(PPKIOSK_VERSION)},
+            {QStringLiteral("name"), cfg.value(QStringLiteral("name")).toString()},
+            {QStringLiteral("uptime"), QDateTime::currentSecsSinceEpoch() - m_startedAt},
+            {QStringLiteral("offline"), cfg.value(QStringLiteral("offline")).toBool()},
+            {QStringLiteral("host"), QHostInfo::localHostName()},
+        };
+        respond(socket, 200, "application/json", QJsonDocument(st).toJson(QJsonDocument::Compact));
+        return;
     }
     if (path == QLatin1String("/api/check") && method == "GET") {
         respond(socket, 200, "application/json", okJson.toByteArray());

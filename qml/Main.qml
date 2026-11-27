@@ -19,6 +19,20 @@ Rectangle {
     readonly property bool adult: cfg.theme === "volwassen" && !contrast
     // Glas-thema: donker, doorschijnende glaskaarten, zachte gloed, grote letters en pill-knoppen
     readonly property bool glass: cfg.theme === "glas" && !contrast
+    // Extra wensen 0.11 (beheer: Scherm > Startscherm / Uiterlijk)
+    readonly property bool analog: cfg.clockStyle === "analoog"
+    readonly property bool dayBig: cfg.dayBig === true
+    readonly property real big: cfg.bigButtons === true ? 1.35 : 1          // grote knoppen
+    Binding { target: news; property: "offline"; value: root.cfg.offline === true }
+    Binding { target: weather; property: "offline"; value: root.cfg.offline === true }
+    Binding { target: watchdog; property: "enabled"; value: root.cfg.watchdog !== false }
+    readonly property var season: {
+        const md = (now.getMonth() + 1) * 100 + now.getDate()
+        if (md >= 321 && md < 621) return { name: "lente", icon: "🌷", key: "lente" }
+        if (md >= 621 && md < 923) return { name: "zomer", icon: "☀️", key: "zomer" }
+        if (md >= 923 && md < 1221) return { name: "herfst", icon: "🍂", key: "herfst" }
+        return { name: "winter", icon: "❄️", key: "winter" }
+    }
     // Hoe doorzichtig de glaskaarten zijn (beheer: 50-95%, standaard 80%)
     readonly property real glassAlpha: 1 - Math.max(50, Math.min(95, cfg.glassTransparency || 80)) / 100
     readonly property var bg: cfg.background || {}
@@ -158,26 +172,39 @@ Rectangle {
     Item {
         id: header
         anchors { left: parent.left; right: parent.right; top: parent.top; leftMargin: 48 * root.s; rightMargin: 48 * root.s; topMargin: 24 * root.s }
-        height: 150 * root.f
+        height: (root.analog ? 200 : root.dayBig ? 170 : 150) * root.f
 
         Row {
             id: clock
             spacing: 32 * root.s
             anchors.verticalCenter: parent.verticalCenter
             Text {
+                visible: !root.analog
                 text: Qt.formatTime(root.now, "HH:mm")
                 font.pixelSize: (root.glass ? 136 : 120) * root.f; font.bold: true; color: root.ink
                 font.letterSpacing: root.glass ? -3 * root.s : 0
+            }
+            // Grote analoge klok (beheer: Startscherm > Klok)
+            AnalogClock {
+                visible: root.analog
+                anchors.verticalCenter: parent.verticalCenter
+                width: 190 * root.f; height: width
+                now: root.now
+                glass: root.glass || root.contrast
+                ink: root.contrast ? "#FFFFFF" : root.glass ? "#FFFFFF" : root.ink
+                accent: root.contrast ? "#FFE14D" : root.green
             }
             Column {
                 anchors.verticalCenter: parent.verticalCenter
                 Text {
                     text: root.part.hello + ", het is " + root.now.toLocaleDateString(Qt.locale("nl_NL"), "dddd")
-                    font.pixelSize: 52 * root.f; font.bold: true; color: root.green
+                    font.pixelSize: (root.dayBig ? 66 : 52) * root.f; font.bold: true; color: root.green
                 }
                 Text {
                     text: root.now.toLocaleDateString(Qt.locale("nl_NL"), "d MMMM yyyy")
-                    font.pixelSize: 40 * root.f; color: root.soft
+                          + (root.dayBig ? "  ·  " + root.season.name + " " + root.season.icon : "")
+                          + (root.analog ? "  ·  " + Qt.formatTime(root.now, "HH:mm") + " uur" : "")
+                    font.pixelSize: (root.dayBig ? 50 : 40) * root.f; color: root.soft
                 }
             }
             // Lang vasthouden op de klok: beheergegevens tonen (adres, code, QR)
@@ -195,7 +222,7 @@ Rectangle {
                 id: micButton
                 anchors.verticalCenter: parent.verticalCenter
                 visible: root.cfg.voice === true
-                width: 88 * root.f; height: width
+                width: 88 * root.f * root.big; height: width
                 radius: width / 2
                 readonly property bool busy: listener.state === "listening" || listener.state === "starting"
                 color: root.contrast ? "#000000" : busy ? "#E74C3C" : (micTap.pressed ? "#DDE3EA" : root.glass ? "#26FFFFFF" : "#FFFFFF")
@@ -230,7 +257,7 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 visible: root.radioRow >= 0 || root.daypartStation !== ""
                 width: musicRow.implicitWidth + 48 * root.s
-                height: 88 * root.f
+                height: 88 * root.f * root.big
                 radius: height / 2
                 color: root.contrast ? "#000000" : root.radioRow >= 0 ? (musicTap.pressed ? "#245F3E" : "#2E8B57") : (musicTap.pressed ? "#DDE3EA" : root.glass ? "#26FFFFFF" : "#FFFFFF")
                 border.color: root.contrast ? "#FFE14D" : root.glass ? "#55FFFFFF" : root.radioRow >= 0 ? "transparent" : "#2E8B57"
@@ -269,7 +296,7 @@ Rectangle {
                 id: volumeButton
                 anchors.verticalCenter: parent.verticalCenter
                 visible: root.radioRow >= 0
-                width: 88 * root.f; height: width
+                width: 88 * root.f * root.big; height: width
                 radius: width / 2
                 color: root.contrast ? "#000000" : (volumeTap.pressed || volumePanel.visible) ? (root.glass ? "#40FFFFFF" : "#DDE3EA") : root.glass ? "#26FFFFFF" : "#FFFFFF"
                 border.color: root.contrast ? "#FFE14D" : root.glass ? "#55FFFFFF" : "#2E8B57"
@@ -409,9 +436,9 @@ Rectangle {
             GradientStop { position: 1; color: root.contrast ? "#000000" : root.adult ? "#B89A5E" : "#FFC72C" }
         }
         border.color: root.contrast ? "#FFFFFF" : "transparent"; border.width: root.lineWidth
-        // Confetti
+        // Confetti (beheer: Scherm > Startscherm > Feestanimatie)
         Repeater {
-            model: party.visible ? 28 : 0
+            model: party.visible && root.cfg.party !== false ? 28 : 0
             delegate: Rectangle {
                 required property int index
                 width: 14 * root.s; height: 22 * root.s; radius: root.r(3)
@@ -441,6 +468,85 @@ Rectangle {
                 style: Text.Outline; styleColor: root.contrast ? "#000000" : "#55000000"
                 elide: Text.ElideRight
             }
+        }
+    }
+
+    readonly property bool birthday: agenda.celebrations.some(c => c.kind === "birthday")
+    function celebrate() {
+        if (root.cfg.party === false || root.night) return
+        console.info("Party: balloons")
+        balloons.running = true
+        balloonsStop.restart()
+    }
+    // Verjaardag: ballonnen bij het opstarten, elk heel uur overdag, en bij tikken op de feestbalk
+    Timer {
+        interval: 30000; repeat: true; running: root.birthday && root.cfg.party !== false
+        onTriggered: if (root.now.getMinutes() === 0 && root.now.getSeconds() < 30 && root.now.getHours() >= 8 && root.now.getHours() <= 20) root.celebrate()
+    }
+    onBirthdayChanged: if (birthday) celebrate()
+    TapHandler {
+        parent: party
+        gesturePolicy: TapHandler.ReleaseWithinBounds
+        onTapped: {
+            root.celebrate()
+            if (root.cfg.speak) speaker.say(agenda.celebrations.map(c => c.title).join(". "))
+        }
+    }
+    Timer { id: balloonsStop; interval: 14000; onTriggered: balloons.running = false }
+    Item {
+        id: balloons
+        property bool running: false
+        anchors.fill: parent
+        z: 90
+        visible: running
+        Repeater {
+            model: balloons.running ? 22 : 0
+            delegate: Item {
+                id: bal
+                required property int index
+                width: (90 + (index % 4) * 18) * root.s; height: width * 1.25
+                property real sway: 0
+                x: ((index * 397) % 100) / 100 * (balloons.width - width) + sway
+                y: balloons.height
+                Rectangle {
+                    width: parent.width; height: parent.width * 1.15
+                    radius: width / 2
+                    color: ["#FF5E7E", "#FFC72C", "#5DA9E9", "#6CC28B", "#B48AD6", "#FF8A3D"][bal.index % 6]
+                    opacity: 0.92
+                    Rectangle { x: parent.width * 0.22; y: parent.height * 0.18; width: parent.width * 0.2; height: parent.height * 0.25; radius: width / 2; color: "#66FFFFFF" }
+                }
+                Rectangle { x: parent.width / 2 - 1; y: parent.width * 1.15; width: 2; height: parent.height * 0.6; color: "#99FFFFFF" }
+                NumberAnimation on y {
+                    from: balloons.height + 50 * root.s; to: -bal.height * 1.5
+                    duration: 7000 + (bal.index % 5) * 1400
+                    running: balloons.running
+                }
+                SequentialAnimation on sway {
+                    loops: Animation.Infinite; running: balloons.running
+                    NumberAnimation { from: -40 * root.s; to: 40 * root.s; duration: 1600 + bal.index * 60; easing.type: Easing.InOutSine }
+                    NumberAnimation { from: 40 * root.s; to: -40 * root.s; duration: 1600 + bal.index * 60; easing.type: Easing.InOutSine }
+                }
+            }
+        }
+        Text {
+            anchors.centerIn: parent
+            text: "🎉"
+            font.family: root.emojiFont
+            font.pixelSize: 260 * root.s
+            NumberAnimation on scale { running: balloons.running; from: 0.4; to: 1.2; duration: 1200; easing.type: Easing.OutBack }
+            NumberAnimation on opacity { running: balloons.running; from: 1; to: 0; duration: 4000; easing.type: Easing.InQuad }
+        }
+    }
+
+    // ---------- Seizoensthema: rustig vallende blaadjes, sneeuw of bloemen ----------
+    SeasonDecor {
+        anchors.fill: parent
+        visible: root.cfg.seasonDecor === true && root.page === "home" && !root.contrast && !root.night
+        theme: {
+            const m = root.now.getMonth() + 1, d = root.now.getDate()
+            if (m === 11 && d >= 14 || m === 12 && d <= 5) return "sinterklaas"
+            if (m === 12 && d >= 6) return "kerst"
+            return root.season.key
         }
     }
 
@@ -621,16 +727,17 @@ Rectangle {
             RowLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: false
-                Layout.preferredHeight: (root.f > root.s ? 120 : 160) * root.s
-                Layout.maximumHeight: (root.f > root.s ? 120 : 160) * root.s
+                Layout.preferredHeight: (root.f > root.s ? 120 : 160) * root.s * root.big
+                Layout.maximumHeight: (root.f > root.s ? 120 : 160) * root.s * root.big
                 spacing: 24 * root.s
                 Repeater {
                     model: [
                         { title: "Presentaties", icon: "🖼️", line: "presentaties", tint: "#5DA9E9", calm: "#4D6A86", page: "presentations" },
                         { title: "Kijk & luister", icon: "🎧", line: "stream", tint: "#6CC28B", calm: "#5E7D6A", page: "stream" },
                         { title: "Snelkoppelingen", icon: "⭐", line: "snelkoppelingen", tint: "#E97A6B", calm: "#A0745E", page: "shortcuts" },
-                        { title: "Spelletjes", icon: "🧩", line: "spelletjes", tint: "#B48AD6", calm: "#6E6684", page: "games" }
-                    ].filter(t => (t.page !== "games" || root.cfg.games !== false))
+                        { title: "Spelletjes", icon: "🧩", line: "spelletjes", tint: "#B48AD6", calm: "#6E6684", page: "games" },
+                        { title: weather.available ? "Weer " + weather.temperature + "°" : "Weer", icon: weather.available ? weather.icon : "⛅", line: "", tint: "#4FB3C9", calm: "#4F7A86", page: "weather" }
+                    ].filter(t => (t.page !== "games" || root.cfg.games !== false) && (t.page !== "weather" || root.cfg.weatherTile === true))
                     delegate: Rectangle {
                         id: tileBox
                         required property var modelData
@@ -654,14 +761,14 @@ Rectangle {
                             spacing: 4 * root.s
                             Image {
                                 anchors.horizontalCenter: parent.horizontalCenter
-                                visible: root.adult || root.glass
-                                width: (root.f > root.s ? 48 : 60) * root.s; height: width
-                                source: root.adult || root.glass ? "qrc:/icons/" + modelData.line + ".png" : ""
+                                visible: (root.adult || root.glass) && modelData.line !== ""
+                                width: (root.f > root.s ? 48 : 60) * root.s * root.big; height: width
+                                source: (root.adult || root.glass) && modelData.line !== "" ? "qrc:/icons/" + modelData.line + ".png" : ""
                                 smooth: true; mipmap: true
                             }
                             Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
-                                visible: !root.adult && !root.glass
+                                visible: (!root.adult && !root.glass) || modelData.line === ""
                                 text: modelData.icon
                                 font.family: root.emojiFont
                                 font.pixelSize: (root.f > root.s ? 44 : 56) * root.s
@@ -880,7 +987,7 @@ Rectangle {
         anchors.fill: parent
         active: root.page !== "home"
         sourceComponent: root.page === "stream" ? streamPage : root.page === "presentations" ? presentationPage
-                         : root.page === "shortcuts" ? shortcutsPage : root.page === "games" ? gamesPage : root.page === "news" ? newsPage : null
+                         : root.page === "shortcuts" ? shortcutsPage : root.page === "games" ? gamesPage : root.page === "news" ? newsPage : root.page === "weather" ? weatherPage : null
         // Zachte overgang: scherm komt iets naar voren en wordt zichtbaar
         onLoaded: pageIn.restart()
         ParallelAnimation {
@@ -891,6 +998,7 @@ Rectangle {
     }
     Component { id: streamPage; StreamScreen { s: root.s; home: root; onBack: root.page = "home" } }
     Component { id: gamesPage; GamesScreen { s: root.s; onBack: root.page = "home" } }
+    Component { id: weatherPage; WeatherScreen { s: root.s; onBack: root.page = "home" } }
     Component { id: newsPage; NewsScreen { s: root.s; current: root.newsIndex; onBack: root.page = "home" } }
     Component { id: presentationPage; PresentationScreen { s: root.s; onBack: root.page = "home" } }
     Component { id: shortcutsPage; ShortcutsScreen { s: root.s; onBack: root.page = "home" } }
@@ -951,6 +1059,27 @@ Rectangle {
             } else if (selfTest === "news") {
                 news.loadSample()
                 console.info("News ticker: " + root.tickerItems.length + " items, shown " + (root.tickerItem ? root.tickerItem.title : "-"))
+            } else if (selfTest === "extras") {
+                agenda.setTestSetting("clockStyle", "analoog")
+                agenda.setTestSetting("dayBig", true)
+                agenda.setTestSetting("seasonDecor", true)
+                agenda.setTestSetting("weatherTile", true)
+                agenda.setTestSetting("bigButtons", true)
+                console.info("Extras: analog " + root.analog + " dayBig " + root.dayBig + " season " + root.season.name + " big " + root.big
+                             + " watchdog " + watchdog.enabled + " beat " + (watchdog.lastBeatAge() < 10000 ? "ok" : "late"))
+                console.info("Holidays: " + ["2026-04-05", "2026-04-27", "2025-04-26", "2026-12-05", "2026-05-14", "2026-06-02"].map(d => d + "=" + (agenda.holidayName(d) || "-")).join(" "))
+                root.celebrate()
+            } else if (selfTest === "reminder") {
+                agenda.setTestSetting("remindMinutes", 5)
+                root.wakeUntil = Date.now() + 60000
+                root.checkReminder(true)
+                console.info("Reminder popup: " + (reminderPopup.visible ? "yes" : "no"))
+            } else if (selfTest === "freeze") {
+                // Alleen handmatig: hoofdthread 15 s vastzetten om de waakhond te testen
+                const until = Date.now() + 15000
+                while (Date.now() < until) {}
+            } else if (selfTest === "weatherpage") {
+                root.page = "weather"
             } else if (selfTest === "newspage") {
                 news.loadSample()
                 root.openNews(news.headlines[0])
@@ -1015,6 +1144,94 @@ Rectangle {
         function onActivityStarted(title, note) {
             if (root.cfg.speak && !root.night)
                 speaker.announce("Het is tijd voor: " + title + (note ? ". " + note : ""), root.cfg.chime !== false)
+        }
+    }
+
+    // ---------- Herinnering: een paar minuten voor een activiteit een melding met geluid ----------
+    property var reminded: ({})
+    property var reminder: null
+    function checkReminder(force) {
+        const min = root.cfg.remindMinutes || 0
+        if ((min <= 0 && !force) || root.night) return
+        const at = new Date(root.now.getTime() + Math.max(1, min) * 60000)
+        const hhmm = Qt.formatTime(at, "HH:mm")
+        const list = root.items
+        for (let i = 0; i < list.length; ++i) {
+            const it = list[i]
+            const key = Qt.formatDate(root.now, "yyyy-MM-dd") + " " + it.start + " " + it.title
+            if ((it.start === hhmm || (force && i === 0)) && !root.reminded[key]) {
+                root.reminded[key] = true
+                root.reminder = { title: it.title, icon: it.icon || "⏰", imageUrl: it.imageUrl || "", start: it.start, minutes: Math.max(1, min), color: it.color || "" }
+                console.info("Reminder: " + it.title + " at " + it.start)
+                reminderHide.restart()
+                if (root.cfg.remindSound !== false)
+                    speaker.announce(root.cfg.speak ? "Over " + Math.max(1, min) + " minuten: " + it.title : "", true)
+                return
+            }
+        }
+    }
+    Timer { interval: 15000; repeat: true; running: (root.cfg.remindMinutes || 0) > 0; onTriggered: root.checkReminder(false) }
+    Timer { id: reminderHide; interval: 2 * 60 * 1000; onTriggered: root.reminder = null }
+    Rectangle {
+        id: reminderPopup
+        anchors.fill: parent
+        z: 95
+        visible: root.reminder !== null
+        color: "#99000000"
+        MouseArea { anchors.fill: parent; onClicked: root.reminder = null }
+        Rectangle {
+            anchors.centerIn: parent
+            width: 1100 * root.s; height: 640 * root.s
+            radius: 48 * root.s
+            color: root.contrast ? "#000000" : root.glass ? "#E61A2036" : "#FFFFFF"
+            border.color: root.contrast ? "#FFE14D" : root.glass ? "#66FFFFFF" : "#2E8B57"; border.width: 4 * root.s
+            MouseArea { anchors.fill: parent }   // tik op de kaart sluit niet
+            GlassBackground { anchors.fill: parent; anchors.margins: 4 * root.s; visible: root.glass; opacity: 0.5; clip: true }
+            Column {
+                anchors.centerIn: parent
+                spacing: 20 * root.s
+                Row {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    spacing: 18 * root.s
+                    Text { text: "⏰"; font.family: root.emojiFont; font.pixelSize: 54 * root.s }
+                    Text {
+                        text: "Over " + (root.reminder ? root.reminder.minutes : 0) + " minuten"
+                        font.pixelSize: 54 * root.s; font.bold: true
+                        color: root.contrast ? "#FFE14D" : root.glass ? "#8BE9C0" : "#2E8B57"
+                    }
+                }
+                Picto {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: 180 * root.s; height: 180 * root.s
+                    it: root.reminder
+                    size: 150 * root.s
+                    SequentialAnimation on scale {
+                        running: reminderPopup.visible; loops: Animation.Infinite
+                        NumberAnimation { to: 1.08; duration: 700; easing.type: Easing.InOutSine }
+                        NumberAnimation { to: 1.0; duration: 700; easing.type: Easing.InOutSine }
+                    }
+                }
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: 1000 * root.s; horizontalAlignment: Text.AlignHCenter
+                    text: root.reminder ? root.reminder.title : ""
+                    font.pixelSize: 76 * root.s; font.bold: true
+                    color: root.glass || root.contrast ? "#FFFFFF" : "#1F2A44"
+                    wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight
+                }
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: root.reminder ? "Om " + root.reminder.start + " uur" : ""
+                    font.pixelSize: 44 * root.s; color: root.glass || root.contrast ? "#C3CAE0" : "#5B6478"
+                }
+                Rectangle {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: 320 * root.s * root.big; height: 100 * root.s * root.big; radius: height / 2
+                    color: okTap.pressed ? "#245F3E" : "#2E8B57"
+                    Text { anchors.centerIn: parent; text: "Oké"; font.pixelSize: 44 * root.s; font.bold: true; color: "#FFFFFF" }
+                    TapHandler { id: okTap; gesturePolicy: TapHandler.ReleaseWithinBounds; onTapped: root.reminder = null }
+                }
+            }
         }
     }
 
@@ -1345,7 +1562,7 @@ Rectangle {
         anchors.fill: parent
         visible: root.night
         color: "#000000"
-        opacity: root.cfg.nightMode === "black" ? 1 : 0.88
+        opacity: root.cfg.nightMode === "black" ? 1 : (root.cfg.nightDim || 88) / 100
         z: 100
         Text {
             anchors.centerIn: parent

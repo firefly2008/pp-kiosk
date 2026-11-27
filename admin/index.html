@@ -54,9 +54,15 @@ dialog{border:0;border-radius:16px;max-width:640px;width:calc(100% - 32px)}
 #pickSearch{width:100%;padding:8px 10px;font-size:16px}
 .picker button.on{outline:3px solid var(--groen)}
 .hint{color:var(--grijs);font-size:15px}
-nav.tabs{display:flex;gap:8px;max-width:1100px;margin:0 auto;padding:16px 16px 0;flex-wrap:wrap}
-nav.tabs button{border-radius:999px;font-weight:600}
-nav.tabs button.on{background:var(--groen);color:#fff;border-color:var(--groen)}
+nav.cats{display:flex;gap:8px;max-width:1100px;margin:0 auto;padding:16px 16px 0;flex-wrap:wrap}
+nav.cats button{border-radius:12px;font-weight:700}
+nav.cats button.on{background:var(--groen);color:#fff;border-color:var(--groen)}
+nav.tabs{display:flex;gap:6px;max-width:1100px;margin:10px auto 0;padding:8px 16px;flex-wrap:wrap;border-bottom:1px solid var(--lijn)}
+nav.tabs.single{display:none}
+nav.tabs button{border-radius:999px;font-weight:600;min-height:38px;padding:4px 14px;background:transparent}
+nav.tabs button.on{background:var(--groen-licht);color:var(--groen);border-color:var(--groen)}
+.srow2{display:flex;flex-direction:column;gap:2px;padding:10px 0;border-bottom:1px solid var(--lijn)}.srow2:last-child{border:none}
+.ok{color:var(--groen);font-weight:700}
 .pres{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
 .pres h3{margin:0 0 4px;font-size:19px}
 .pres .tools{flex-direction:row;flex-wrap:wrap}
@@ -111,7 +117,12 @@ progress{width:100%;height:16px}
 @media (max-width:700px){.lrow{grid-template-columns:56px 1fr}.lrow>*:nth-child(n+3){grid-column:1/-1}.pres{grid-template-columns:1fr}
   .fields{grid-template-columns:1fr 1fr}.fields>div:nth-child(3){grid-column:1/-1}.row{grid-template-columns:48px 1fr}.tools{grid-column:1/-1;flex-direction:row;flex-wrap:wrap}
   .set{grid-template-columns:1fr}.mrow{grid-template-columns:90px 56px 1fr}.mrow>*:nth-child(4){grid-column:1/-1}
-  .krow,.srow,.brow{grid-template-columns:1fr 1fr}.week{grid-template-columns:1fr}}
+  .krow,.srow,.brow{grid-template-columns:1fr 1fr}.week{grid-template-columns:1fr}
+  nav.cats,nav.tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  nav.cats button,nav.tabs button{flex:0 0 auto;min-height:48px}
+  header h1{font-size:18px}main{padding:10px 10px 120px}.card{padding:14px}
+  button,select,input[type=text],input[type=password],input[type=number]{min-height:46px;font-size:17px}
+  .bar button{flex:1}}
 </style>
 </head>
 <body>
@@ -136,18 +147,36 @@ progress{width:100%;height:16px}
   <p id="loginErr" class="hint"></p>
 </div>
 
+<nav class="cats" id="cats" hidden>
+  <button data-cat="dag" class="on">📅 Dagstructuur</button>
+  <button data-cat="media">🎧 Media</button>
+  <button data-cat="spel">🧩 Spellen &amp; ontspanning</button>
+  <button data-cat="com">💬 Communicatie</button>
+  <button data-cat="info">ℹ️ Info</button>
+  <button data-cat="scherm">🎨 Scherm &amp; thema</button>
+  <button data-cat="tech">⚙️ Techniek</button>
+</nav>
 <nav class="tabs" id="tabs" hidden>
-  <button data-tab="agenda" class="on">📅 Dagplanning</button>
-  <button data-tab="food">🍽️ Eten &amp; feest</button>
-  <button data-tab="pres">🖼️ Presentaties</button>
-  <button data-tab="media">🎧 Kijk &amp; luister</button>
-  <button data-tab="links">⭐ Snelkoppelingen</button>
-  <button data-tab="screen">🖥️ Scherm</button>
-  <button data-tab="live">📺 Live</button>
-  <button data-tab="stats">📊 Gebruik</button>
-  <button data-tab="backup">💾 Back-up</button>
-  <button data-tab="access">🔑 Toegang</button>
-  <button data-tab="kiosks">🏠 Kiosken</button>
+  <button data-tab="agenda" data-cat="dag" class="on">Dagplanning</button>
+  <button data-tab="food" data-cat="dag">Eten &amp; feest</button>
+  <button data-tab="remind" data-cat="dag">Herinneren &amp; voorlezen</button>
+  <button data-tab="pres" data-cat="media">Presentaties</button>
+  <button data-tab="media" data-cat="media">Kijk &amp; luister</button>
+  <button data-tab="music" data-cat="media">Muziek</button>
+  <button data-tab="links" data-cat="media">Snelkoppelingen</button>
+  <button data-tab="play" data-cat="spel">Spellen &amp; ontspanning</button>
+  <button data-tab="comm" data-cat="com">Spraak &amp; berichten</button>
+  <button data-tab="info" data-cat="info">Nieuws, weer &amp; kalender</button>
+  <button data-tab="look" data-cat="scherm">Uiterlijk</button>
+  <button data-tab="home" data-cat="scherm">Startscherm</button>
+  <button data-tab="saver" data-cat="scherm">Screensaver &amp; nacht</button>
+  <button data-tab="live" data-cat="tech">Live</button>
+  <button data-tab="status" data-cat="tech">Status kiosken</button>
+  <button data-tab="stats" data-cat="tech">Gebruik</button>
+  <button data-tab="backup" data-cat="tech">Back-up</button>
+  <button data-tab="access" data-cat="tech">Toegang</button>
+  <button data-tab="kiosks" data-cat="tech">Kiosken</button>
+  <button data-tab="system" data-cat="tech">Systeem</button>
 </nav>
 
 <main id="app" hidden>
@@ -230,12 +259,9 @@ progress{width:100%;height:16px}
   <button id="addLink">+ Snelkoppeling toevoegen</button>
  </section>
 
- <section id="tab-screen" hidden>
-  <h2>Scherm</h2>
+ <section id="tab-remind" hidden>
+  <h2>Herinneren &amp; voorlezen</h2>
   <div class="card set">
-    <label for="sName">Naam van deze kiosk</label>
-    <input type="text" id="sName" maxlength="40" placeholder="Bijvoorbeeld: Woonkamer">
-
     <span>Voorlezen</span>
     <div>
       <label class="toggle"><input type="checkbox" id="sSpeak"> Activiteit hardop zeggen als hij begint</label>
@@ -243,22 +269,68 @@ progress{width:100%;height:16px}
       <p class="hint">Tikken op "Nu" of "Vandaag eten" leest ook voor. Gebruikt de Nederlandse stem van Windows.</p>
     </div>
 
-    <label for="sScale">Tekstgrootte</label>
-    <select id="sScale"><option value="1">Normaal</option><option value="1.2">Groot</option><option value="1.4">Extra groot</option></select>
+    <label for="sRemind">Herinnering vooraf</label>
+    <div>
+      <select id="sRemind"><option value="0">Uit</option><option value="5">5 minuten van tevoren</option><option value="10">10 minuten van tevoren</option><option value="15">15 minuten van tevoren</option></select>
+      <label class="toggle" style="margin-top:8px"><input type="checkbox" id="sRemindSound"> Met een geluidje</label>
+      <p class="hint">Een grote melding op het scherm: "Over 5 minuten: Lunch". Tik om hem weg te halen.</p>
+    </div>
+  </div>
+ </section>
 
-    <span>Nieuws</span>
-    <label class="toggle"><input type="checkbox" id="sNews"> Laatste nieuws van de NOS op het startscherm (wisselt met de mededelingen)</label>
+ <section id="tab-music" hidden>
+  <h2>Muziek</h2>
+  <div class="card set">
+    <span>Muziek per dagdeel</span>
+    <div>
+      <div class="when">
+        <label>Ochtend <select id="sMusOchtend" style="width:auto"></select></label>
+        <label>Middag <select id="sMusMiddag" style="width:auto"></select></label>
+        <label>Avond <select id="sMusAvond" style="width:auto"></select></label>
+      </div>
+      <label class="toggle" style="margin-top:8px"><input type="checkbox" id="sMusAuto"> Vanzelf aanzetten als het dagdeel begint ('s nachts uit)</label>
+      <p class="hint">Bovenin het startscherm staat een knop om de zender van nu aan of uit te zetten.</p>
+    </div>
+  </div>
+ </section>
 
+ <section id="tab-play" hidden>
+  <h2>Spellen &amp; ontspanning</h2>
+  <div class="card set">
+    <span>Spelletjes</span>
+    <label class="toggle"><input type="checkbox" id="sGames"> Tegel "Spelletjes" op het startscherm (memory en puzzel)</label>
+  </div>
+ </section>
+
+ <section id="tab-comm" hidden>
+  <h2>Spraak &amp; berichten</h2>
+  <div class="card set">
     <span>Spraakbediening</span>
     <div>
       <label class="toggle"><input type="checkbox" id="sVoice"> Microfoonknop bovenin: tik en zeg bijvoorbeeld "wat doen we nu?" of "zet de radio aan"</label>
       <p class="hint">Werkt zonder internet, met de Nederlandse spraakherkenning van Windows. Nodig: een microfoon, en in Windows bij Tijd en taal &gt; Taal de taal Nederlands met spraak. Ook: Privacy &gt; Microfoon &gt; bureaublad-apps toestaan.<br>
       Zinnen: zet de radio aan/uit · volgende zender · wat doen we nu · wat doen we straks · wat eten we vandaag · hoe laat is het · welke dag is het · spelletjes · presentaties · terug.</p>
     </div>
+  </div>
+ </section>
 
-    <span>Spelletjes</span>
-    <label class="toggle"><input type="checkbox" id="sGames"> Tegel "Spelletjes" op het startscherm (memory en puzzel)</label>
+ <section id="tab-info" hidden>
+  <h2>Nieuws, weer &amp; kalender</h2>
+  <div class="card set">
+    <span>Nieuws</span>
+    <label class="toggle"><input type="checkbox" id="sNews"> Laatste nieuws van de NOS op het startscherm (wisselt met de mededelingen)</label>
 
+    <span>Weer</span>
+    <label class="toggle"><input type="checkbox" id="sWeatherTile"> Tegel "Weer" op het startscherm (vandaag en de komende dagen)</label>
+
+    <span>Feestdagen</span>
+    <label class="toggle"><input type="checkbox" id="sHolidays"> Nederlandse feestdagen vanzelf tonen (Pasen, Koningsdag, Sinterklaas, Kerst en meer)</label>
+  </div>
+ </section>
+
+ <section id="tab-look" hidden>
+  <h2>Uiterlijk</h2>
+  <div class="card set">
     <label for="sTheme">Thema</label>
     <div>
       <select id="sTheme"><option value="standaard">Vrolijk (standaard)</option><option value="volwassen">Volwassen: rustige kleuren, strakke vormen</option><option value="glas">Glas: donker, doorschijnend glas en zachte gloed</option></select>
@@ -266,7 +338,6 @@ progress{width:100%;height:16px}
       <label id="glassRow" style="margin-top:8px">Doorzichtigheid van de glaskaarten: <b id="glassVal">80%</b>
         <input type="range" id="sGlass" min="50" max="95" step="5" style="width:100%"></label>
     </div>
-
     <label for="sBgType">Achtergrond</label>
     <div>
       <select id="sBgType"><option value="daypart">Wisselt met het dagdeel</option><option value="color">Eén kleur</option><option value="photo">Eigen foto</option></select>
@@ -292,21 +363,37 @@ progress{width:100%;height:16px}
         </div>
       </div>
     </div>
-
-    <span>Muziek per dagdeel</span>
-    <div>
-      <div class="when">
-        <label>Ochtend <select id="sMusOchtend" style="width:auto"></select></label>
-        <label>Middag <select id="sMusMiddag" style="width:auto"></select></label>
-        <label>Avond <select id="sMusAvond" style="width:auto"></select></label>
-      </div>
-      <label class="toggle" style="margin-top:8px"><input type="checkbox" id="sMusAuto"> Vanzelf aanzetten als het dagdeel begint ('s nachts uit)</label>
-      <p class="hint">Bovenin het startscherm staat een knop om de zender van nu aan of uit te zetten.</p>
-    </div>
-
+    <label for="sScale">Tekstgrootte</label>
+    <select id="sScale"><option value="1">Normaal</option><option value="1.2">Groot</option><option value="1.4">Extra groot</option></select>
     <span>Hoog contrast</span>
     <label class="toggle"><input type="checkbox" id="sContrast"> Zwarte achtergrond, witte en gele tekst (voor slechtzienden)</label>
 
+    <span>Grote knoppen</span>
+    <label class="toggle"><input type="checkbox" id="sBigButtons"> Extra grote tegels en knoppen (makkelijker raken)</label>
+
+    <span>Seizoen</span>
+    <label class="toggle"><input type="checkbox" id="sSeasonDecor"> Versiering bij het seizoen en de feestdagen (Sinterklaas, Kerst, lente, zomer, herfst)</label>
+  </div>
+ </section>
+
+ <section id="tab-home" hidden>
+  <h2>Startscherm</h2>
+  <p class="hint">Welke tegels en onderdelen op het startscherm staan. Spelletjes, weer en nieuws zet je aan bij hun eigen onderdeel.</p>
+  <div class="card set">
+    <label for="sClock">Klok</label>
+    <select id="sClock"><option value="digitaal">Cijfers (09:30)</option><option value="analoog">Wijzerklok (groot, met wijzers)</option></select>
+
+    <span>Dag en seizoen</span>
+    <label class="toggle"><input type="checkbox" id="sDayBig"> Dag, datum en seizoen groot bovenaan ("Vrijdag 27 november · herfst")</label>
+
+    <span>Verjaardagen</span>
+    <label class="toggle"><input type="checkbox" id="sParty"> Feestbalk met confetti op een verjaardag of feestdag</label>
+  </div>
+ </section>
+
+ <section id="tab-saver" hidden>
+  <h2>Screensaver &amp; nacht</h2>
+  <div class="card set">
     <label for="sSaver">Screensaver</label>
     <div>
       <select id="sSaver">
@@ -322,7 +409,6 @@ progress{width:100%;height:16px}
         <option value="5">Na 5 minuten</option><option value="10">Na 10 minuten</option>
       </select>
     </div>
-
     <span>Nachtstand</span>
     <div>
       <div class="when">
@@ -330,10 +416,30 @@ progress{width:100%;height:16px}
         <label>tot <input type="time" id="sNightTo"></label>
         <select id="sNightMode" style="width:auto"><option value="dim">Dimmen (klok blijft zichtbaar)</option><option value="black">Helemaal zwart</option></select>
       </div>
+      <label style="margin-top:8px">Hoe donker bij dimmen: <b id="nightDimVal">88%</b>
+        <input type="range" id="sNightDim" min="50" max="95" step="5" style="width:100%"></label>
       <p class="hint">Leeg = geen nachtstand. Aanraken = 2 minuten wakker.</p>
     </div>
   </div>
  </section>
+
+ <section id="tab-system" hidden>
+  <h2>Systeem</h2>
+  <div class="card set">
+    <label for="sName">Naam van deze kiosk</label>
+    <input type="text" id="sName" maxlength="40" placeholder="Bijvoorbeeld: Woonkamer">
+
+    <span>Vastlopen</span>
+    <label class="toggle"><input type="checkbox" id="sWatchdog"> PP Kiosk vanzelf opnieuw starten als hij vastloopt of afsluit</label>
+
+    <span>Zonder internet</span>
+    <div>
+      <label class="toggle"><input type="checkbox" id="sOffline"> Offline-modus: niets van internet ophalen (geen nieuws, weer, updates of online radio)</label>
+      <p class="hint">Agenda, eten, presentaties, spelletjes en eigen foto's werken gewoon. Valt internet even weg, dan laat de kiosk het laatste nieuws en weer zien dat hij nog had.</p>
+    </div>
+  </div>
+ </section>
+
 
  <section id="tab-live" hidden>
   <h2>Live: zo ziet de kiosk er nu uit</h2>
@@ -386,6 +492,13 @@ progress{width:100%;height:16px}
     <p><button class="primary" id="accSave">Opslaan</button> <button id="accClear">Vaste inlog uitzetten</button></p>
     <p id="accInfo" class="hint"></p>
   </div>
+ </section>
+
+ <section id="tab-status" hidden>
+  <h2>Status van de kiosken</h2>
+  <p class="hint">Staat elke kiosk aan, en welke versie draait er? De lijst met kiosken stel je in bij Kiosken.</p>
+  <div class="card" id="statusList"></div>
+  <button id="statusRefresh">Opnieuw kijken</button>
  </section>
 
  <section id="tab-kiosks" hidden>
@@ -475,14 +588,14 @@ async function api(method, body, path = '/api/agenda'){
 async function start(){
   try {
     data = await api('GET');
-    $('login').hidden = true; $('app').hidden = false; $('bar').hidden = false; $('tabs').hidden = false;
+    $('login').hidden = true; $('app').hidden = false; $('bar').hidden = false; $('tabs').hidden = false; $('cats').hidden = false;
     if (!base) { ownCode = code; await loadKiosks(); }
     links = null; media = null;
     render(); renderFood(); renderScreen(); loadPictos(); loadWeek();
     showTab(tab);
   } catch (e) {
     if (base) { alert(e.message); switchTarget(''); return; }
-    $('login').hidden = false; $('app').hidden = true; $('bar').hidden = true; $('tabs').hidden = true;
+    $('login').hidden = false; $('app').hidden = true; $('bar').hidden = true; $('tabs').hidden = true; $('cats').hidden = true;
     $('loginErr').textContent = code ? e.message : '';
   }
 }
@@ -687,9 +800,9 @@ $('addSpecial').onclick = () => { data.special.push({title: '', date: '', icon: 
 
 // ---------- Scherm ----------
 const S = {sName: 'name', sSpeak: 'speak', sChime: 'chime', sScale: 'textScale', sContrast: 'contrast', sSaver: 'screensaverMinutes', sRadioSaver: 'radioSaverMinutes',
-           sSaverPres: 'screensaverPresentation', sNightFrom: 'nightFrom', sNightTo: 'nightTo', sNightMode: 'nightMode', sDinner: 'dinnerTime', sNews: 'news', sGames: 'games', sTheme: 'theme', sVoice: 'voice', sGlass: 'glassTransparency'};
+           sSaverPres: 'screensaverPresentation', sNightFrom: 'nightFrom', sNightTo: 'nightTo', sNightMode: 'nightMode', sDinner: 'dinnerTime', sNews: 'news', sGames: 'games', sRemind: 'remindMinutes', sRemindSound: 'remindSound', sWeatherTile: 'weatherTile', sHolidays: 'holidays', sBigButtons: 'bigButtons', sSeasonDecor: 'seasonDecor', sClock: 'clockStyle', sDayBig: 'dayBig', sParty: 'party', sNightDim: 'nightDim', sWatchdog: 'watchdog', sOffline: 'offline', sTheme: 'theme', sVoice: 'voice', sGlass: 'glassTransparency'};
 async function renderScreen(){
-  const s = data.settings = Object.assign({speak: false, chime: true, textScale: 1, contrast: false, screensaverMinutes: 5, radioSaverMinutes: 1, screensaverPresentation: 'Menu van de week', dinnerTime: '17:00', news: true, games: true, week: true, voice: false, glassTransparency: 80, theme: 'standaard', nightFrom: '', nightTo: '', nightMode: 'dim', name: ''}, data.settings || {});
+  const s = data.settings = Object.assign({speak: false, chime: true, textScale: 1, contrast: false, screensaverMinutes: 5, radioSaverMinutes: 1, screensaverPresentation: 'Menu van de week', dinnerTime: '17:00', news: true, games: true, voice: false, remindMinutes: 0, remindSound: true, weatherTile: false, holidays: true, bigButtons: false, seasonDecor: false, clockStyle: 'digitaal', dayBig: false, party: true, nightDim: 88, watchdog: true, offline: false, glassTransparency: 80, theme: 'standaard', nightFrom: '', nightTo: '', nightMode: 'dim', name: ''}, data.settings || {});
   try {
     const p = await api('GET', null, '/api/presentations');
     $('sSaverPres').innerHTML = '<option value="">De eerste presentatie</option>' + p.items.map(x => `<option value="${esc(x.name)}">${esc(x.title)}</option>`).join('');
@@ -699,15 +812,15 @@ async function renderScreen(){
     if (el.type === 'checkbox') el.checked = !!s[k];
     else el.value = String(s[k] ?? '');
   }
-  renderLook(); showGlass();
+  renderLook(); showGlass(); $('nightDimVal').textContent = $('sNightDim').value + '%';
   $('sScale').value = [1, 1.2, 1.4].reduce((a, b) => Math.abs(b - s.textScale) < Math.abs(a - s.textScale) ? b : a, 1);
   showName();
 }
 for (const [id, k] of Object.entries(S)) {
   $(id).addEventListener('input', () => {
     const el = $(id);
-    data.settings[k] = el.type === 'checkbox' ? el.checked : (k === 'textScale' || k === 'screensaverMinutes' || k === 'radioSaverMinutes' || k === 'glassTransparency') ? +el.value : el.value;
-    changed(); if (k === 'name') showName(); showGlass();
+    data.settings[k] = el.type === 'checkbox' ? el.checked : (k === 'textScale' || k === 'screensaverMinutes' || k === 'radioSaverMinutes' || k === 'glassTransparency' || k === 'remindMinutes' || k === 'nightDim') ? +el.value : el.value;
+    changed(); if (k === 'name') showName(); showGlass(); $('nightDimVal').textContent = $('sNightDim').value + '%';
   });
 }
 // Achtergrond en muziek per dagdeel
@@ -891,33 +1004,68 @@ $('save').onclick = async () => {
   } catch (e) { $('status').textContent = e.message; $('status').className = 'err'; }
 };
 
-// ---------- Tabbladen ----------
+// ---------- Tabbladen: eerst een onderdeel (bovenste rij), dan het tabblad ----------
+const OWN_SAVE = ['links', 'media', 'kiosks'];                 // tabbladen met een eigen opslag
+const NO_BAR = ['pres', 'live', 'stats', 'backup', 'access', 'status'];
+function catOf(t){ const b = $('tabs').querySelector(`button[data-tab="${t}"]`); return b ? b.dataset.cat : 'dag'; }
 function showTab(t){
+  if (!$('tab-' + t)) t = 'agenda';
   tab = t;
-  for (const b of $('tabs').querySelectorAll('button')) b.classList.toggle('on', b.dataset.tab === t);
+  const cat = catOf(t);
+  try { localStorage.setItem('pptab', t); } catch (e) {}
+  for (const b of $('cats').querySelectorAll('button')) b.classList.toggle('on', b.dataset.cat === cat);
+  for (const b of $('tabs').querySelectorAll('button')) { b.hidden = b.dataset.cat !== cat; b.classList.toggle('on', b.dataset.tab === t); }
+  $('tabs').classList.toggle('single', $('tabs').querySelectorAll(`button[data-cat="${cat}"]`).length < 2);
   for (const s of document.querySelectorAll('main > section')) s.hidden = s.id !== 'tab-' + t;
-  $('bar').hidden = ['pres', 'live', 'stats', 'backup', 'access'].includes(t);
+  for (const b of document.querySelectorAll('#cats button.on, #tabs button.on')) { const n = b.parentElement; n.scrollLeft = b.offsetLeft - (n.clientWidth - b.offsetWidth) / 2; }
+  $('bar').hidden = NO_BAR.includes(t);
   if (t === 'stats') loadStats();
   if (t === 'access') loadAccess();
+  if (t === 'status') loadStatus();
   clearInterval(liveTimer); liveTimer = null;
   if (t === 'live') { liveShot(); liveTimer = setInterval(liveShot, 3000); }
   if (t === 'pres') loadPres();
   if (t === 'links' && !links) api('GET', null, '/api/shortcuts').then(j => { links = j.items; renderLinks(); }).catch(e => alert(e.message));
   if (t === 'media' && !media) api('GET', null, '/api/media').then(j => { media = j; renderMedia(); }).catch(e => alert(e.message));
   if (t === 'kiosks') renderKiosks();
+  window.scrollTo(0, 0);
 }
-$('tabs').addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b || b.dataset.tab === tab) return;
-  const agendaTabs = ['agenda', 'food', 'screen'];
-  const leavingOwnSave = !(agendaTabs.includes(tab) && agendaTabs.includes(b.dataset.tab));
+function switchTo(t){
+  if (t === tab) return;
+  const leavingOwnSave = OWN_SAVE.includes(tab) || OWN_SAVE.includes(t);
   if (dirty && leavingOwnSave) {
     if (!confirm('Wijzigingen zijn nog niet opgeslagen. Toch wisselen?')) return;
     dirty = false; $('status').textContent = '';
     if (tab === 'links') links = null; else if (tab === 'media') media = null; else if (tab === 'kiosks') loadKiosks();
     else api('GET').then(j => { data = j; render(); renderFood(); renderScreen(); });
   }
-  showTab(b.dataset.tab);
+  showTab(t);
+}
+$('statusRefresh').onclick = () => loadStatus();
+$('tabs').addEventListener('click', e => { const b = e.target.closest('button[data-tab]'); if (b) switchTo(b.dataset.tab); });
+$('cats').addEventListener('click', e => {
+  const b = e.target.closest('button[data-cat]'); if (!b) return;
+  const first = $('tabs').querySelector(`button[data-cat="${b.dataset.cat}"]`);
+  if (first) switchTo(first.dataset.tab);
 });
+try { const t = localStorage.getItem('pptab'); if (t) tab = t; } catch (e) {}
+
+// ---------- Status van de kiosken ----------
+async function loadStatus(){
+  const rows = [{name: 'Deze kiosk', base: '', code: ownCode}].concat(kiosks.filter(k => k.address).map(k => ({name: k.name || k.address, base: kioskBase(k), code: k.code})));
+  $('statusList').innerHTML = rows.map((r, i) => `<div class="srow2" id="st${i}"><b>${esc(r.name)}</b><span class="hint">bezig…</span></div>`).join('');
+  rows.forEach(async (r, i) => {
+    const el = $('st' + i).querySelector('span');
+    try {
+      const ctl = new AbortController(); setTimeout(() => ctl.abort(), 5000);
+      const x = await fetch(r.base + '/api/status', {headers: {'X-Code': r.code}, signal: ctl.signal});
+      if (!x.ok) throw new Error(x.status === 403 ? 'code klopt niet' : 'fout ' + x.status);
+      const j = await x.json();
+      const up = j.uptime > 86400 ? Math.floor(j.uptime / 86400) + ' dagen' : j.uptime > 3600 ? Math.floor(j.uptime / 3600) + ' uur' : Math.floor(j.uptime / 60) + ' min';
+      el.innerHTML = `<span class="ok">● Aan</span> · versie ${esc(j.version)}${j.name ? ' · ' + esc(j.name) : ''} · draait ${up}${j.offline ? ' · offline-modus' : ''}${j.radio ? ' · radio: ' + esc(j.radio) : ''}`;
+    } catch (e) { el.innerHTML = `<span class="err">● Niet bereikbaar</span> (${esc(e.name === 'AbortError' ? 'geen antwoord' : e.message)})`; }
+  });
+}
 
 // ---------- Presentaties ----------
 let presTimer = null;

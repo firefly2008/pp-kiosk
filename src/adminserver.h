@@ -6,6 +6,7 @@
 
 #include <QHash>
 #include <QNetworkAccessManager>
+#include <QDateTime>
 #include <QObject>
 #include <QTcpServer>
 #include <QUrl>
@@ -96,6 +97,7 @@ private:
     QHash<QTcpSocket *, Pending> m_pending;
     QList<AppModel *> m_web;
     RadioModel *m_radio = nullptr;
+    qint64 m_startedAt = QDateTime::currentSecsSinceEpoch();
     Stats *m_stats = nullptr;
     QQuickWindow *m_window = nullptr;
     QTcpServer m_server;

@@ -32,6 +32,7 @@
 #include "paths.h"
 #include "radiomodel.h"
 #include "news.h"
+#include "watchdog.h"
 #include "weather.h"
 #include "updater.h"
 #include "homebridge.h"
@@ -283,6 +284,8 @@ int main(int argc, char *argv[])
     Weather weather;
     ctx->setContextProperty(QStringLiteral("weather"), &weather);
     News news;
+    Watchdog watchdog;
+    ctx->setContextProperty(QStringLiteral("watchdog"), &watchdog);
     ctx->setContextProperty(QStringLiteral("news"), &news);
     Updater updater;
     ctx->setContextProperty(QStringLiteral("updater"), &updater);

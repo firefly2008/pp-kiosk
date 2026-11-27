@@ -39,6 +39,7 @@ public:
     QVariantMap settings() const;
     QVariantMap todayMenu() const { return m_menu; }
     QVariantList celebrations() const { return m_celebrations; }
+    static QPair<QString, QString> holidayFor(const QDate &d);
     QString daypart() const { return m_daypart; }
     QString pictoDir() const { return m_pictoDir; }
     // Weekmenu: 7 objecten (maandag eerst) met dish, note, image
@@ -55,6 +56,7 @@ public:
     // Alleen voor de rooktest: instelling tijdelijk veranderen (wordt niet opgeslagen)
     Q_INVOKABLE void setTestSetting(const QString &key, const QVariant &value);
     Q_INVOKABLE QString testPhoto();
+    Q_INVOKABLE QString holidayName(const QString &isoDate) const { return holidayFor(QDate::fromString(isoDate, Qt::ISODate)).first; }
     // Kleine dingen die het scherm onthoudt (bijvoorbeeld het radiovolume), in settings.ini onder "ui/"
     Q_INVOKABLE QVariant uiValue(const QString &key, const QVariant &fallback) const;
     Q_INVOKABLE void setUiValue(const QString &key, const QVariant &value);
