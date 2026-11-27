@@ -10,7 +10,7 @@
 class News : public QObject
 {
     Q_OBJECT
-    // Elk item: title, time ("19:30")
+    // Elk item: title, time ("19:30"), text (de tekst van het bericht, zonder HTML), image (foto-adres of leeg)
     Q_PROPERTY(QVariantList headlines READ headlines NOTIFY changed)
 
 public:

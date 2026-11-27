@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "agenda.h"
 #include "menuboard.h"
+#include "paths.h"
+#include <QSettings>
 
 #include <QDateTime>
 #include <QDir>
@@ -280,6 +282,7 @@ bool Agenda::setJson(const QByteArray &json, QString *error)
         {QStringLiteral("textScale"), qBound(1.0, scale, 1.5)},
         {QStringLiteral("contrast"), si.value(QStringLiteral("contrast")).toBool(false)},
         {QStringLiteral("screensaverMinutes"), qBound(0, si.value(QStringLiteral("screensaverMinutes")).toInt(0), 240)},
+        {QStringLiteral("radioSaverMinutes"), qBound(0, si.value(QStringLiteral("radioSaverMinutes")).toInt(1), 60)},
         {QStringLiteral("screensaverPresentation"), si.value(QStringLiteral("screensaverPresentation")).toString().left(60)},
         {QStringLiteral("nightFrom"), validTime(nightFrom) ? nightFrom : QString()},
         {QStringLiteral("nightTo"), validTime(nightTo) ? nightTo : QString()},
@@ -295,6 +298,8 @@ bool Agenda::setJson(const QByteArray &json, QString *error)
              {QStringLiteral("type"), (bgType == QLatin1String("color") || bgType == QLatin1String("photo")) ? bgType : QStringLiteral("daypart")},
              {QStringLiteral("color"), colorRe.match(bgColor).hasMatch() ? bgColor : QStringLiteral("#ECE6DA")},
              {QStringLiteral("photo"), QFileInfo(bgIn.value(QStringLiteral("photo")).toString()).fileName().left(120)},
+             // Naam van de fotograaf (Unsplash), staat klein in de hoek van het scherm
+             {QStringLiteral("credit"), bgIn.value(QStringLiteral("credit")).toString().trimmed().left(80)},
          }},
         {QStringLiteral("music"), QJsonObject{
              {QStringLiteral("ochtend"), music.value(QStringLiteral("ochtend")).toString().trimmed().left(80)},
@@ -359,6 +364,9 @@ QVariantMap Agenda::settings() const
     }
     if (!m.contains(QStringLiteral("dinnerTime"))) {
         m.insert(QStringLiteral("dinnerTime"), QStringLiteral("17:00"));
+    }
+    if (!m.contains(QStringLiteral("radioSaverMinutes"))) {
+        m.insert(QStringLiteral("radioSaverMinutes"), 1);
     }
     if (!m.contains(QStringLiteral("screensaverMinutes"))) {
         m.insert(QStringLiteral("screensaverMinutes"), 5);
@@ -516,4 +524,14 @@ void Agenda::recompute()
     }
     m_first = false;
     Q_EMIT changed();
+}
+
+QVariant Agenda::uiValue(const QString &key, const QVariant &fallback) const
+{
+    return QSettings(appSettingsFile(), QSettings::IniFormat).value(QStringLiteral("ui/") + key, fallback);
+}
+
+void Agenda::setUiValue(const QString &key, const QVariant &value)
+{
+    QSettings(appSettingsFile(), QSettings::IniFormat).setValue(QStringLiteral("ui/") + key, value);
 }

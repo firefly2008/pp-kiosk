@@ -46,7 +46,7 @@ Presentations::Presentations(const QString &dataDir, QObject *parent)
     , m_root(dataDir + QStringLiteral("/presentaties"))
 {
     QDir().mkpath(m_root);
-    installDemo();
+    removeDemo();
     m_debounce.setSingleShot(true);
     m_debounce.setInterval(800);
     connect(&m_debounce, &QTimer::timeout, this, &Presentations::refresh);
@@ -54,33 +54,18 @@ Presentations::Presentations(const QString &dataDir, QObject *parent)
     refresh();
 }
 
-void Presentations::installDemo()
+void Presentations::removeDemo()
 {
+    // Vanaf 0.10: de voorbeeldpresentatie "Diner van de dag" is weg (het menubord laat het eten al zien)
     QSettings settings(appSettingsFile(), QSettings::IniFormat);
-    if (settings.value(QStringLiteral("presentations/demoInstalled")).toBool()) {
+    if (settings.value(QStringLiteral("presentations/demoRemoved")).toBool()) {
         return;
     }
-    const QString dir = m_root + QStringLiteral("/Diner van de dag");
-    QDir().mkpath(dir);
-    QFile::copy(QStringLiteral(":/demo/diner-van-de-dag.jpg"), dir + QStringLiteral("/01.jpg"));
-    QFile::setPermissions(dir + QStringLiteral("/01.jpg"), QFile::ReadOwner | QFile::WriteOwner | QFile::ReadUser | QFile::WriteUser);
-    QFile info(dir + QStringLiteral("/info.json"));
-    if (info.open(QIODevice::WriteOnly)) {
-        const QJsonObject caption{
-            {QStringLiteral("title"), QStringLiteral("Diner van de dag")},
-            {QStringLiteral("subtitle"), QStringLiteral("Zuurkoolstamppot met rookworst")},
-            {QStringLiteral("badge"), QStringLiteral("17:30")},
-        };
-        info.write(QJsonDocument(QJsonObject{
-                                     {QStringLiteral("title"), QStringLiteral("Diner van de dag")},
-                                     {QStringLiteral("interval"), 12},
-                                     {QStringLiteral("menu"), true},
-                                     {QStringLiteral("captions"), QJsonObject{{QStringLiteral("01.jpg"), caption}}},
-                                 })
-                       .toJson());
+    QDir dir(m_root + QStringLiteral("/Diner van de dag"));
+    if (dir.exists() && dir.removeRecursively()) {
+        qInfo() << "Presentations: demo removed";
     }
-    settings.setValue(QStringLiteral("presentations/demoInstalled"), true);
-    qInfo() << "Presentations: demo installed";
+    settings.setValue(QStringLiteral("presentations/demoRemoved"), true);
 }
 
 void Presentations::refresh()
@@ -110,7 +95,7 @@ void Presentations::refresh()
         item.insert(QStringLiteral("cover"), QUrl::fromLocalFile(dir.filePath(images.first())).toString());
         item.insert(QStringLiteral("interval"), qBound(3, info.value(QStringLiteral("interval")).toInt(10), 300));
         // Tekst op de dia uit het weekmenu ("Diner van de dag")
-        item.insert(QStringLiteral("menu"), info.value(QStringLiteral("menu")).toBool(folder == QLatin1String("Diner van de dag")));
+        item.insert(QStringLiteral("menu"), info.value(QStringLiteral("menu")).toBool(false));
         m_list.append(item);
         m_watcher.addPath(dir.absolutePath());
     }

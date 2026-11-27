@@ -32,6 +32,8 @@
 #include <QRegularExpression>
 #include <QSaveFile>
 #include <QNetworkInterface>
+#include <QNetworkReply>
+#include <QNetworkRequest>
 #include <QPainter>
 #include <QPasswordDigestor>
 #include <QCryptographicHash>
@@ -214,7 +216,7 @@ void AdminServer::respond(QTcpSocket *socket, int status, const QByteArray &type
     head += "Content-Type: " + type + "\r\nContent-Length: " + QByteArray::number(body.size())
             + "\r\nCache-Control: no-store\r\nConnection: close\r\n" + cors + extraHeaders
             + "X-Content-Type-Options: nosniff\r\nX-Frame-Options: DENY\r\nReferrer-Policy: no-referrer"
-              "\r\nContent-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http:; connect-src 'self' http:; frame-ancestors 'none'"
+              "\r\nContent-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https://images.unsplash.com; connect-src 'self' http:; frame-ancestors 'none'"
               "\r\n\r\n";
     socket->write(head + body);
     socket->disconnectFromHost();
@@ -366,6 +368,148 @@ bool AdminServer::checkAccess(QTcpSocket *socket, const QByteArray &host, const 
     }
     m_failures.remove(ip);
     return true;
+}
+
+QString AdminServer::unsplashKey() const
+{
+    return QSettings(appSettingsFile(), QSettings::IniFormat).value(QStringLiteral("unsplash/key")).toString();
+}
+
+namespace {
+QNetworkRequest unsplashRequest(const QUrl &url, const QString &key)
+{
+    QNetworkRequest req(url);
+    req.setRawHeader("Accept-Version", "v1");
+    if (!key.isEmpty()) {
+        req.setRawHeader("Authorization", "Client-ID " + key.toLatin1());
+    }
+    req.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("PPKiosk"));
+    req.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+    req.setTransferTimeout(20000);
+    return req;
+}
+const QString unsplashRef = QStringLiteral("utm_source=pp_kiosk&utm_medium=referral");
+}
+
+void AdminServer::unsplashSearch(QTcpSocket *socket, const QString &q, int page)
+{
+    const QString key = unsplashKey();
+    if (key.isEmpty()) {
+        respond(socket, 400, "application/json", R"({"error":"Nog geen Unsplash-sleutel ingesteld.","nokey":true})");
+        return;
+    }
+    if (q.trimmed().isEmpty()) {
+        respond(socket, 400, "application/json", R"({"error":"Typ een zoekwoord."})");
+        return;
+    }
+    QUrl url(QStringLiteral("https://api.unsplash.com/search/photos"));
+    QUrlQuery uq;
+    uq.addQueryItem(QStringLiteral("query"), q);
+    uq.addQueryItem(QStringLiteral("page"), QString::number(page));
+    uq.addQueryItem(QStringLiteral("per_page"), QStringLiteral("24"));
+    uq.addQueryItem(QStringLiteral("orientation"), QStringLiteral("landscape"));
+    url.setQuery(uq);
+    QPointer<QTcpSocket> sock(socket);
+    QNetworkReply *reply = m_network.get(unsplashRequest(url, key));
+    connect(reply, &QNetworkReply::finished, this, [this, reply, sock] {
+        reply->deleteLater();
+        if (!sock) {
+            return;
+        }
+        const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        if (reply->error() != QNetworkReply::NoError || status != 200) {
+            qInfo() << "Unsplash: search failed" << status << reply->errorString();
+            respond(sock, 502, "application/json", QJsonDocument(QJsonObject{{QStringLiteral("error"),
+                status == 401 ? QStringLiteral("De Unsplash-sleutel klopt niet.") : status == 403 ? QStringLiteral("Unsplash: te veel zoekopdrachten dit uur. Probeer het later.")
+                              : QStringLiteral("Unsplash is niet bereikbaar. Is er internet?")}}).toJson(QJsonDocument::Compact));
+            return;
+        }
+        QJsonArray out;
+        for (const QJsonValue &v : QJsonDocument::fromJson(reply->readAll()).object().value(QStringLiteral("results")).toArray()) {
+            const QJsonObject o = v.toObject();
+            const QJsonObject user = o.value(QStringLiteral("user")).toObject();
+            out.append(QJsonObject{
+                {QStringLiteral("id"), o.value(QStringLiteral("id")).toString()},
+                {QStringLiteral("thumb"), o.value(QStringLiteral("urls")).toObject().value(QStringLiteral("small")).toString()},
+                {QStringLiteral("alt"), o.value(QStringLiteral("alt_description")).toString()},
+                {QStringLiteral("author"), user.value(QStringLiteral("name")).toString()},
+                {QStringLiteral("authorUrl"), user.value(QStringLiteral("links")).toObject().value(QStringLiteral("html")).toString() + QLatin1Char('?') + unsplashRef},
+            });
+        }
+        respond(sock, 200, "application/json", QJsonDocument(QJsonObject{{QStringLiteral("results"), out}}).toJson(QJsonDocument::Compact));
+    });
+}
+
+void AdminServer::unsplashUse(QTcpSocket *socket, const QString &idOrLink)
+{
+    // Een id, of een link zoals https://unsplash.com/photos/zonsondergang-aan-zee-AbC123xyz
+    static const QRegularExpression idRe(QStringLiteral("([A-Za-z0-9_-]{11})(?:[/?#].*)?$"));
+    const QRegularExpressionMatch m = idRe.match(idOrLink);
+    if (!m.hasMatch()) {
+        respond(socket, 400, "application/json", R"({"error":"Dit is geen Unsplash-foto. Plak de link van de foto, bijvoorbeeld https://unsplash.com/photos/..."})");
+        return;
+    }
+    const QString id = m.captured(1);
+    const QString key = unsplashKey();
+    QPointer<QTcpSocket> sock(socket);
+    const QString pictoDir = m_agenda->pictoDir();
+    auto download = [this, sock, id, pictoDir](const QUrl &imageUrl, const QString &credit, const QString &creditUrl) {
+        QNetworkReply *img = m_network.get(unsplashRequest(imageUrl, QString()));
+        connect(img, &QNetworkReply::finished, this, [this, img, sock, id, pictoDir, credit, creditUrl] {
+            img->deleteLater();
+            const QByteArray data = img->readAll();
+            QImage image;
+            if (img->error() != QNetworkReply::NoError || !image.loadFromData(data)) {
+                qInfo() << "Unsplash: download failed" << img->errorString();
+                if (sock) {
+                    respond(sock, 502, "application/json", R"({"error":"De foto ophalen lukt niet. Is er internet?"})");
+                }
+                return;
+            }
+            if (image.width() > 2560) {
+                image = image.scaledToWidth(2560, Qt::SmoothTransformation);
+            }
+            QDir().mkpath(pictoDir);
+            const QString name = QStringLiteral("unsplash-%1.jpg").arg(id);
+            image.save(pictoDir + QLatin1Char('/') + name, "JPG", 88);
+            qInfo() << "Unsplash: background saved" << name << image.size();
+            if (sock) {
+                respond(sock, 200, "application/json", QJsonDocument(QJsonObject{{QStringLiteral("name"), name}, {QStringLiteral("credit"), credit},
+                                                                               {QStringLiteral("creditUrl"), creditUrl}}).toJson(QJsonDocument::Compact));
+            }
+        });
+    };
+    if (key.isEmpty()) {
+        // Zonder sleutel: de gewone downloadlink van Unsplash (volgt een doorverwijzing naar de foto)
+        download(QUrl(QStringLiteral("https://unsplash.com/photos/%1/download?w=1920&").arg(id) + unsplashRef), QStringLiteral("Unsplash"),
+                 QStringLiteral("https://unsplash.com/photos/%1?").arg(id) + unsplashRef);
+        return;
+    }
+    QNetworkReply *reply = m_network.get(unsplashRequest(QUrl(QStringLiteral("https://api.unsplash.com/photos/") + id), key));
+    connect(reply, &QNetworkReply::finished, this, [this, reply, sock, key, download] {
+        reply->deleteLater();
+        const QJsonObject o = QJsonDocument::fromJson(reply->readAll()).object();
+        const QString raw = o.value(QStringLiteral("urls")).toObject().value(QStringLiteral("raw")).toString();
+        if (reply->error() != QNetworkReply::NoError || raw.isEmpty()) {
+            const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+            qInfo() << "Unsplash: photo failed" << status << reply->errorString();
+            if (sock) {
+                respond(sock, 502, "application/json", status == 404 ? QByteArray(R"({"error":"Deze foto is niet gevonden op Unsplash."})")
+                                                       : status == 401 ? QByteArray(R"({"error":"De Unsplash-sleutel klopt niet."})")
+                                                       : QByteArray(R"({"error":"Unsplash is niet bereikbaar. Is er internet?"})"));
+            }
+            return;
+        }
+        // Volgens de regels van Unsplash: melden dat de foto gebruikt wordt
+        const QString ping = o.value(QStringLiteral("links")).toObject().value(QStringLiteral("download_location")).toString();
+        if (!ping.isEmpty()) {
+            QNetworkReply *p = m_network.get(unsplashRequest(QUrl(ping), key));
+            connect(p, &QNetworkReply::finished, p, &QObject::deleteLater);
+        }
+        const QJsonObject user = o.value(QStringLiteral("user")).toObject();
+        download(QUrl(raw + QStringLiteral("&w=1920&h=1080&fit=crop&q=85&fm=jpg")), user.value(QStringLiteral("name")).toString(),
+                 user.value(QStringLiteral("links")).toObject().value(QStringLiteral("html")).toString() + QLatin1Char('?') + unsplashRef);
+    });
 }
 
 void AdminServer::countFailure(const QString &ip)
@@ -748,6 +892,33 @@ void AdminServer::dispatch(QTcpSocket *socket, Pending &p)
             respond(socket, 200, "application/json", okJson.toByteArray());
             return;
         }
+    }
+    // ---------- Unsplash (achtergrondfoto) ----------
+    if (path == QLatin1String("/api/unsplash/key")) {
+        if (method == "GET") {
+            respond(socket, 200, "application/json", QJsonDocument(QJsonObject{{QStringLiteral("set"), !unsplashKey().isEmpty()}}).toJson(QJsonDocument::Compact));
+            return;
+        }
+        if (method == "PUT") {
+            const QString key = QJsonDocument::fromJson(body).object().value(QStringLiteral("key")).toString().trimmed();
+            static const QRegularExpression keyRe(QStringLiteral("^[A-Za-z0-9_-]{20,80}$"));
+            if (!key.isEmpty() && !keyRe.match(key).hasMatch()) {
+                error(QStringLiteral("Deze sleutel ziet er niet goed uit. Plak de \"Access Key\" van je Unsplash-app."));
+                return;
+            }
+            QSettings(appSettingsFile(), QSettings::IniFormat).setValue(QStringLiteral("unsplash/key"), key);
+            respond(socket, 200, "application/json", okJson.toByteArray());
+            return;
+        }
+    }
+    if (path == QLatin1String("/api/unsplash") && method == "GET") {
+        unsplashSearch(socket, query.queryItemValue(QStringLiteral("q"), QUrl::FullyDecoded).left(80), qBound(1, query.queryItemValue(QStringLiteral("page")).toInt(), 20));
+        return;
+    }
+    if (path == QLatin1String("/api/unsplash") && method == "POST") {
+        const QJsonObject o = QJsonDocument::fromJson(body).object();
+        unsplashUse(socket, o.value(QStringLiteral("id")).toString().trimmed().left(300));
+        return;
     }
     // Inloggen met vaste naam + wachtwoord: geeft een sessiecode die 12 uur geldig is
     if (path == QLatin1String("/api/login") && method == "POST") {

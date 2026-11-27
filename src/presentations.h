@@ -2,7 +2,6 @@
 // Dia's zijn de afbeeldingen in die map (op naam gesorteerd). Optioneel info.json:
 //   { "title": "...", "interval": 10,
 //     "captions": { "01.jpg": { "title": "...", "subtitle": "...", "badge": "..." } } }
-// Bij de eerste start komt er een voorbeeld ("Diner van de dag").
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 
@@ -43,7 +42,7 @@ Q_SIGNALS:
     void changed();
 
 private:
-    void installDemo();
+    void removeDemo();
     void convert(const QString &name);
     void convertWithLibreOffice(const QString &name, const QString &source);
     bool pdfToImages(const QString &pdf, const QString &outDir, QString *error);

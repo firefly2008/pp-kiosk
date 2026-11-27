@@ -84,6 +84,12 @@ progress{width:100%;height:16px}
 .foodpick button img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px}
 .foodpick button .auto{width:100%;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;font-size:40px;background:var(--groen-licht);border-radius:8px}
 .foodpick button.on{outline:3px solid var(--groen)}
+.unsplash{margin-top:12px}.usearch{display:flex;gap:8px}.usearch input{flex:1;font:inherit;padding:8px 10px;border:1px solid var(--lijn);border-radius:8px}
+.uchips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.uchips button{min-height:36px;padding:4px 12px;border-radius:999px;background:var(--groen-licht)}
+.ugrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
+.ugrid figure{margin:0;position:relative}.ugrid button{padding:0;border:none;width:100%;display:block;border-radius:8px;overflow:hidden}
+.ugrid img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block}.ugrid figcaption{font-size:12px;color:var(--grijs);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ugrid figcaption a{color:inherit}
 .brow{display:grid;grid-template-columns:1fr 160px auto;gap:8px;align-items:center;margin-bottom:8px}
 .srow{display:grid;grid-template-columns:70px 1fr 160px auto;gap:8px;align-items:center;margin-bottom:8px}
 .srow input.icon{text-align:center;font-size:24px}
@@ -196,7 +202,7 @@ progress{width:100%;height:16px}
   <h2>Presentatie toevoegen of bijwerken</h2>
   <div class="card">
     <label for="presName">Naam van de presentatie (bestaande naam = bijwerken)</label>
-    <input type="text" id="presName" list="presNames" maxlength="60" placeholder="Bijvoorbeeld: Diner van de dag">
+    <input type="text" id="presName" list="presNames" maxlength="60" placeholder="Bijvoorbeeld: Uitje naar de dierentuin">
     <datalist id="presNames"></datalist>
     <div class="drop" id="drop" style="margin-top:12px">
       <p>Sleep hier een PowerPoint (.pptx), PDF of foto's naartoe, of</p>
@@ -269,6 +275,21 @@ progress{width:100%;height:16px}
         <img id="bgPreview" alt="" style="max-width:240px;max-height:135px;border-radius:8px;display:none">
         <div><input type="file" id="bgFile" accept="image/png,image/jpeg"></div>
         <p class="hint">Er komt een lichte laag over de foto, zodat de tekst goed leesbaar blijft.</p>
+        <div class="card unsplash">
+          <h3>Of kies een foto van Unsplash</h3>
+          <div class="usearch"><input type="search" id="uQuery" placeholder="Zoek: bijvoorbeeld bos, strand, bloemen, bergen"><button id="uGo" class="primary">Zoeken</button></div>
+          <div class="uchips" id="uChips"></div>
+          <p id="uInfo" class="hint"></p>
+          <div class="ugrid" id="uGrid"></div>
+          <p><button id="uMore" hidden>Meer foto's</button></p>
+          <label for="uLink">Of plak de link van een Unsplash-foto (werkt ook zonder sleutel)</label>
+          <div class="usearch"><input type="text" id="uLink" placeholder="https://unsplash.com/photos/..."><button id="uUse">Gebruiken</button></div>
+          <details id="uKeyBox"><summary>Unsplash-sleutel (nodig om te zoeken)</summary>
+            <p class="hint">Gratis: maak een account op unsplash.com/developers, kies "New Application" en plak hier de <b>Access Key</b>. De sleutel blijft op de kiosk.</p>
+            <div class="usearch"><input type="text" id="uKey" autocomplete="off" placeholder="Access Key"><button id="uKeySave">Opslaan</button></div>
+            <p id="uKeyInfo" class="hint"></p>
+          </details>
+        </div>
       </div>
     </div>
 
@@ -294,7 +315,12 @@ progress{width:100%;height:16px}
       </select>
       <label for="sSaverPres" style="margin-top:8px">Presentatie</label>
       <select id="sSaverPres"></select>
-      <p class="hint">Na zoveel minuten zonder aanraken start de presentatie. Aanraken = terug naar het startscherm. Speelt de radio, dan zweeft de naam van de zender over het scherm.</p>
+      <p class="hint">Na zoveel minuten zonder aanraken start de presentatie. Aanraken = terug naar het startscherm.</p>
+      <label for="sRadioSaver" style="margin-top:8px">Als de radio speelt</label>
+      <select id="sRadioSaver">
+        <option value="0">Geen screensaver</option><option value="1">Zender zweeft over het scherm na 1 minuut</option><option value="2">Na 2 minuten</option>
+        <option value="5">Na 5 minuten</option><option value="10">Na 10 minuten</option>
+      </select>
     </div>
 
     <span>Nachtstand</span>
@@ -395,7 +421,7 @@ progress{width:100%;height:16px}
 
 <dialog id="foodDlg">
   <h3>Foto bij het eten</h3>
-  <p class="hint">Deze foto staat op het menubord en bij "Diner van de dag".</p>
+  <p class="hint">Deze foto staat op het menubord.</p>
   <div class="foodpick" id="foodPick"></div>
   <p><button id="foodOwn">📁 Eigen foto uploaden of kiezen…</button> <button id="foodClose">Sluiten</button></p>
 </dialog>
@@ -660,10 +686,10 @@ $('addBday').onclick = () => { data.birthdays.push({name: '', date: ''}); change
 $('addSpecial').onclick = () => { data.special.push({title: '', date: '', icon: '🎉'}); changed(); renderFood(); };
 
 // ---------- Scherm ----------
-const S = {sName: 'name', sSpeak: 'speak', sChime: 'chime', sScale: 'textScale', sContrast: 'contrast', sSaver: 'screensaverMinutes',
+const S = {sName: 'name', sSpeak: 'speak', sChime: 'chime', sScale: 'textScale', sContrast: 'contrast', sSaver: 'screensaverMinutes', sRadioSaver: 'radioSaverMinutes',
            sSaverPres: 'screensaverPresentation', sNightFrom: 'nightFrom', sNightTo: 'nightTo', sNightMode: 'nightMode', sDinner: 'dinnerTime', sNews: 'news', sGames: 'games', sTheme: 'theme', sVoice: 'voice', sGlass: 'glassTransparency'};
 async function renderScreen(){
-  const s = data.settings = Object.assign({speak: false, chime: true, textScale: 1, contrast: false, screensaverMinutes: 5, screensaverPresentation: 'Menu van de week', dinnerTime: '17:00', news: true, games: true, week: true, voice: false, glassTransparency: 80, theme: 'standaard', nightFrom: '', nightTo: '', nightMode: 'dim', name: ''}, data.settings || {});
+  const s = data.settings = Object.assign({speak: false, chime: true, textScale: 1, contrast: false, screensaverMinutes: 5, radioSaverMinutes: 1, screensaverPresentation: 'Menu van de week', dinnerTime: '17:00', news: true, games: true, week: true, voice: false, glassTransparency: 80, theme: 'standaard', nightFrom: '', nightTo: '', nightMode: 'dim', name: ''}, data.settings || {});
   try {
     const p = await api('GET', null, '/api/presentations');
     $('sSaverPres').innerHTML = '<option value="">De eerste presentatie</option>' + p.items.map(x => `<option value="${esc(x.name)}">${esc(x.title)}</option>`).join('');
@@ -680,7 +706,7 @@ async function renderScreen(){
 for (const [id, k] of Object.entries(S)) {
   $(id).addEventListener('input', () => {
     const el = $(id);
-    data.settings[k] = el.type === 'checkbox' ? el.checked : (k === 'textScale' || k === 'screensaverMinutes' || k === 'glassTransparency') ? +el.value : el.value;
+    data.settings[k] = el.type === 'checkbox' ? el.checked : (k === 'textScale' || k === 'screensaverMinutes' || k === 'radioSaverMinutes' || k === 'glassTransparency') ? +el.value : el.value;
     changed(); if (k === 'name') showName(); showGlass();
   });
 }
@@ -706,10 +732,53 @@ function showGlass(){
   $('glassRow').hidden = $('sTheme').value !== 'glas';
   $('glassVal').textContent = $('sGlass').value + '%';
 }
+// ---------- Unsplash ----------
+const U_CHIPS = ['Natuur', 'Bos', 'Strand', 'Bergen', 'Bloemen', 'Herfst', 'Winter', 'Lente', 'Zonsondergang', 'Water', 'Dieren', 'Stad'];
+$('uChips').innerHTML = U_CHIPS.map(c => `<button data-q="${c}">${c}</button>`).join('');
+let uPage = 1;
+async function uSearch(more){
+  const q = $('uQuery').value.trim(); if (!q) return;
+  uPage = more ? uPage + 1 : 1;
+  $('uInfo').textContent = 'Zoeken…'; if (!more) $('uGrid').innerHTML = '';
+  try {
+    const j = await api('GET', null, '/api/unsplash?q=' + encodeURIComponent(q) + '&page=' + uPage);
+    $('uGrid').insertAdjacentHTML('beforeend', j.results.map(r => `<figure><button data-id="${esc(r.id)}" title="${esc(r.alt || '')}"><img src="${esc(r.thumb)}" alt="${esc(r.alt || '')}" loading="lazy"></button>
+      <figcaption>Foto: <a href="${esc(r.authorUrl)}" target="_blank" rel="noopener">${esc(r.author)}</a> / Unsplash</figcaption></figure>`).join(''));
+    $('uInfo').textContent = j.results.length ? 'Tik op een foto om hem als achtergrond te gebruiken.' : 'Niets gevonden. Probeer een ander woord.';
+    $('uMore').hidden = j.results.length < 24;
+  } catch (e) {
+    $('uInfo').textContent = e.message;
+    if (/sleutel/i.test(e.message)) $('uKeyBox').open = true;
+  }
+}
+async function uUse(id){
+  $('uInfo').textContent = 'Foto ophalen…';
+  try {
+    const j = await api('POST', {id}, '/api/unsplash');
+    Object.assign(data.settings.background, {type: 'photo', photo: j.name, credit: j.credit || 'Unsplash'});
+    $('sBgType').value = 'photo'; showBg(); changed();
+    $('uInfo').textContent = 'Gekozen. Druk op Opslaan om hem op het scherm te zetten.';
+  } catch (e) { $('uInfo').textContent = e.message; }
+}
+$('uGo').onclick = () => uSearch(false);
+$('uQuery').addEventListener('keydown', e => { if (e.key === 'Enter') uSearch(false); });
+$('uMore').onclick = () => uSearch(true);
+$('uChips').addEventListener('click', e => { const b = e.target.closest('button[data-q]'); if (b) { $('uQuery').value = b.dataset.q; uSearch(false); } });
+$('uGrid').addEventListener('click', e => { const b = e.target.closest('button[data-id]'); if (b) uUse(b.dataset.id); });
+$('uUse').onclick = () => { const v = $('uLink').value.trim(); if (v) uUse(v); };
+$('uKeySave').onclick = async () => {
+  try { await api('PUT', {key: $('uKey').value.trim()}, '/api/unsplash/key'); $('uKey').value = ''; $('uKeyInfo').textContent = 'Opgeslagen. Je kunt nu zoeken.'; }
+  catch (e) { $('uKeyInfo').textContent = e.message; }
+};
+async function uKeyState(){
+  try { const j = await api('GET', null, '/api/unsplash/key'); $('uKeyInfo').textContent = j.set ? 'Er is een sleutel ingesteld.' : 'Nog geen sleutel: zoeken werkt pas met een sleutel.'; $('uKeyBox').open = !j.set; } catch (e) {}
+}
+
 function showBg(){
   const b = data.settings.background;
   $('bgColorRow').hidden = b.type !== 'color';
   $('bgPhotoRow').hidden = b.type !== 'photo';
+  if (b.type === 'photo') uKeyState();
   $('bgPreview').style.display = b.photo ? 'block' : 'none';
   if (b.photo) $('bgPreview').src = pictoUrl(b.photo);
 }
@@ -721,7 +790,7 @@ $('bgFile').addEventListener('change', async () => {
     const r = await fetch(base + '/api/picto?file=' + encodeURIComponent(f.name), {method: 'POST', headers: {'X-Code': code}, body: f});
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.error || 'Uploaden mislukt');
-    data.settings.background.photo = j.name; data.settings.background.type = 'photo';
+    data.settings.background.photo = j.name; data.settings.background.type = 'photo'; data.settings.background.credit = '';
     showBg(); changed();
   } catch (err) { alert(f.name + ': ' + err.message); }
   $('bgFile').value = '';
