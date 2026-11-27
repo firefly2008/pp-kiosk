@@ -118,11 +118,11 @@ Rectangle {
         Text { text: "🧩"; font.family: page.emojiFont; font.pixelSize: 56 * page.s }
         Text {
             Layout.fillWidth: true
-            text: page.game === "memory" ? "Memory" : page.game === "puzzle" ? "Puzzel" : "Spelletjes"
+            text: ({ memory: "Memory", puzzle: "Puzzel", quiz: "Quiz van de dag", words: "Woordzoeker", sudoku: "Sudoku", color: "Kleurplaat" })[page.game] || "Spelletjes"
             font.pixelSize: 64 * page.s; font.bold: true; color: page.ink
         }
         Text {
-            visible: page.game !== ""
+            visible: page.game === "memory" || page.game === "puzzle"
             text: page.game === "memory" ? "Beurten: " + page.turns : "Zetten: " + page.turns
             font.pixelSize: 40 * page.s; color: page.soft
         }
@@ -142,20 +142,24 @@ Rectangle {
         Column {
             anchors.centerIn: parent
             spacing: 12 * page.s
-            Text { anchors.horizontalCenter: parent.horizontalCenter; text: choice.icon; font.family: page.emojiFont; font.pixelSize: 120 * page.s }
-            Text { anchors.horizontalCenter: parent.horizontalCenter; text: choice.title; font.pixelSize: 64 * page.s; font.bold: true; color: "#FFFFFF" }
-            Text { anchors.horizontalCenter: parent.horizontalCenter; text: choice.sub; font.pixelSize: 36 * page.s; color: "#F0FFFFFF" }
+            Text { anchors.horizontalCenter: parent.horizontalCenter; text: choice.icon; font.family: page.emojiFont; font.pixelSize: 96 * page.s }
+            Text { anchors.horizontalCenter: parent.horizontalCenter; text: choice.title; font.pixelSize: 52 * page.s; font.bold: true; color: "#FFFFFF" }
+            Text { anchors.horizontalCenter: parent.horizontalCenter; text: choice.sub; font.pixelSize: 32 * page.s; color: "#F0FFFFFF" }
         }
         TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; id: choiceTap; onTapped: choice.chosen() }
     }
     GridLayout {
         visible: page.game === ""
-        anchors { left: parent.left; right: parent.right; top: top.bottom; bottom: parent.bottom; margins: 60 * page.s }
-        columns: 2; rowSpacing: 40 * page.s; columnSpacing: 40 * page.s
+        anchors { left: parent.left; right: parent.right; top: top.bottom; bottom: parent.bottom; margins: 50 * page.s }
+        columns: 4; rowSpacing: 32 * page.s; columnSpacing: 32 * page.s
         Choice { Layout.fillWidth: true; Layout.fillHeight: true; icon: "🃏"; title: "Memory"; sub: "Makkelijk: 6 paren"; tint: "#5DA9E9"; onChosen: page.startMemory(6) }
         Choice { Layout.fillWidth: true; Layout.fillHeight: true; icon: "🃏"; title: "Memory"; sub: "Moeilijker: 10 paren"; tint: "#3F7FC0"; onChosen: page.startMemory(10) }
         Choice { Layout.fillWidth: true; Layout.fillHeight: true; icon: "🧩"; title: "Puzzel"; sub: "Makkelijk: 9 stukjes"; tint: "#6CC28B"; onChosen: page.startPuzzle(3) }
         Choice { Layout.fillWidth: true; Layout.fillHeight: true; icon: "🧩"; title: "Puzzel"; sub: "Moeilijker: 16 stukjes"; tint: "#3E9A63"; onChosen: page.startPuzzle(4) }
+        Choice { Layout.fillWidth: true; Layout.fillHeight: true; icon: "❓"; title: "Quiz"; sub: "5 vragen van vandaag"; tint: "#E9A23B"; onChosen: page.startExtra("quiz") }
+        Choice { Layout.fillWidth: true; Layout.fillHeight: true; icon: "🔎"; title: "Woordzoeker"; sub: "Vind 5 woorden"; tint: "#D6457A"; onChosen: page.startExtra("words") }
+        Choice { Layout.fillWidth: true; Layout.fillHeight: true; icon: "🔢"; title: "Sudoku"; sub: "Makkelijk: 4 bij 4"; tint: "#8E7CC3"; onChosen: page.startExtra("sudoku") }
+        Choice { Layout.fillWidth: true; Layout.fillHeight: true; icon: "🖍️"; title: "Kleurplaat"; sub: "Rustig kleuren"; tint: "#4FB3C9"; onChosen: page.startExtra("color") }
     }
 
     // ---------- Memory-bord ----------
@@ -249,6 +253,25 @@ Rectangle {
         }
     }
 
+    // ---------- Quiz, woordzoeker, sudoku en kleurplaat (elk een eigen bestand) ----------
+    function startExtra(k) {
+        done = false
+        stats.count("game", ({ quiz: "Quiz", words: "Woordzoeker", sudoku: "Sudoku", color: "Kleurplaat" })[k])
+        if (game === k && extra.item) extra.item.start()   // nog een keer
+        else game = k                                      // laden start het spel
+    }
+    Loader {
+        id: extra
+        anchors { left: parent.left; right: parent.right; top: top.bottom; bottom: parent.bottom; margins: 40 * page.s; topMargin: 24 * page.s }
+        active: ["quiz", "words", "sudoku", "color"].indexOf(page.game) >= 0
+        sourceComponent: page.game === "quiz" ? quizC : page.game === "words" ? wordsC : page.game === "sudoku" ? sudokuC : page.game === "color" ? colorC : null
+        onLoaded: item.start()
+    }
+    Component { id: quizC; QuizGame { g: page; onWon: page.done = true } }
+    Component { id: wordsC; WordSearch { g: page; onWon: page.done = true } }
+    Component { id: sudokuC; SudokuGame { g: page; onWon: page.done = true } }
+    Component { id: colorC; ColorGame { g: page; onWon: page.done = true } }
+
     // ---------- Gewonnen ----------
     Rectangle {
         anchors.centerIn: parent
@@ -268,7 +291,7 @@ Rectangle {
                     width: 380 * page.s; height: 110 * page.s; radius: 28 * page.s
                     color: againTap.pressed ? "#3E9A63" : "#6CC28B"
                     Text { anchors.centerIn: parent; text: "Nog een keer"; font.pixelSize: 44 * page.s; font.bold: true; color: "#FFFFFF" }
-                    TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; id: againTap; onTapped: page.game === "memory" ? page.startMemory(page.cards.length / 2) : page.startPuzzle(page.size) }
+                    TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; id: againTap; onTapped: page.game === "memory" ? page.startMemory(page.cards.length / 2) : page.game === "puzzle" ? page.startPuzzle(page.size) : page.startExtra(page.game) }
                 }
                 Rectangle {
                     width: 320 * page.s; height: 110 * page.s; radius: 28 * page.s

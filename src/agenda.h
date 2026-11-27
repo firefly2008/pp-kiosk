@@ -61,6 +61,8 @@ public:
     // Alleen voor de rooktest: instelling tijdelijk veranderen (wordt niet opgeslagen)
     // Foto van de dag: nieuwe achtergrondfoto (bestand in de picto-map) met de naam van de fotograaf
     void setBackgroundPhoto(const QString &name, const QString &credit);
+    // Afspraken uit een gekoppelde agenda (Google Agenda): alleen-lezen, per datum
+    void setExternal(const QList<QJsonObject> &items);
     Q_INVOKABLE void setTestSetting(const QString &key, const QVariant &value);
     Q_INVOKABLE QString testPhoto();
     Q_INVOKABLE QString holidayName(const QString &isoDate) const { return holidayFor(QDate::fromString(isoDate, Qt::ISODate)).first; }
@@ -91,6 +93,7 @@ private:
     bool m_first = true;
     QVariantMap m_menu;
     QVariantList m_celebrations;
+    QList<QJsonObject> m_external;
     QString m_daypart;
     QTimer m_timer;
 };

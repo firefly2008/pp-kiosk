@@ -347,6 +347,18 @@ bool Agenda::setJson(const QByteArray &json, QString *error)
         {QStringLiteral("watchdog"), si.value(QStringLiteral("watchdog")).toBool(true)},
         {QStringLiteral("offline"), si.value(QStringLiteral("offline")).toBool(false)},
         {QStringLiteral("relax"), si.value(QStringLiteral("relax")).toBool(true)},
+        {QStringLiteral("readAloud"), si.value(QStringLiteral("readAloud")).toBool(true)},
+        {QStringLiteral("talkTile"), si.value(QStringLiteral("talkTile")).toBool(false)},
+        {QStringLiteral("talkAlert"), si.value(QStringLiteral("talkAlert")).toBool(true)},
+        {QStringLiteral("travelTile"), si.value(QStringLiteral("travelTile")).toBool(false)},
+        {QStringLiteral("ovStop"), si.value(QStringLiteral("ovStop")).toString().trimmed().left(40)},
+        {QStringLiteral("ovStopName"), si.value(QStringLiteral("ovStopName")).toString().trimmed().left(80)},
+        {QStringLiteral("nsStation"), si.value(QStringLiteral("nsStation")).toString().trimmed().left(10)},
+        {QStringLiteral("nsStationName"), si.value(QStringLiteral("nsStationName")).toString().trimmed().left(60)},
+        {QStringLiteral("trafficUrl"), si.value(QStringLiteral("trafficUrl")).toString().startsWith(QLatin1String("https://")) ? si.value(QStringLiteral("trafficUrl")).toString().left(300) : QString()},
+        {QStringLiteral("tilePres"), si.value(QStringLiteral("tilePres")).toBool(true)},
+        {QStringLiteral("tileStream"), si.value(QStringLiteral("tileStream")).toBool(true)},
+        {QStringLiteral("tileLinks"), si.value(QStringLiteral("tileLinks")).toBool(true)},
         {QStringLiteral("saverFade"), si.value(QStringLiteral("saverFade")).toBool(true)},
         {QStringLiteral("radioRegion"), RadioModel::regionalNames().contains(si.value(QStringLiteral("radioRegion")).toString()) ? si.value(QStringLiteral("radioRegion")).toString() : QString()},
         {QStringLiteral("theme"), (si.value(QStringLiteral("theme")).toString() == QLatin1String("volwassen") || si.value(QStringLiteral("theme")).toString() == QLatin1String("glas"))
@@ -427,6 +439,13 @@ QStringList Agenda::messages() const
     for (const QJsonValue &v : m_data.value(QStringLiteral("messages")).toArray()) {
         out.append(v.toString());
     }
+    // Afspraken voor de hele dag uit de gekoppelde agenda
+    const QString today = QDate::currentDate().toString(Qt::ISODate);
+    for (const QJsonObject &o : m_external) {
+        if (o.value(QStringLiteral("allDay")).toBool() && o.value(QStringLiteral("date")).toString() == today) {
+            out.append(QStringLiteral("📅 Vandaag: ") + o.value(QStringLiteral("title")).toString());
+        }
+    }
     return out;
 }
 
@@ -473,7 +492,9 @@ QVariantMap Agenda::settings() const
         {QStringLiteral("holidays"), true}, {QStringLiteral("bigButtons"), false}, {QStringLiteral("seasonDecor"), false},
         {QStringLiteral("clockStyle"), QStringLiteral("digitaal")}, {QStringLiteral("dayBig"), false}, {QStringLiteral("party"), true},
         {QStringLiteral("nightDim"), 88}, {QStringLiteral("watchdog"), true}, {QStringLiteral("offline"), false},
-        {QStringLiteral("relax"), true}, {QStringLiteral("saverFade"), true}, {QStringLiteral("radioRegion"), QString()}};
+        {QStringLiteral("relax"), true}, {QStringLiteral("saverFade"), true}, {QStringLiteral("radioRegion"), QString()},
+        {QStringLiteral("readAloud"), true}, {QStringLiteral("talkTile"), false}, {QStringLiteral("talkAlert"), true}, {QStringLiteral("travelTile"), false},
+        {QStringLiteral("tilePres"), true}, {QStringLiteral("tileStream"), true}, {QStringLiteral("tileLinks"), true}};
     for (const auto &d : extraDefaults) {
         if (!m.contains(d.first)) m.insert(d.first, d.second);
     }
@@ -545,6 +566,11 @@ QVariantList Agenda::itemsFor(const QDate &date) const
             list.append(copy);
         }
     }
+    for (const QJsonObject &o : m_external) {
+        if (o.value(QStringLiteral("date")).toString() == iso && !o.value(QStringLiteral("allDay")).toBool()) {
+            list.append(o);
+        }
+    }
     std::stable_sort(list.begin(), list.end(), [](const QJsonObject &a, const QJsonObject &b) {
         return a.value(QStringLiteral("start")).toString() < b.value(QStringLiteral("start")).toString();
     });
@@ -560,6 +586,14 @@ void Agenda::setTestTime(const QString &time)
     m_testTime = validTime(time) ? time : QString();
     m_stamp.clear();
     recompute();
+}
+
+void Agenda::setExternal(const QList<QJsonObject> &items)
+{
+    m_external = items;
+    m_stamp.clear();
+    recompute();
+    Q_EMIT changed();
 }
 
 void Agenda::setBackgroundPhoto(const QString &name, const QString &credit)

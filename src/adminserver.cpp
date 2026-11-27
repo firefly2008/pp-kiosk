@@ -12,6 +12,9 @@
 #include "stats.h"
 #include "backup.h"
 #include "menuboard.h"
+#include "messageboard.h"
+#include "calendarfeed.h"
+#include "transit.h"
 #include <QCoreApplication>
 #include <QProcess>
 #include "paths.h"
@@ -1111,6 +1114,60 @@ void AdminServer::dispatch(QTcpSocket *socket, Pending &p)
                 }
             }
             setLogin(user, pass);
+            respond(socket, 200, "application/json", okJson.toByteArray());
+            return;
+        }
+    }
+    if (m_transit && (path == QLatin1String("/api/ov/search") || path == QLatin1String("/api/ns/search")) && method == "GET") {
+        const QString q = QUrlQuery(p.url).queryItemValue(QStringLiteral("q"), QUrl::FullyDecoded).trimmed().left(60);
+        if (q.size() < 2) {
+            error(QStringLiteral("Typ minstens 2 letters."));
+            return;
+        }
+        QPointer<QTcpSocket> sock(socket);
+        auto done = [this, sock](int status, const QByteArray &json) {
+            if (sock) respond(sock, status, "application/json", json);
+        };
+        if (path == QLatin1String("/api/ov/search")) m_transit->searchStops(q, done);
+        else m_transit->searchStations(q, done);
+        return;
+    }
+    if (m_transit && path == QLatin1String("/api/ns/key")) {
+        if (method == "PUT" || method == "POST") {
+            m_transit->setNsKey(QJsonDocument::fromJson(body).object().value(QStringLiteral("key")).toString());
+        }
+        respond(socket, 200, "application/json", QJsonDocument(QJsonObject{{QStringLiteral("set"), !m_transit->nsKey().isEmpty()}}).toJson(QJsonDocument::Compact));
+        return;
+    }
+    if (path == QLatin1String("/api/calendar") && m_calendar) {
+        if (method == "PUT" || method == "POST") {
+            m_calendar->setUrl(QJsonDocument::fromJson(body).object().value(QStringLiteral("url")).toString().left(1000));
+        }
+        const QString u = m_calendar->url();
+        respond(socket, 200, "application/json", QJsonDocument(QJsonObject{
+            {QStringLiteral("set"), !u.isEmpty()},
+            {QStringLiteral("host"), QUrl(u).host()},
+            {QStringLiteral("status"), m_calendar->status()},
+            {QStringLiteral("count"), m_calendar->count()}}).toJson(QJsonDocument::Compact));
+        return;
+    }
+    if (path == QLatin1String("/api/board") && m_board) {
+        if (method == "GET") {
+            respond(socket, 200, "application/json", QJsonDocument(QJsonObject{{QStringLiteral("items"), m_board->list()}}).toJson(QJsonDocument::Compact));
+            return;
+        }
+        if (method == "POST") {
+            const QJsonObject o = QJsonDocument::fromJson(body).object();
+            const QString text = o.value(QStringLiteral("text")).toString().trimmed();
+            if (text.isEmpty()) {
+                error(QStringLiteral("Typ eerst een bericht."));
+                return;
+            }
+            respond(socket, 200, "application/json", QJsonDocument(m_board->post(text, o.value(QStringLiteral("from")).toString())).toJson(QJsonDocument::Compact));
+            return;
+        }
+        if (method == "DELETE") {
+            m_board->clear();
             respond(socket, 200, "application/json", okJson.toByteArray());
             return;
         }

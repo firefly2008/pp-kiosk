@@ -23,6 +23,7 @@ Rectangle {
     readonly property bool analog: cfg.clockStyle === "analoog"
     readonly property bool dayBig: cfg.dayBig === true
     readonly property real big: cfg.bigButtons === true ? 1.35 : 1          // grote knoppen
+    readonly property bool tapSpeak: cfg.readAloud !== false               // voorlezen bij tikken
     Binding { target: news; property: "offline"; value: root.cfg.offline === true }
     Binding { target: weather; property: "offline"; value: root.cfg.offline === true }
     Binding { target: watchdog; property: "enabled"; value: root.cfg.watchdog !== false }
@@ -490,7 +491,7 @@ Rectangle {
         gesturePolicy: TapHandler.ReleaseWithinBounds
         onTapped: {
             root.celebrate()
-            if (root.cfg.speak) speaker.say(agenda.celebrations.map(c => c.title).join(". "))
+            if (root.tapSpeak) speaker.say(agenda.celebrations.map(c => c.title).join(". "))
         }
     }
     Timer { id: balloonsStop; interval: 14000; onTriggered: balloons.running = false }
@@ -632,7 +633,7 @@ Rectangle {
                 }
                 TapHandler {
                     gesturePolicy: TapHandler.ReleaseWithinBounds   // knop: tik gaat niet door naar wat eronder ligt
-                    onTapped: if (root.cfg.speak && root.current) speaker.say("Nu: " + root.current.title)
+                    onTapped: if (root.tapSpeak && root.current) speaker.say("Nu: " + root.current.title + (root.current.note ? ". " + root.current.note : ""))
                 }
                 Text {
                     anchors.centerIn: parent
@@ -720,7 +721,7 @@ Rectangle {
                         }
                     }
                 }
-                TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; onTapped: if (root.cfg.speak) speaker.say("Vandaag eten we " + agenda.todayMenu.dish + " " + (agenda.todayMenu.note || "")) }
+                TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; onTapped: if (root.tapSpeak) speaker.say("Vandaag eten we " + agenda.todayMenu.dish + " " + (agenda.todayMenu.note || "")) }
             }
             }
 
@@ -738,8 +739,13 @@ Rectangle {
                         { title: "Snelkoppelingen", icon: "⭐", line: "snelkoppelingen", tint: "#E97A6B", calm: "#A0745E", page: "shortcuts" },
                         { title: "Spelletjes", icon: "🧩", line: "spelletjes", tint: "#B48AD6", calm: "#6E6684", page: "games" },
                         { title: "Ontspanning", icon: "🌿", line: "", tint: "#E9A23B", calm: "#8A7350", page: "relax" },
+                        { title: "Praatkaart", icon: "🗨️", line: "", tint: "#D6457A", calm: "#8A5A6E", page: "talk" },
+                        { title: "Onderweg", icon: "🚌", line: "", tint: "#3F7FC0", calm: "#4D6A86", page: "travel" },
                         { title: weather.available ? "Weer " + weather.temperature + "°" : "Weer", icon: weather.available ? weather.icon : "⛅", line: "", tint: "#4FB3C9", calm: "#4F7A86", page: "weather" }
-                    ].filter(t => (t.page !== "games" || root.cfg.games !== false) && (t.page !== "weather" || root.cfg.weatherTile === true) && (t.page !== "relax" || root.cfg.relax !== false))
+                    ].filter(t => (t.page !== "games" || root.cfg.games !== false) && (t.page !== "weather" || root.cfg.weatherTile === true) && (t.page !== "relax" || root.cfg.relax !== false)
+                              && (t.page !== "talk" || root.cfg.talkTile === true) && (t.page !== "travel" || root.cfg.travelTile === true)
+                              && (t.page !== "presentations" || root.cfg.tilePres !== false) && (t.page !== "stream" || root.cfg.tileStream !== false)
+                              && (t.page !== "shortcuts" || root.cfg.tileLinks !== false))
                     delegate: Rectangle {
                         id: tileBox
                         required property var modelData
@@ -869,6 +875,11 @@ Rectangle {
                             font.pixelSize: 40 * root.f; color: root.green
                         }
                     }
+                    // Tik op een regel: voorlezen (beheer: Dagstructuur > Herinneringen > Voorlezen bij tikken)
+                    TapHandler {
+                        gesturePolicy: TapHandler.ReleaseWithinBounds
+                        onTapped: if (root.tapSpeak) speaker.say("Om " + modelData.start + ": " + modelData.title + (modelData.note ? ". " + modelData.note : ""))
+                    }
                 }
 
                 Text {
@@ -989,7 +1000,7 @@ Rectangle {
         anchors.fill: parent
         active: root.page !== "home"
         sourceComponent: root.page === "stream" ? streamPage : root.page === "presentations" ? presentationPage
-                         : root.page === "shortcuts" ? shortcutsPage : root.page === "games" ? gamesPage : root.page === "news" ? newsPage : root.page === "weather" ? weatherPage : root.page === "relax" ? relaxPage : null
+                         : root.page === "shortcuts" ? shortcutsPage : root.page === "games" ? gamesPage : root.page === "news" ? newsPage : root.page === "weather" ? weatherPage : root.page === "relax" ? relaxPage : root.page === "talk" ? talkPage : root.page === "travel" ? travelPage : null
         // Zachte overgang: scherm komt iets naar voren en wordt zichtbaar
         onLoaded: pageIn.restart()
         ParallelAnimation {
@@ -1000,6 +1011,8 @@ Rectangle {
     }
     Component { id: streamPage; StreamScreen { s: root.s; home: root; onBack: root.page = "home" } }
     Component { id: gamesPage; GamesScreen { s: root.s; onBack: root.page = "home" } }
+    Component { id: talkPage; TalkScreen { s: root.s; onBack: root.page = "home" } }
+    Component { id: travelPage; TravelScreen { s: root.s; home: root; onBack: root.page = "home" } }
     Component { id: relaxPage; RelaxScreen { s: root.s; home: root; onBack: root.page = "home" } }
     Component { id: weatherPage; WeatherScreen { s: root.s; onBack: root.page = "home" } }
     Component { id: newsPage; NewsScreen { s: root.s; current: root.newsIndex; onBack: root.page = "home" } }
@@ -1094,6 +1107,23 @@ Rectangle {
                 // Alleen handmatig: hoofdthread 15 s vastzetten om de waakhond te testen
                 const until = Date.now() + 15000
                 while (Date.now() < until) {}
+            } else if (selfTest === "board") {
+                board.post("Over 10 minuten gaan we wandelen. Trek je jas aan!", "Anja")
+                console.info("Board popup: " + (boardPopup.visible ? "yes" : "no"))
+                board.markRead(root.boardMsg.id)
+                console.info("Board after read: " + (boardPopup.visible ? "still" : "gone"))
+            } else if (selfTest === "talk") {
+                root.page = "talk"
+                pageLoader.item.choose(pageLoader.item.cards[3])
+            } else if (selfTest === "travel") {
+                transit.loadSample()
+                root.page = "travel"
+                console.info("Travel departures: " + transit.departures.length)
+            } else if (selfTest === "calendar") {
+                console.info("Calendar test: " + calendar.selfTest())
+            } else if (selfTest === "quiz" || selfTest === "words" || selfTest === "sudoku" || selfTest === "color") {
+                root.page = "games"
+                pageLoader.item.startExtra(selfTest)
             } else if (selfTest === "relax") {
                 root.page = "relax"
                 relaxTest.start()
@@ -1249,6 +1279,75 @@ Rectangle {
                     color: okTap.pressed ? "#245F3E" : "#2E8B57"
                     Text { anchors.centerIn: parent; text: "Oké"; font.pixelSize: 44 * root.s; font.bold: true; color: "#FFFFFF" }
                     TapHandler { id: okTap; gesturePolicy: TapHandler.ReleaseWithinBounds; onTapped: root.reminder = null }
+                }
+            }
+        }
+    }
+
+    // ---------- Berichtenbord: bericht van de begeleiding (beheer: Communicatie > Berichtenbord) ----------
+    readonly property var boardMsg: board.current
+    Connections {
+        target: board
+        function onArrived() {
+            root.screensaver = false
+            if (root.page === "presentations" && pageLoader.item && pageLoader.item.show) root.page = "home"
+            if (!root.night) speaker.announce(root.tapSpeak && root.boardMsg.text ? "Bericht" + (root.boardMsg.from ? " van " + root.boardMsg.from : "") + ": " + root.boardMsg.text : "", true)
+            console.info("Board message shown")
+        }
+    }
+    Rectangle {
+        id: boardPopup
+        anchors.fill: parent
+        z: 96
+        visible: !!root.boardMsg.id
+        color: "#99000000"
+        MouseArea { anchors.fill: parent }   // tik ernaast doet niets: eerst "Gelezen"
+        Rectangle {
+            anchors.centerIn: parent
+            width: 1300 * root.s; height: 700 * root.s
+            radius: 48 * root.s
+            color: root.contrast ? "#000000" : root.glass ? "#E61A2036" : "#FFFFFF"
+            border.color: root.contrast ? "#FFE14D" : root.glass ? "#66FFFFFF" : "#5DA9E9"; border.width: 4 * root.s
+            GlassBackground { anchors.fill: parent; anchors.margins: 4 * root.s; visible: root.glass; opacity: 0.5; clip: true }
+            ColumnLayout {
+                anchors { fill: parent; margins: 56 * root.s }
+                spacing: 20 * root.s
+                Row {
+                    spacing: 20 * root.s
+                    Text { text: "💬"; font.family: root.emojiFont; font.pixelSize: 64 * root.s }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Bericht" + (root.boardMsg.from ? " van " + root.boardMsg.from : "")
+                              + (root.boardMsg.time ? "  ·  " + root.boardMsg.time.substring(11, 16) + " uur" : "")
+                        font.pixelSize: 48 * root.s; font.bold: true
+                        color: root.contrast ? "#FFE14D" : root.glass ? "#8BE9C0" : "#2E8B57"
+                    }
+                }
+                Text {
+                    Layout.fillWidth: true; Layout.fillHeight: true
+                    text: root.boardMsg.text || ""
+                    font.pixelSize: 72 * root.s; font.bold: true
+                    color: root.glass || root.contrast ? "#FFFFFF" : "#1F2A44"
+                    wrapMode: Text.WordWrap; elide: Text.ElideRight
+                    fontSizeMode: boardPopup.visible ? Text.Fit : Text.FixedSize; minimumPixelSize: 36 * root.s
+                    verticalAlignment: Text.AlignVCenter
+                }
+                Row {
+                    Layout.alignment: Qt.AlignHCenter
+                    spacing: 30 * root.s
+                    Rectangle {
+                        width: 380 * root.s * root.big; height: 110 * root.s * root.big; radius: height / 2
+                        color: readTap.pressed ? "#245F3E" : "#2E8B57"
+                        Text { anchors.centerIn: parent; text: "✓  Gelezen"; font.pixelSize: 46 * root.s; font.bold: true; color: "#FFFFFF" }
+                        TapHandler { id: readTap; gesturePolicy: TapHandler.ReleaseWithinBounds; onTapped: board.markRead(root.boardMsg.id) }
+                    }
+                    Rectangle {
+                        width: 380 * root.s * root.big; height: 110 * root.s * root.big; radius: height / 2
+                        color: sayTap.pressed ? "#40FFFFFF" : root.glass ? "#26FFFFFF" : "#EEF1F5"
+                        border.color: root.glass ? "#55FFFFFF" : "#5DA9E9"; border.width: 2
+                        Text { anchors.centerIn: parent; text: "🔊  Voorlezen"; font.pixelSize: 46 * root.s; font.bold: true; color: root.glass || root.contrast ? "#FFFFFF" : "#1F2A44" }
+                        TapHandler { id: sayTap; gesturePolicy: TapHandler.ReleaseWithinBounds; onTapped: speaker.say(root.boardMsg.text || "") }
+                    }
                 }
             }
         }

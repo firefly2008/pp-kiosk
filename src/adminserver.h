@@ -15,6 +15,9 @@
 class Agenda;
 class AppModel;
 class RadioModel;
+class MessageBoard;
+class CalendarFeed;
+class Transit;
 class Presentations;
 class Shortcuts;
 class Stats;
@@ -51,6 +54,9 @@ public:
     void setWindow(QQuickWindow *window) { m_window = window; }
     // Gebruiksstatistiek (tabblad Gebruik)
     void setStats(Stats *stats) { m_stats = stats; }
+    void setBoard(MessageBoard *board) { m_board = board; }
+    void setCalendar(CalendarFeed *calendar) { m_calendar = calendar; }
+    void setTransit(Transit *transit) { m_transit = transit; }
     // Rooktest: back-up maken en meteen terugzetten (zonder herstart)
     Q_INVOKABLE void backupTest();
     // Rooktest: vaste inlog instellen, goed en fout proberen, weer weghalen
@@ -103,6 +109,9 @@ private:
     QHash<QTcpSocket *, Pending> m_pending;
     QList<AppModel *> m_web;
     RadioModel *m_radio = nullptr;
+    MessageBoard *m_board = nullptr;
+    CalendarFeed *m_calendar = nullptr;
+    Transit *m_transit = nullptr;
     qint64 m_startedAt = QDateTime::currentSecsSinceEpoch();
     Stats *m_stats = nullptr;
     QQuickWindow *m_window = nullptr;

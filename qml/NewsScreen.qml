@@ -147,6 +147,12 @@ Rectangle {
                 spacing: 20 * page.s
                 Pill { label: "‹  Vorige"; onHit: page.go(-1) }
                 Item { Layout.fillWidth: true }
+                Pill {
+                    visible: agenda.settings.readAloud !== false
+                    label: "🔊  Voorlezen"
+                    onHit: { if (page.item) speaker.say(page.item.title + ". " + (page.item.text || "")); hideTimer.restart() }
+                }
+                Item { Layout.fillWidth: true }
                 Pill { label: "Volgende  ›"; onHit: page.go(1) }
             }
         }

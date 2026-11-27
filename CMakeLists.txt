@@ -51,6 +51,9 @@ qt_add_executable(ppkiosk WIN32
     src/listener.h
     src/news.cpp
     src/watchdog.cpp
+    src/messageboard.cpp
+    src/calendarfeed.cpp
+    src/transit.cpp
     src/news.h
     src/shortcuts.h
     src/thirdparty/qrcodegen.cpp
@@ -93,7 +96,13 @@ set(PPKIOSK_QML_FILES qml/Main.qml qml/StreamScreen.qml qml/PresentationScreen.q
         qml/AnalogClock.qml
         qml/SeasonDecor.qml
         qml/WeatherScreen.qml
-        qml/RelaxScreen.qml)
+        qml/RelaxScreen.qml
+        qml/TalkScreen.qml
+        qml/TravelScreen.qml
+        qml/QuizGame.qml
+        qml/WordSearch.qml
+        qml/SudokuGame.qml
+        qml/ColorGame.qml)
 foreach(qml_file IN LISTS PPKIOSK_QML_FILES)
     get_filename_component(qml_name ${qml_file} NAME)
     set_source_files_properties(${qml_file} PROPERTIES QT_RESOURCE_ALIAS ${qml_name})
