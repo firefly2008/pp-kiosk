@@ -74,6 +74,13 @@ MenuBoard::MenuBoard(Agenda *agenda, const QString &presentationsRoot, QObject *
     update(true);
 }
 
+QStringList MenuBoard::photoNames()
+{
+    return {QStringLiteral("aardappel-vlees"), QStringLiteral("stamppot"), QStringLiteral("vis"), QStringLiteral("kip-rijst"), QStringLiteral("nasi"),
+            QStringLiteral("pasta"), QStringLiteral("pizza"), QStringLiteral("friet"), QStringLiteral("burger"), QStringLiteral("salade"),
+            QStringLiteral("soep"), QStringLiteral("pannenkoek")};
+}
+
 QString MenuBoard::photoFor(const QString &dish, const QString &note)
 {
     // Volgorde telt: "Vis met friet" is vis, "Hutspot met gehaktbal" is stamppot
@@ -303,7 +310,14 @@ void MenuBoard::update(bool force)
     const QString time = m_agenda->settings().value(QStringLiteral("dinnerTime")).toString();
     const QVariantMap cfg = m_agenda->settings();
     const bool glass = cfg.value(QStringLiteral("theme")).toString() == QLatin1String("glas") && !cfg.value(QStringLiteral("contrast")).toBool();
-    const QString key = today.toString(Qt::ISODate) + time + (glass ? QStringLiteral("glas") : QString()) + QString::fromUtf8(QJsonDocument(menu).toJson(QJsonDocument::Compact));
+    QString key = today.toString(Qt::ISODate) + time + (glass ? QStringLiteral("glas") : QString()) + QString::fromUtf8(QJsonDocument(menu).toJson(QJsonDocument::Compact));
+    // Ook een eigen foto die vervangen is (zelfde naam, nieuwe inhoud) telt als wijziging
+    for (const QJsonValue &v : menu) {
+        const QString own = v.toObject().value(QStringLiteral("image")).toString();
+        if (!own.isEmpty()) {
+            key += QString::number(QFileInfo(m_agenda->pictoDir() + QLatin1Char('/') + own).lastModified().toMSecsSinceEpoch());
+        }
+    }
     // Opnieuw maken als het menu, de tijd of de dag verandert, of als de map is weggehaald
     if (!force && key == m_key && QFileInfo::exists(m_dir + QStringLiteral("/info.json"))) {
         return;
@@ -317,6 +331,8 @@ void MenuBoard::update(bool force)
     }
     const QLocale nl(QLocale::Dutch, QLocale::Netherlands);
     int count = 0;
+    // Elke nieuwe versie krijgt nieuwe bestandsnamen: anders laat het scherm (beeldcache) de oude plaatjes nog zien
+    const QString stamp = QString::fromLatin1(QCryptographicHash::hash(key.toUtf8(), QCryptographicHash::Md5).toHex().left(8));
     for (int i = 0; i < 7; ++i) {
         const QDate day = today.addDays(i);
         const QJsonObject o = menu.at(day.dayOfWeek() - 1).toObject();
@@ -330,13 +346,18 @@ void MenuBoard::update(bool force)
         if (!own.isEmpty()) {
             photo.load(m_agenda->pictoDir() + QLatin1Char('/') + own);
         }
+        // Zelf gekozen standaardfoto, anders een foto die bij het gerecht past
+        const QString food = o.value(QStringLiteral("food")).toString();
+        if (photo.isNull() && photoNames().contains(food)) {
+            photo.load(QStringLiteral(":/food/") + food + QStringLiteral(".jpg"));
+        }
         if (photo.isNull()) {
             photo.load(QStringLiteral(":/food/") + photoFor(dish, note) + QStringLiteral(".jpg"));
         }
         const QString label = i == 0 ? QStringLiteral("Vandaag") : i == 1 ? QStringLiteral("Morgen") : nl.dayName(day.dayOfWeek());
         const QString date = (i < 2 ? nl.dayName(day.dayOfWeek()) + QLatin1Char(' ') : QString()) + nl.toString(day, QStringLiteral("d MMMM"));
         const QImage slide = glass ? renderGlass(label, date, dish, note, time, photo) : render(label, date, dish, note, time, photo);
-        slide.save(dir.filePath(QStringLiteral("%1.jpg").arg(++count)), "JPG", 90);
+        slide.save(dir.filePath(QStringLiteral("%1-%2.jpg").arg(++count).arg(stamp)), "JPG", 90);
     }
     QSaveFile info(dir.filePath(QStringLiteral("info.json")));
     if (info.open(QIODevice::WriteOnly)) {
@@ -349,5 +370,5 @@ void MenuBoard::update(bool force)
                        .toJson());
         info.commit();
     }
-    qInfo() << "Menu board:" << count << "slides" << (glass ? "glass" : "");
+    qInfo() << "Menu board:" << count << "slides" << (glass ? "glass" : "") << stamp;
 }

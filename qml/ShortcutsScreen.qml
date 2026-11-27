@@ -49,7 +49,7 @@ Rectangle {
             color: backTap.pressed ? page.pressBg : page.cardBg
             border.color: page.lineColor; border.width: 2
             Text { anchors.centerIn: parent; text: "‹  Terug"; font.pixelSize: 40 * page.s; font.bold: true; color: page.ink }
-            TapHandler { id: backTap; onTapped: page.back() }
+            TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; id: backTap; onTapped: page.back() }
         }
         Text { text: "⭐"; font.family: page.emojiFont; font.pixelSize: 56 * page.s }
         Text {
@@ -106,7 +106,7 @@ Rectangle {
                                         elide: Text.ElideRight
                                         style: Text.Raised; styleColor: "#40000000"
                                     }
-                                    TapHandler { id: tileTap; onTapped: page.open(modelData) }
+                                    TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; id: tileTap; onTapped: page.open(modelData) }
                                 }
                             }
                         }

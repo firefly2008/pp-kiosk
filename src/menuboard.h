@@ -18,6 +18,8 @@ public:
     static QString folderName() { return QStringLiteral("Menu van de week"); }
     // Welke ingebouwde foto past bij dit gerecht (bijv. "vis", "pasta"); altijd een geldige naam
     static QString photoFor(const QString &dish, const QString &note);
+    // Namen van de standaard etensfoto's (qrc:/food/<naam>.jpg)
+    static QStringList photoNames();
     // Eén dia tekenen (1920 x 1080)
     static QImage render(const QString &dayLabel, const QString &dateText, const QString &dish, const QString &note,
                          const QString &time, const QImage &photo);

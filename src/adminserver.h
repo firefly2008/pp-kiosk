@@ -50,6 +50,8 @@ public:
     void setStats(Stats *stats) { m_stats = stats; }
     // Rooktest: back-up maken en meteen terugzetten (zonder herstart)
     Q_INVOKABLE void backupTest();
+    // Rooktest: vaste inlog instellen, goed en fout proberen, weer weghalen
+    Q_INVOKABLE void loginTest();
 
 Q_SIGNALS:
     void changed();
@@ -75,6 +77,12 @@ private:
     void dispatch(QTcpSocket *socket, Pending &p);
     void respond(QTcpSocket *socket, int status, const QByteArray &type, const QByteArray &body, const QByteArray &extraHeaders = {});
     void makeQr();
+    // Vaste inlognaam + wachtwoord (naast de code). Wachtwoord alleen als PBKDF2-hash in settings.ini.
+    bool loginSet() const;
+    bool checkLogin(const QString &user, const QString &pass) const;
+    void setLogin(const QString &user, const QString &pass);
+    bool validToken(const QString &token);
+    void countFailure(const QString &ip);
 
     QString m_dataDir;
     Agenda *m_agenda;
@@ -90,5 +98,6 @@ private:
     QUrl m_qr;
     QHash<QString, QList<qint64>> m_failures;   // ip → tijden van foute codes
     QHash<QString, qint64> m_blockedUntil;      // ip → geblokkeerd tot
+    QHash<QString, qint64> m_tokens;            // sessie na inloggen met naam + wachtwoord → geldig tot
     int m_open = 0;
 };

@@ -1,5 +1,29 @@
 [
   {
+    "version": "0.9.0",
+    "date": "2026-11-27",
+    "notes": [
+      "Tikken werkt nu precies: een tik op een knop gaat niet meer door naar wat eronder ligt. Daardoor sprak de kiosk bijvoorbeeld niet meer 'Nu: Dagbesteding' uit bij de spelletjes, en start een tik in een presentatie niet meer per ongeluk een andere presentatie.",
+      "Diner van de dag laat nu een foto zien die past bij het eten van vandaag (de eigen foto uit het weekmenu, of een passende standaardfoto).",
+      "Memory: een spel dat je halverwege stopt, kan het volgende spel niet meer in de war brengen.",
+      "Beheerpagina: inloggen kan nu ook met een vaste inlognaam en wachtwoord (instellen op het nieuwe tabblad Toegang). Daar staat ook het adres van de kiosk en hoe je de pc een vast IP-adres geeft.",
+      "Veel meer pictogrammen voor de dagplanning (warm eten, sporten, lezen, slapen, en meer), in groepen met de naam eronder en een zoekveld.",
+      "Weekmenu: per dag zelf een foto kiezen bij het eten: een van de standaardfoto's of een eigen foto. Die staat op het menubord en bij Diner van de dag.",
+      "Menubord: als je het menu of het eten van een dag aanpast, worden de plaatjes meteen opnieuw gemaakt en zie je ze direct op het scherm, ook als de presentatie al loopt.",
+      "De tegel Mijn week is weggehaald."
+    ],
+    "notes_en": [
+      "Taps are now precise: a tap on a button no longer reaches what lies underneath. For example, the kiosk no longer says 'Now: Day activities' in the games, and a tap in a slideshow no longer starts another slideshow by accident.",
+      "Dinner of the day now shows a photo that matches today's meal (your own photo from the weekly menu, or a matching stock photo).",
+      "Memory: a game you stop halfway can no longer upset the next game.",
+      "Admin page: you can now also log in with a fixed username and password (set it up on the new Access tab). That tab also shows the kiosk's address and how to give the PC a fixed IP address.",
+      "Many more icons for the day planning (hot meal, sports, reading, sleeping and more), grouped with their names and a search box.",
+      "Weekly menu: choose a photo for each day's meal yourself: one of the stock photos or your own photo. It appears on the menu board and in Dinner of the day.",
+      "Menu board: when you change the menu or a day's meal, the slides are rebuilt right away and show up on screen immediately, even while the slideshow is running.",
+      "The My week tile has been removed."
+    ]
+  },
+  {
     "version": "0.8.0",
     "date": "2026-11-26",
     "notes": [

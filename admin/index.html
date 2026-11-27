@@ -45,6 +45,13 @@ button.danger{color:var(--rood)}
 dialog{border:0;border-radius:16px;max-width:640px;width:calc(100% - 32px)}
 .picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(60px,1fr));gap:6px;margin:12px 0;max-height:40vh;overflow:auto}
 .picker button{font-size:30px;padding:4px;height:60px}
+#picker{grid-template-columns:repeat(auto-fill,minmax(84px,1fr))}
+#picker button{height:auto;min-height:84px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+#picker .pi{font-size:32px;line-height:1.1}
+#picker .pn{font-size:12px;line-height:1.15;color:var(--grijs);text-align:center;word-break:break-word}
+#picker .pgroup{grid-column:1/-1;margin:8px 0 0;font-size:14px}
+.picker>p{grid-column:1/-1}
+#pickSearch{width:100%;padding:8px 10px;font-size:16px}
 .picker button.on{outline:3px solid var(--groen)}
 .hint{color:var(--grijs);font-size:15px}
 nav.tabs{display:flex;gap:8px;max-width:1100px;margin:0 auto;padding:16px 16px 0;flex-wrap:wrap}
@@ -71,6 +78,12 @@ progress{width:100%;height:16px}
 .weeknav{display:flex;gap:8px;align-items:center;margin-bottom:8px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .mrow{display:grid;grid-template-columns:110px 56px 1fr 1fr;gap:8px;align-items:center;margin-bottom:8px}
+.mrow .pict img{width:44px;height:44px;object-fit:cover;border-radius:8px}
+.foodpick{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin:12px 0;max-height:55vh;overflow:auto}
+.foodpick button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px;font-size:13px}
+.foodpick button img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px}
+.foodpick button .auto{width:100%;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;font-size:40px;background:var(--groen-licht);border-radius:8px}
+.foodpick button.on{outline:3px solid var(--groen)}
 .brow{display:grid;grid-template-columns:1fr 160px auto;gap:8px;align-items:center;margin-bottom:8px}
 .srow{display:grid;grid-template-columns:70px 1fr 160px auto;gap:8px;align-items:center;margin-bottom:8px}
 .srow input.icon{text-align:center;font-size:24px}
@@ -107,6 +120,13 @@ progress{width:100%;height:16px}
   <p class="hint">Houd op het kioskscherm de klok 1,5 seconde vast: de code staat dan in beeld.</p>
   <input id="code" inputmode="numeric" maxlength="6" autocomplete="off">
   <p><button class="primary" id="go">Verder</button></p>
+  <h2>Of: inloggen met naam en wachtwoord</h2>
+  <p class="hint">Werkt alleen als dit op het tabblad Toegang is ingesteld.</p>
+  <label for="lUser">Inlognaam</label>
+  <input id="lUser" autocomplete="username" autocapitalize="off">
+  <label for="lPass">Wachtwoord</label>
+  <input id="lPass" type="password" autocomplete="current-password">
+  <p><button class="primary" id="goLogin">Inloggen</button></p>
   <p id="loginErr" class="hint"></p>
 </div>
 
@@ -120,6 +140,7 @@ progress{width:100%;height:16px}
   <button data-tab="live">📺 Live</button>
   <button data-tab="stats">📊 Gebruik</button>
   <button data-tab="backup">💾 Back-up</button>
+  <button data-tab="access">🔑 Toegang</button>
   <button data-tab="kiosks">🏠 Kiosken</button>
 </nav>
 
@@ -221,14 +242,12 @@ progress{width:100%;height:16px}
 
     <span>Nieuws</span>
     <label class="toggle"><input type="checkbox" id="sNews"> Laatste nieuws van de NOS op het startscherm (wisselt met de mededelingen)</label>
-    <span>Mijn week</span>
-    <label class="toggle"><input type="checkbox" id="sWeek"> Tegel "Mijn week" op het startscherm (hele week in één oogopslag)</label>
 
     <span>Spraakbediening</span>
     <div>
       <label class="toggle"><input type="checkbox" id="sVoice"> Microfoonknop bovenin: tik en zeg bijvoorbeeld "wat doen we nu?" of "zet de radio aan"</label>
       <p class="hint">Werkt zonder internet, met de Nederlandse spraakherkenning van Windows. Nodig: een microfoon, en in Windows bij Tijd en taal &gt; Taal de taal Nederlands met spraak. Ook: Privacy &gt; Microfoon &gt; bureaublad-apps toestaan.<br>
-      Zinnen: zet de radio aan/uit · volgende zender · wat doen we nu · wat doen we straks · wat eten we vandaag · hoe laat is het · welke dag is het · mijn week · spelletjes · presentaties · terug.</p>
+      Zinnen: zet de radio aan/uit · volgende zender · wat doen we nu · wat doen we straks · wat eten we vandaag · hoe laat is het · welke dag is het · spelletjes · presentaties · terug.</p>
     </div>
 
     <span>Spelletjes</span>
@@ -321,6 +340,28 @@ progress{width:100%;height:16px}
   </div>
  </section>
 
+ <section id="tab-access" hidden>
+  <h2>Beheerpagina op afstand</h2>
+  <div class="card">
+    <h3>Adres van deze kiosk</h3>
+    <p id="accAddr" class="hint"></p>
+    <p class="hint">Geef deze pc een vast IP-adres, dan blijft dit adres altijd hetzelfde. Dat kan in de router (zoek naar "DHCP-reservering" of "vast IP-adres") of in Windows: Instellingen &gt; Netwerk en internet &gt; je verbinding &gt; IP-toewijzing &gt; Handmatig.</p>
+  </div>
+  <div class="card">
+    <h3>Vaste inlognaam en wachtwoord</h3>
+    <p class="hint">Hiermee log je in op de beheerpagina vanaf elke pc, tablet of telefoon op hetzelfde netwerk, zonder de code van het scherm. De code van het scherm blijft ook werken. Blijft 12 uur ingelogd.</p>
+    <p id="accState" class="hint"></p>
+    <label for="aUser">Inlognaam</label>
+    <input id="aUser" autocomplete="off" autocapitalize="off" maxlength="40">
+    <label for="aPass">Nieuw wachtwoord (minstens 8 tekens)</label>
+    <input id="aPass" type="password" autocomplete="new-password" maxlength="128">
+    <label for="aPass2">Wachtwoord nog een keer</label>
+    <input id="aPass2" type="password" autocomplete="new-password" maxlength="128">
+    <p><button class="primary" id="accSave">Opslaan</button> <button id="accClear">Vaste inlog uitzetten</button></p>
+    <p id="accInfo" class="hint"></p>
+  </div>
+ </section>
+
  <section id="tab-kiosks" hidden>
   <h2>Meerdere kiosken</h2>
   <p class="hint">Zet hier de andere kiosken (adres en code staan op hun scherm: klok 1,5 seconde vasthouden). Kies daarna bovenin welke kiosk je beheert.</p>
@@ -341,6 +382,7 @@ progress{width:100%;height:16px}
 
 <dialog id="pickDlg">
   <h3>Kies een pictogram</h3>
+  <input type="search" id="pickSearch" placeholder="Zoeken: bijvoorbeeld eten, sport, lezen, slapen" aria-label="Pictogram zoeken">
   <div class="picker" id="picker"></div>
   <h3>Eigen picto's</h3>
   <p class="hint">Upload eigen plaatjes (.png, .jpg, .svg), bijvoorbeeld picto's van je organisatie of een foto.</p>
@@ -351,8 +393,27 @@ progress{width:100%;height:16px}
   <p><button class="primary" id="pickOk">Klaar</button> <button id="pickNone">Geen eigen plaatje</button></p>
 </dialog>
 
+<dialog id="foodDlg">
+  <h3>Foto bij het eten</h3>
+  <p class="hint">Deze foto staat op het menubord en bij "Diner van de dag".</p>
+  <div class="foodpick" id="foodPick"></div>
+  <p><button id="foodOwn">📁 Eigen foto uploaden of kiezen…</button> <button id="foodClose">Sluiten</button></p>
+</dialog>
+
 <script>
-const ICONS = ['🛏️','🚿','🛁','🪥','🚽','👕','🧥','🍞','🥣','☕','🥪','🍽️','🍎','🥤','💊','🩺','🛠️','🎨','✂️','📚','🧩','🎲','🎵','🎤','📺','🎮','💻','📱','☎️','🚶','🚲','🚌','🚗','🚆','⚽','🏊','🧘','💪','🛋️','😴','🛒','🧺','🧹','🧽','🍳','🥕','👨‍⚕️','🦷','🏥','💇','👪','🤝','🎉','🎂','🎁','🌳','🌻','🐕','🐈','⛪','🕌','📅','⏰','🏠','🏫','💼','💶','✉️','🧸','🎬'];
+const FOOD = [['aardappel-vlees','Aardappels met vlees'],['stamppot','Stamppot'],['vis','Vis'],['kip-rijst','Kip met rijst'],['nasi','Nasi / bami'],
+  ['pasta','Pasta'],['pizza','Pizza'],['friet','Friet'],['burger','Burger'],['salade','Salade'],['soep','Soep'],['pannenkoek','Pannenkoeken']];
+const ICON_GROUPS = [
+  ['Opstaan en verzorging', '🛏️ opstaan|🚿 douchen|🛁 in bad|🪥 tanden poetsen|🧼 handen wassen|🚽 wc|🪒 scheren|💇 kapper|💅 nagels|🧴 insmeren|👕 aankleden|🧥 jas aan|🧦 sokken|👓 bril|💊 medicijnen|🩺 dokter|👨‍⚕️ arts|🦷 tandarts|🏥 ziekenhuis|🦽 rolstoel|💆 massage'],
+  ['Eten en drinken', '🍞 ontbijt|🥣 pap|🥪 lunch|🍽️ eten|🍲 warm eten|🍝 pasta|🍛 rijst|🥔 aardappelen|🥗 salade|🍜 soep|🍕 pizza|🍟 friet|🍎 fruit|🥕 groente|🍰 gebak|🍪 koekje|☕ koffie|🫖 thee|🥤 drinken|🧃 sapje|🍳 koken|🧑‍🍳 samen koken|🎂 taart'],
+  ['Sport en bewegen', '🏃 sporten|🚶 wandelen|🚴 fietsen|🚲 fiets|🏊 zwemmen|💪 fitness|🏋️ gewichten|🤸 gym|🧘 yoga|💃 dansen|⚽ voetbal|🏀 basketbal|🏓 tafeltennis|🏸 badminton|🎳 bowlen|⛳ golf|🎾 tennis|🥾 lopen buiten|🏒 hockey'],
+  ['Bezig zijn', '🛠️ dagbesteding|🎨 schilderen|🖍️ kleuren|✂️ knutselen|🧶 handwerk|🪴 tuinieren|🌻 bloemen|📚 lezen|📖 boek|📰 krant|✍️ schrijven|🧩 puzzelen|🎲 spelletje|🃏 kaarten|♟️ schaken|🎵 muziek|🎤 zingen|🎹 piano|🎸 gitaar|📺 tv kijken|🎬 film|🍿 bioscoop|🎮 gamen|💻 computer|📱 telefoon|☎️ bellen|📸 fotograferen|🧸 spelen'],
+  ['Huishouden en boodschappen', '🛒 boodschappen|🛍️ winkelen|🧺 was doen|🧹 vegen|🧽 schoonmaken|🪣 dweilen|🗑️ afval|🛏️ bed opmaken|🐕 hond|🐈 kat|🐾 dieren verzorgen|🏠 thuis'],
+  ['Rust en slapen', '😴 slapen|🛌 naar bed|💤 middagslaap|🛋️ rusten|🌙 avond|🧘 ontspannen|🎧 luisteren|🕯️ rustig moment'],
+  ['Onderweg', '🚌 bus|🚗 auto|🚕 taxi|🚆 trein|🚐 busje|✈️ vliegtuig|🏫 school|💼 werk|🏛️ museum|🎭 theater|🌳 park|🏖️ strand|🦆 eendjes voeren|🐴 manege|⛪ kerk|🕌 moskee|🙏 bidden'],
+  ['Samen en feest', '👪 familie|🤝 bezoek|🗣️ praten|👩‍🏫 les|🧑‍🤝‍🧑 vrienden|🎉 feest|🎁 cadeau|🎄 kerst|🥳 verjaardag|📅 afspraak|⏰ tijd|💶 geld|✉️ post|☀️ buiten|☔ regen']
+];
+const ICONS = ICON_GROUPS.flatMap(g => g[1].split('|').map(x => { const k = x.indexOf(' '); return {icon: x.slice(0, k), name: x.slice(k + 1), group: g[0]}; }));
 const COLORS = ['#A7D8F0','#F6C85F','#8CC084','#C3B1E1','#F4A6A0','#F7B267','#B8E0D2','#D5D5D5'];
 const DAYS = ['ma','di','wo','do','vr','za','zo'];
 const DAYNAMES = ['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'];
@@ -378,7 +439,7 @@ async function api(method, body, path = '/api/agenda'){
   try {
     r = await fetch(base + path, {method, headers: {'X-Code': code, 'Content-Type': 'application/json'}, body: body ? JSON.stringify(body) : undefined});
   } catch (e) { throw Object.assign(new Error(base ? 'Kiosk ' + base + ' is niet bereikbaar' : 'Kiosk niet bereikbaar'), {login: !base}); }
-  if (r.status === 403) throw Object.assign(new Error('Code klopt niet'), {login: true});
+  if (r.status === 403) throw Object.assign(new Error(code.length > 6 ? 'Opnieuw inloggen, alsjeblieft.' : 'Code klopt niet'), {login: true});
   if (r.status === 429) throw Object.assign(new Error('Te veel pogingen. Probeer het over 10 minuten.'), {login: true});
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.error || 'Opslaan mislukt');
@@ -464,6 +525,7 @@ function openPicker(target, done){
   picking = target; pickDone = done; pickImage = target.image || '';
   $('ownIcon').value = target.icon || '';
   renderOwnPictos();
+  $('pickSearch').value = ''; renderPicker();
   $('pickDlg').showModal();
 }
 function renderOwnPictos(){
@@ -473,8 +535,19 @@ function renderOwnPictos(){
 async function loadPictos(){
   try { pictos = (await api('GET', null, '/api/pictos')).items; } catch (e) { pictos = []; }
 }
-$('picker').innerHTML = ICONS.map(c => `<button>${c}</button>`).join('');
-$('picker').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { $('ownIcon').value = b.textContent; pickImage = ''; renderOwnPictos(); } });
+// Pictogrammen per groep, met naam eronder; zoeken op naam (bijvoorbeeld "slapen" of "sport")
+function renderPicker(){
+  const q = ($('pickSearch').value || '').trim().toLowerCase();
+  const hit = it => !q || it.name.toLowerCase().includes(q) || it.group.toLowerCase().includes(q);
+  $('picker').innerHTML = ICON_GROUPS.map(g => {
+    const items = ICONS.filter(it => it.group === g[0] && hit(it));
+    if (!items.length) return '';
+    return `<h4 class="pgroup">${esc(g[0])}</h4>` + items.map(it => `<button data-icon="${esc(it.icon)}" title="${esc(it.name)}"><span class="pi">${it.icon}</span><span class="pn">${esc(it.name)}</span></button>`).join('');
+  }).join('') || '<p class="hint">Niets gevonden. Typ of plak hieronder zelf een emoji.</p>';
+}
+renderPicker();
+$('pickSearch').addEventListener('input', renderPicker);
+$('picker').addEventListener('click', e => { const b = e.target.closest('button[data-icon]'); if (b) { $('ownIcon').value = b.dataset.icon; pickImage = ''; renderOwnPictos(); } });
 $('ownPictos').addEventListener('click', async e => {
   const b = e.target.closest('button[data-picto]'); if (!b) return;
   pickImage = b.dataset.picto; renderOwnPictos();
@@ -528,11 +601,11 @@ $('wkNow').onclick = () => { weekStart = monday(new Date()); loadWeek(); };
 
 // ---------- Eten & feest ----------
 function renderFood(){
-  data.menu = data.menu && data.menu.length === 7 ? data.menu : DAYNAMES.map(() => ({dish: '', note: '', image: ''}));
+  data.menu = data.menu && data.menu.length === 7 ? data.menu : DAYNAMES.map(() => ({dish: '', note: '', image: '', food: ''}));
   $('menu').innerHTML = data.menu.map((m, k) => `
     <div class="mrow" data-m="${k}">
       <strong>${DAYNAMES[k]}</strong>
-      <button class="pict" data-act="mpick" style="background:var(--groen-licht)" aria-label="Plaatje kiezen">${pictoHtml({image: m.image, icon: '🍽️'})}</button>
+      <button class="pict" data-act="mpick" style="background:var(--groen-licht)" aria-label="Foto kiezen" title="Foto kiezen">${m.image ? pictoHtml({image: m.image}) : m.food ? `<img src="${base}/food/${esc(m.food)}.jpg" alt="">` : '📷'}</button>
       <input type="text" data-k="dish" value="${esc(m.dish)}" maxlength="80" placeholder="Gerecht" aria-label="Gerecht ${DAYNAMES[k]}">
       <input type="text" data-k="note" value="${esc(m.note)}" maxlength="120" placeholder="met ... (mag leeg)" aria-label="Toevoeging ${DAYNAMES[k]}">
     </div>`).join('');
@@ -557,7 +630,21 @@ function renderFood(){
 function showDate(v){ const m = String(v).match(/^(?:(\d{4})-)?(\d{2})-(\d{2})$/); return m ? m[3] + '-' + m[2] + (m[1] ? '-' + m[1] : '') : v; }
 function storeDate(v){ const m = String(v).trim().match(/^(\d{1,2})[-\/.](\d{1,2})(?:[-\/.](\d{4}))?$/); if (!m) return v; const dd = m[1].padStart(2, '0'), mm = m[2].padStart(2, '0'); return (m[3] ? m[3] + '-' : '') + mm + '-' + dd; }
 $('menu').addEventListener('input', e => { const r = e.target.closest('[data-m]'); if (r && e.target.dataset.k) { data.menu[r.dataset.m][e.target.dataset.k] = e.target.value; changed(); } });
-$('menu').addEventListener('click', e => { const b = e.target.closest('button[data-act=mpick]'); if (!b) return; const m = data.menu[b.closest('[data-m]').dataset.m]; openPicker(m, renderFood); });
+// Foto bij het eten: automatisch, een standaardfoto of een eigen foto
+let foodFor = null;
+function renderFoodPick(){
+  const m = foodFor;
+  $('foodPick').innerHTML = `<button data-food="" class="${!m.image && !m.food ? 'on' : ''}"><span class="auto">✨</span>Automatisch (past bij het gerecht)</button>`
+    + (m.image ? `<button data-food="own" class="on">${pictoHtml({image: m.image})}Eigen foto</button>` : '')
+    + FOOD.map(f => `<button data-food="${f[0]}" class="${!m.image && m.food === f[0] ? 'on' : ''}"><img src="${base}/food/${f[0]}.jpg" alt="" loading="lazy">${esc(f[1])}</button>`).join('');
+}
+$('menu').addEventListener('click', e => { const b = e.target.closest('button[data-act=mpick]'); if (!b) return; foodFor = data.menu[b.closest('[data-m]').dataset.m]; renderFoodPick(); $('foodDlg').showModal(); });
+$('foodPick').addEventListener('click', e => {
+  const b = e.target.closest('button[data-food]'); if (!b || b.dataset.food === 'own') return;
+  foodFor.food = b.dataset.food; foodFor.image = ''; changed(); renderFood(); $('foodDlg').close();
+});
+$('foodOwn').onclick = () => { $('foodDlg').close(); openPicker(foodFor, () => { if (foodFor.image) foodFor.food = ''; renderFood(); }); };
+$('foodClose').onclick = () => $('foodDlg').close();
 for (const [box, key, rowAttr] of [['bdays', 'birthdays', 'b'], ['special', 'special', 's']]) {
   $(box).addEventListener('input', e => {
     const r = e.target.closest(`[data-${rowAttr}]`); if (!r || !e.target.dataset.k) return;
@@ -574,7 +661,7 @@ $('addSpecial').onclick = () => { data.special.push({title: '', date: '', icon: 
 
 // ---------- Scherm ----------
 const S = {sName: 'name', sSpeak: 'speak', sChime: 'chime', sScale: 'textScale', sContrast: 'contrast', sSaver: 'screensaverMinutes',
-           sSaverPres: 'screensaverPresentation', sNightFrom: 'nightFrom', sNightTo: 'nightTo', sNightMode: 'nightMode', sDinner: 'dinnerTime', sNews: 'news', sGames: 'games', sTheme: 'theme', sWeek: 'week', sVoice: 'voice', sGlass: 'glassTransparency'};
+           sSaverPres: 'screensaverPresentation', sNightFrom: 'nightFrom', sNightTo: 'nightTo', sNightMode: 'nightMode', sDinner: 'dinnerTime', sNews: 'news', sGames: 'games', sTheme: 'theme', sVoice: 'voice', sGlass: 'glassTransparency'};
 async function renderScreen(){
   const s = data.settings = Object.assign({speak: false, chime: true, textScale: 1, contrast: false, screensaverMinutes: 5, screensaverPresentation: 'Menu van de week', dinnerTime: '17:00', news: true, games: true, week: true, voice: false, glassTransparency: 80, theme: 'standaard', nightFrom: '', nightTo: '', nightMode: 'dim', name: ''}, data.settings || {});
   try {
@@ -740,8 +827,9 @@ function showTab(t){
   tab = t;
   for (const b of $('tabs').querySelectorAll('button')) b.classList.toggle('on', b.dataset.tab === t);
   for (const s of document.querySelectorAll('main > section')) s.hidden = s.id !== 'tab-' + t;
-  $('bar').hidden = ['pres', 'live', 'stats', 'backup'].includes(t);
+  $('bar').hidden = ['pres', 'live', 'stats', 'backup', 'access'].includes(t);
   if (t === 'stats') loadStats();
+  if (t === 'access') loadAccess();
   clearInterval(liveTimer); liveTimer = null;
   if (t === 'live') { liveShot(); liveTimer = setInterval(liveShot, 3000); }
   if (t === 'pres') loadPres();
@@ -961,6 +1049,48 @@ $('copyAll').onclick = async () => {
   }
   $('copyStatus').textContent = out.join(' · ');
 };
+
+// ---------- Toegang: vaste inlognaam en wachtwoord ----------
+async function loadAccess(){
+  try {
+    const j = await api('GET', null, '/api/access');
+    const list = (j.addresses && j.addresses.length ? j.addresses : [j.address]).filter(Boolean);
+    $('accAddr').innerHTML = list.map(a => '<b>' + esc(a) + '</b>').join('<br>') || 'Geen netwerk gevonden.';
+    $('accState').textContent = j.set ? 'Nu ingesteld voor: ' + j.user : 'Nog niet ingesteld.';
+    $('aUser').value = j.user || '';
+  } catch (e) { $('accState').textContent = e.message; }
+}
+$('accSave').onclick = async () => {
+  const user = $('aUser').value.trim(), pass = $('aPass').value;
+  if (user.length < 3 || /\s/.test(user)) { $('accInfo').textContent = 'Inlognaam: minstens 3 tekens, zonder spaties.'; return; }
+  if (pass.length < 8) { $('accInfo').textContent = 'Wachtwoord: minstens 8 tekens.'; return; }
+  if (pass !== $('aPass2').value) { $('accInfo').textContent = 'De twee wachtwoorden zijn niet hetzelfde.'; return; }
+  try {
+    await api('PUT', {user, pass}, '/api/access');
+    $('aPass').value = ''; $('aPass2').value = '';
+    $('accInfo').textContent = 'Opgeslagen. Log voortaan in met ' + user + ' en dit wachtwoord.';
+    loadAccess();
+  } catch (e) { $('accInfo').textContent = e.message; }
+};
+$('accClear').onclick = async () => {
+  if (!confirm('Vaste inlog uitzetten? Inloggen kan dan alleen nog met de code van het scherm.')) return;
+  try { await api('PUT', {user: '', pass: ''}, '/api/access'); $('accInfo').textContent = 'Vaste inlog staat uit.'; loadAccess(); }
+  catch (e) { $('accInfo').textContent = e.message; }
+};
+$('goLogin').onclick = async () => {
+  $('loginErr').textContent = '';
+  try {
+    const r = await fetch('/api/login', {method: 'POST', headers: {'Content-Type': 'application/json'},
+                                         body: JSON.stringify({user: $('lUser').value.trim(), pass: $('lPass').value})});
+    if (r.status === 429) throw new Error('Te veel pogingen. Probeer het over 10 minuten.');
+    if (!r.ok) throw new Error('Inlognaam of wachtwoord klopt niet.');
+    const j = await r.json();
+    code = j.token; $('lPass').value = '';
+    try { sessionStorage.setItem('ppcode', code); } catch (e) {}
+    start();
+  } catch (e) { $('loginErr').textContent = e.message; }
+};
+$('lPass').addEventListener('keydown', e => { if (e.key === 'Enter') $('goLogin').click(); });
 
 $('go').onclick = () => { code = $('code').value.trim(); try { sessionStorage.setItem('ppcode', code); } catch (e) {} start(); };
 $('code').addEventListener('keydown', e => { if (e.key === 'Enter') $('go').click(); });

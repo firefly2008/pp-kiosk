@@ -197,6 +197,7 @@ Rectangle {
                     font.pixelSize: 44 * root.f
                 }
                 TapHandler {
+                    gesturePolicy: TapHandler.ReleaseWithinBounds   // knop: tik gaat niet door naar wat eronder ligt
                     id: micTap
                     onTapped: {
                         root.voiceAsked = true
@@ -238,6 +239,7 @@ Rectangle {
                     }
                 }
                 TapHandler {
+                    gesturePolicy: TapHandler.ReleaseWithinBounds   // knop: tik gaat niet door naar wat eronder ligt
                     id: musicTap
                     onTapped: {
                         if (root.radioRow >= 0) root.stopRadio(); else root.playDaypart()
@@ -465,6 +467,7 @@ Rectangle {
                     }
                 }
                 TapHandler {
+                    gesturePolicy: TapHandler.ReleaseWithinBounds   // knop: tik gaat niet door naar wat eronder ligt
                     onTapped: if (root.cfg.speak && root.current) speaker.say("Nu: " + root.current.title)
                 }
                 Text {
@@ -553,7 +556,7 @@ Rectangle {
                         }
                     }
                 }
-                TapHandler { onTapped: if (root.cfg.speak) speaker.say("Vandaag eten we " + agenda.todayMenu.dish + " " + (agenda.todayMenu.note || "")) }
+                TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; onTapped: if (root.cfg.speak) speaker.say("Vandaag eten we " + agenda.todayMenu.dish + " " + (agenda.todayMenu.note || "")) }
             }
             }
 
@@ -569,9 +572,8 @@ Rectangle {
                         { title: "Presentaties", icon: "🖼️", line: "presentaties", tint: "#5DA9E9", calm: "#4D6A86", page: "presentations" },
                         { title: "Kijk & luister", icon: "🎧", line: "stream", tint: "#6CC28B", calm: "#5E7D6A", page: "stream" },
                         { title: "Snelkoppelingen", icon: "⭐", line: "snelkoppelingen", tint: "#E97A6B", calm: "#A0745E", page: "shortcuts" },
-                        { title: "Mijn week", icon: "🗓️", line: "week", tint: "#F2A93B", calm: "#8C7A55", page: "week" },
                         { title: "Spelletjes", icon: "🧩", line: "spelletjes", tint: "#B48AD6", calm: "#6E6684", page: "games" }
-                    ].filter(t => (t.page !== "games" || root.cfg.games !== false) && (t.page !== "week" || root.cfg.week !== false))
+                    ].filter(t => (t.page !== "games" || root.cfg.games !== false))
                     delegate: Rectangle {
                         id: tileBox
                         required property var modelData
@@ -617,6 +619,7 @@ Rectangle {
                             }
                         }
                         TapHandler {
+                            gesturePolicy: TapHandler.ReleaseWithinBounds   // knop: tik gaat niet door naar wat eronder ligt
                             id: tap
                             onTapped: {
                                 console.info("Tile tapped: " + modelData.title)
@@ -723,14 +726,15 @@ Rectangle {
         color: "#CC1F2A44"
         onVisibleChanged: if (visible) closeTimer.restart()
         Timer { id: closeTimer; interval: 120000; onTriggered: adminPanel.visible = false }
-        TapHandler { onTapped: adminPanel.visible = false }
+        // Tikken naast de kaart sluit; de tik komt niet bij het startscherm eronder
+        MouseArea { anchors.fill: parent; onClicked: adminPanel.visible = false }
 
         Rectangle {
             anchors.centerIn: parent
             width: 1100 * root.s; height: 620 * root.s
             radius: root.r(32)
             color: "#FFFFFF"
-            TapHandler { }   // tikken op de kaart sluit niet
+            MouseArea { anchors.fill: parent }   // tikken op de kaart sluit niet
 
             RowLayout {
                 anchors { fill: parent; margins: 48 * root.s }
@@ -759,13 +763,13 @@ Rectangle {
                             width: 300 * root.s; height: 90 * root.s; radius: root.r(20)
                             color: newCodeTap.pressed ? "#DDE3EA" : "#EEF1F5"
                             Text { anchors.centerIn: parent; text: "Nieuwe code"; font.pixelSize: 34 * root.s; color: root.ink }
-                            TapHandler { id: newCodeTap; onTapped: admin.newCode() }
+                            TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; id: newCodeTap; onTapped: admin.newCode() }
                         }
                         Rectangle {
                             width: 240 * root.s; height: 90 * root.s; radius: root.r(20)
                             color: closeTap.pressed ? Qt.darker(root.green, 1.2) : root.green
                             Text { anchors.centerIn: parent; text: "Sluiten"; font.pixelSize: 34 * root.s; color: "#FFFFFF" }
-                            TapHandler { id: closeTap; onTapped: adminPanel.visible = false }
+                            TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; id: closeTap; onTapped: adminPanel.visible = false }
                         }
                     }
                 }
@@ -781,12 +785,18 @@ Rectangle {
     }
 
     // ---------- Andere pagina's (over het startscherm heen) ----------
+    // Vangt alle tikken op die op een pagina niet bij een knop horen, zodat het startscherm
+    // eronder niet meereageert (anders sprak de kaart "Nu" bijvoorbeeld bij de spelletjes)
+    MouseArea {
+        anchors.fill: parent
+        visible: root.page !== "home"
+    }
     Loader {
         id: pageLoader
         anchors.fill: parent
         active: root.page !== "home"
         sourceComponent: root.page === "stream" ? streamPage : root.page === "presentations" ? presentationPage
-                         : root.page === "shortcuts" ? shortcutsPage : root.page === "games" ? gamesPage : root.page === "week" ? weekPage : null
+                         : root.page === "shortcuts" ? shortcutsPage : root.page === "games" ? gamesPage : null
         // Zachte overgang: scherm komt iets naar voren en wordt zichtbaar
         onLoaded: pageIn.restart()
         ParallelAnimation {
@@ -797,7 +807,6 @@ Rectangle {
     }
     Component { id: streamPage; StreamScreen { s: root.s; home: root; onBack: root.page = "home" } }
     Component { id: gamesPage; GamesScreen { s: root.s; onBack: root.page = "home" } }
-    Component { id: weekPage; WeekScreen { s: root.s; onBack: root.page = "home" } }
     Component { id: presentationPage; PresentationScreen { s: root.s; onBack: root.page = "home" } }
     Component { id: shortcutsPage; ShortcutsScreen { s: root.s; onBack: root.page = "home" } }
 
@@ -868,13 +877,11 @@ Rectangle {
             } else if (selfTest === "screensaver") {
                 root.page = "presentations"
                 if (pageLoader.item.startNamed("")) { root.screensaver = true; console.info("Screensaver started") }
-            } else if (selfTest === "week") {
-                root.page = "week"
             } else if (selfTest === "voice") {
                 root.voiceCommand("Wat doen we nu?")
                 root.voiceCommand("hoe laat is het")
                 root.voiceCommand("zet de radio uit")
-                console.info("Voice phrases understood: " + ["wat doen we nu", "wat eten we vandaag", "zet de radio aan", "hoe laat is het", "mijn week"].filter(x => root.voiceCommand(x).indexOf("begrijp ik niet") < 0).length + "/5")
+                console.info("Voice phrases understood: " + ["wat doen we nu", "wat eten we vandaag", "zet de radio aan", "hoe laat is het", "spelletjes"].filter(x => root.voiceCommand(x).indexOf("begrijp ik niet") < 0).length + "/5")
                 root.page = "home"
             } else if (selfTest === "stats") {
                 stats.count("tile", "Rooktest")
@@ -882,13 +889,12 @@ Rectangle {
                 console.info("Stats test: Rooktest " + stats.countOf("tile", "Rooktest"))
             } else if (selfTest === "backup") {
                 admin.backupTest()
+            } else if (selfTest === "login") {
+                admin.loginTest()
             } else if (selfTest === "glassboard") {
                 agenda.setTestSetting("theme", "glas")
                 root.page = "presentations"
                 pageLoader.item.startNamed("Menu van de week")
-            } else if (selfTest === "glassweek") {
-                agenda.setTestSetting("theme", "glas")
-                root.page = "week"
             } else if (selfTest === "glasssaver") {
                 agenda.setTestSetting("theme", "glas")
                 root.radioRow = 0
@@ -1027,8 +1033,6 @@ Rectangle {
         } else if (has("straks", "volgende")) {
             key = "straks"
             answer = root.next ? "Straks, om " + root.next.start + ": " + root.next.title + "." : "Vandaag staat er niets meer op de planning."
-        } else if (has("deze week", "week")) {
-            key = "week"; root.page = "week"; answer = "Hier is je week."
         } else if (has("doen we nu", "gaan we doen", "is er nu")) {
             key = "nu"
             answer = root.current ? "Nu: " + root.current.title + (root.current.note ? ". " + root.current.note : "") + "."
@@ -1084,7 +1088,7 @@ Rectangle {
                 wrapMode: Text.WordWrap
             }
         }
-        TapHandler { onTapped: root.voiceText = "" }
+        MouseArea { anchors.fill: parent; onClicked: root.voiceText = "" }
     }
 
     // ---------- Radio-screensaver: de zender zweeft over het scherm ----------
@@ -1207,6 +1211,7 @@ Rectangle {
             font.family: root.emojiFont
             font.pixelSize: 140 * root.s; color: "#8090B0"
         }
-        TapHandler { onTapped: root.wakeUntil = Date.now() + 2 * 60 * 1000 }
+        // Tik: 2 minuten wakker. De tik zelf gaat niet door naar het startscherm.
+        MouseArea { anchors.fill: parent; onPressed: root.wakeUntil = Date.now() + 2 * 60 * 1000 }
     }
 }

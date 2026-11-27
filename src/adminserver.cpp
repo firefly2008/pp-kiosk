@@ -11,6 +11,7 @@
 #include "shortcuts.h"
 #include "stats.h"
 #include "backup.h"
+#include "menuboard.h"
 #include <QCoreApplication>
 #include <QProcess>
 #include "paths.h"
@@ -32,6 +33,8 @@
 #include <QSaveFile>
 #include <QNetworkInterface>
 #include <QPainter>
+#include <QPasswordDigestor>
+#include <QCryptographicHash>
 #include <QPdfWriter>
 #include <QPointer>
 #include <QRandomGenerator>
@@ -347,26 +350,97 @@ bool AdminServer::checkAccess(QTcpSocket *socket, const QByteArray &host, const 
     if (local) {
         return true;
     }
+    // Inloggen met naam + wachtwoord: de controle (en het tellen van foute pogingen) zit in dispatch
+    if (path == QLatin1String("/api/login") && m_blockedUntil.value(ip) <= now) {
+        return true;
+    }
     // Na 5 foute codes binnen 10 minuten: dit apparaat 10 minuten geblokkeerd
     if (m_blockedUntil.value(ip) > now) {
         respond(socket, 429, "text/plain; charset=utf-8", "te veel pogingen, probeer het over 10 minuten");
         return false;
     }
-    if (!sameCode(code, m_code)) {
-        auto &fails = m_failures[ip];
-        fails.append(now);
-        while (!fails.isEmpty() && now - fails.first() > 600) {
-            fails.removeFirst();
-        }
-        if (fails.size() >= 5) {
-            m_blockedUntil.insert(ip, now + 600);
-            qInfo() << "Admin: blocked" << ip;
-        }
+    if (!sameCode(code, m_code) && !validToken(code)) {
+        countFailure(ip);
         respond(socket, 403, "text/plain; charset=utf-8", "code klopt niet");
         return false;
     }
     m_failures.remove(ip);
     return true;
+}
+
+void AdminServer::countFailure(const QString &ip)
+{
+    const qint64 now = QDateTime::currentSecsSinceEpoch();
+    auto &fails = m_failures[ip];
+    fails.append(now);
+    while (!fails.isEmpty() && now - fails.first() > 600) {
+        fails.removeFirst();
+    }
+    if (fails.size() >= 5) {
+        m_blockedUntil.insert(ip, now + 600);
+        qInfo() << "Admin: blocked" << ip;
+    }
+}
+
+namespace {
+QByteArray loginHash(const QString &pass, const QByteArray &salt)
+{
+    return QPasswordDigestor::deriveKeyPbkdf2(QCryptographicHash::Sha256, pass.toUtf8(), salt, 120000, 32).toHex();
+}
+}
+
+bool AdminServer::loginSet() const
+{
+    const QSettings st(appSettingsFile(), QSettings::IniFormat);
+    return !st.value(QStringLiteral("admin/user")).toString().isEmpty() && !st.value(QStringLiteral("admin/hash")).toString().isEmpty();
+}
+
+bool AdminServer::checkLogin(const QString &user, const QString &pass) const
+{
+    const QSettings st(appSettingsFile(), QSettings::IniFormat);
+    const QString u = st.value(QStringLiteral("admin/user")).toString();
+    const QString h = st.value(QStringLiteral("admin/hash")).toString();
+    const QByteArray salt = QByteArray::fromHex(st.value(QStringLiteral("admin/salt")).toByteArray());
+    if (u.isEmpty() || h.isEmpty() || pass.isEmpty()) {
+        return false;
+    }
+    // Altijd de hash uitrekenen (ook bij een foute naam): geen tijdverschil
+    const bool passOk = sameCode(QString::fromLatin1(loginHash(pass, salt)), h);
+    return sameCode(user.trimmed().toLower(), u.toLower()) && passOk;
+}
+
+void AdminServer::setLogin(const QString &user, const QString &pass)
+{
+    QSettings st(appSettingsFile(), QSettings::IniFormat);
+    if (user.trimmed().isEmpty()) {
+        st.remove(QStringLiteral("admin/user"));
+        st.remove(QStringLiteral("admin/hash"));
+        st.remove(QStringLiteral("admin/salt"));
+    } else {
+        QByteArray salt(16, Qt::Uninitialized);
+        QRandomGenerator::system()->fillRange(reinterpret_cast<quint32 *>(salt.data()), salt.size() / 4);
+        st.setValue(QStringLiteral("admin/user"), user.trimmed());
+        st.setValue(QStringLiteral("admin/salt"), salt.toHex());
+        st.setValue(QStringLiteral("admin/hash"), loginHash(pass, salt));
+    }
+    m_tokens.clear();   // wie met het oude wachtwoord was ingelogd, moet opnieuw
+    qInfo() << "Admin: login" << (user.trimmed().isEmpty() ? "removed" : "set");
+}
+
+bool AdminServer::validToken(const QString &token)
+{
+    if (token.size() != 32) {
+        return false;
+    }
+    const qint64 now = QDateTime::currentSecsSinceEpoch();
+    for (auto it = m_tokens.begin(); it != m_tokens.end();) {
+        it = it.value() < now ? m_tokens.erase(it) : std::next(it);
+    }
+    bool ok = false;
+    for (auto it = m_tokens.cbegin(); it != m_tokens.cend(); ++it) {
+        ok |= sameCode(token, it.key());
+    }
+    return ok;
 }
 
 void AdminServer::dispatch(QTcpSocket *socket, Pending &p)
@@ -508,6 +582,17 @@ void AdminServer::dispatch(QTcpSocket *socket, Pending &p)
         } else {
             error(QStringLiteral("Verwijderen lukt niet."));
         }
+        return;
+    }
+    // Standaard etensfoto's (voor de keuze bij het weekmenu)
+    if (path.startsWith(QLatin1String("/food/")) && method == "GET") {
+        const QString name = path.mid(6).section(QLatin1Char('.'), 0, 0);
+        QFile f(QStringLiteral(":/food/") + name + QStringLiteral(".jpg"));
+        if (!MenuBoard::photoNames().contains(name) || !f.open(QIODevice::ReadOnly)) {
+            respond(socket, 404, "text/plain; charset=utf-8", "niet gevonden");
+            return;
+        }
+        respond(socket, 200, "image/jpeg", f.readAll());
         return;
     }
     if (path.startsWith(QLatin1String("/pictos/")) && method == "GET") {
@@ -664,6 +749,66 @@ void AdminServer::dispatch(QTcpSocket *socket, Pending &p)
             return;
         }
     }
+    // Inloggen met vaste naam + wachtwoord: geeft een sessiecode die 12 uur geldig is
+    if (path == QLatin1String("/api/login") && method == "POST") {
+        const QJsonObject o = QJsonDocument::fromJson(p.buffer).object();
+        const QString ip = socket->peerAddress().toString();
+        if (!checkLogin(o.value(QStringLiteral("user")).toString(), o.value(QStringLiteral("pass")).toString())) {
+            countFailure(ip);
+            qInfo() << "Admin: login failed from" << ip;
+            respond(socket, 403, "text/plain; charset=utf-8", "inlognaam of wachtwoord klopt niet");
+            return;
+        }
+        m_failures.remove(ip);
+        QByteArray raw(16, Qt::Uninitialized);
+        QRandomGenerator::system()->fillRange(reinterpret_cast<quint32 *>(raw.data()), raw.size() / 4);
+        const QString token = QString::fromLatin1(raw.toHex());
+        if (m_tokens.size() > 50) {
+            m_tokens.clear();
+        }
+        m_tokens.insert(token, QDateTime::currentSecsSinceEpoch() + 12 * 3600);
+        qInfo() << "Admin: login ok from" << ip;
+        respond(socket, 200, "application/json", QJsonDocument(QJsonObject{{QStringLiteral("token"), token}}).toJson(QJsonDocument::Compact));
+        return;
+    }
+    // Toegang: vaste inlog instellen, en de adressen van deze pc tonen
+    if (path == QLatin1String("/api/access")) {
+        if (method == "GET") {
+            QJsonArray addresses;
+            for (const QHostAddress &a : QNetworkInterface::allAddresses()) {
+                if (a.protocol() == QAbstractSocket::IPv4Protocol && !a.isLoopback() && !a.isLinkLocal()) {
+                    addresses.append(QStringLiteral("http://%1:%2").arg(a.toString()).arg(m_server.serverPort()));
+                }
+            }
+            const QSettings st(appSettingsFile(), QSettings::IniFormat);
+            respond(socket, 200, "application/json", QJsonDocument(QJsonObject{
+                {QStringLiteral("user"), loginSet() ? st.value(QStringLiteral("admin/user")).toString() : QString()},
+                {QStringLiteral("set"), loginSet()},
+                {QStringLiteral("address"), address()},
+                {QStringLiteral("addresses"), addresses},
+                {QStringLiteral("port"), int(m_server.serverPort())},
+            }).toJson(QJsonDocument::Compact));
+            return;
+        }
+        if (method == "PUT") {
+            const QJsonObject o = QJsonDocument::fromJson(p.buffer).object();
+            const QString user = o.value(QStringLiteral("user")).toString().trimmed();
+            const QString pass = o.value(QStringLiteral("pass")).toString();
+            if (!user.isEmpty()) {
+                if (user.size() < 3 || user.size() > 40 || user.contains(QLatin1Char(' '))) {
+                    error(QStringLiteral("Inlognaam: 3 tot 40 tekens, zonder spaties."));
+                    return;
+                }
+                if (pass.size() < 8 || pass.size() > 128) {
+                    error(QStringLiteral("Wachtwoord: minstens 8 tekens."));
+                    return;
+                }
+            }
+            setLogin(user, pass);
+            respond(socket, 200, "application/json", okJson.toByteArray());
+            return;
+        }
+    }
     if (path == QLatin1String("/api/check") && method == "GET") {
         respond(socket, 200, "application/json", okJson.toByteArray());
         return;
@@ -739,6 +884,15 @@ void AdminServer::selfTest()
         ask(address(), "X-Code: 000000\r\n", QStringLiteral("lan-wrong"));
         ask(address(), "X-Code: " + m_code.toLatin1() + "\r\n", QStringLiteral("lan-right"));
     }
+}
+
+void AdminServer::loginTest()
+{
+    setLogin(QStringLiteral("Rooktest"), QStringLiteral("geheim-123"));
+    const bool good = checkLogin(QStringLiteral("rooktest"), QStringLiteral("geheim-123"));
+    const bool wrong = checkLogin(QStringLiteral("rooktest"), QStringLiteral("geheim-124")) || checkLogin(QStringLiteral("iemand"), QStringLiteral("geheim-123"));
+    setLogin(QString(), QString());
+    qInfo() << "Login test:" << (good && !wrong && !loginSet() ? "ok" : "fout") << good << wrong;
 }
 
 void AdminServer::backupTest()

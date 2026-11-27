@@ -60,7 +60,7 @@ Rectangle {
             color: backTap.pressed ? page.pressBg : page.cardBg
             border.color: page.lineColor; border.width: 2
             Text { anchors.centerIn: parent; text: "‹  Terug"; font.pixelSize: 40 * page.s; font.bold: true; color: page.ink }
-            TapHandler { id: backTap; onTapped: page.back() }
+            TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; id: backTap; onTapped: page.back() }
         }
         Text {
             Layout.fillWidth: true
@@ -89,7 +89,7 @@ Rectangle {
                     Text { text: modelData.icon; font.family: Qt.platform.os === "windows" ? "Segoe UI Emoji" : "Noto Color Emoji"; font.pixelSize: 52 * page.s; anchors.verticalCenter: parent.verticalCenter }
                     Text { text: modelData.title; font.pixelSize: 40 * page.s; font.bold: true; color: on ? "#FFFFFF" : page.ink; anchors.verticalCenter: parent.verticalCenter }
                 }
-                TapHandler { id: tabTap; onTapped: page.section = modelData.key }
+                TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; id: tabTap; onTapped: page.section = modelData.key }
             }
         }
     }
@@ -145,7 +145,7 @@ Rectangle {
                     elide: Text.ElideRight
                     style: Text.Raised; styleColor: "#40000000"
                 }
-                TapHandler { id: tileTap; onTapped: page.open(page.current.model, index) }
+                TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; id: tileTap; onTapped: page.open(page.current.model, index) }
             }
         }
     }
@@ -172,7 +172,7 @@ Rectangle {
                 radius: 24 * page.s
                 color: stopTap.pressed ? "#B03A2E" : "#E74C3C"
                 Text { anchors.centerIn: parent; text: "■  Stop"; font.pixelSize: 40 * page.s; font.bold: true; color: "#FFFFFF" }
-                TapHandler { id: stopTap; onTapped: page.stopRadio() }
+                TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; id: stopTap; onTapped: page.stopRadio() }
             }
         }
     }

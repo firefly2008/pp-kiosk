@@ -32,6 +32,18 @@ Rectangle {
         console.info("Presentation started: " + item.title + " slides " + slides.length)
     }
     function stop() { show = null; slides = [] }
+    // Map veranderd terwijl de presentatie loopt (bijvoorbeeld nieuw menu ingevuld): nieuwe dia's laden
+    Connections {
+        target: presentations
+        function onChanged() {
+            if (!page.show) return
+            const now = presentations.slides(page.show.folder)
+            if (now.length === 0) { page.stop(); return }
+            page.slides = now
+            if (page.slide >= now.length) page.slide = 0
+            console.info("Presentation reloaded: " + page.show.title + " slides " + now.length)
+        }
+    }
     // Screensaver: presentatie op naam starten (leeg of onbekend: de eerste)
     function startNamed(name) {
         const list = presentations.list
@@ -62,7 +74,7 @@ Rectangle {
                 color: backTap.pressed ? page.pressBg : page.cardBg
                 border.color: page.lineColor; border.width: 2
                 Text { anchors.centerIn: parent; text: "‹  Terug"; font.pixelSize: 40 * page.s; font.bold: true; color: page.ink }
-                TapHandler { id: backTap; onTapped: page.back() }
+                TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; id: backTap; onTapped: page.back() }
             }
             Text {
                 Layout.fillWidth: true
@@ -89,7 +101,7 @@ Rectangle {
                     clip: true
                     Image {
                         anchors { left: parent.left; right: parent.right; top: parent.top; bottom: label.top }
-                        source: modelData.cover
+                        source: modelData.menu && agenda.todayMenu.photoUrl ? agenda.todayMenu.photoUrl : modelData.cover
                         fillMode: Image.PreserveAspectCrop
                         asynchronous: true
                         sourceSize.width: 800
@@ -106,7 +118,7 @@ Rectangle {
                             elide: Text.ElideRight
                         }
                     }
-                    TapHandler { id: openTap; onTapped: page.start(modelData) }
+                    TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; id: openTap; onTapped: page.start(modelData) }
                 }
             }
             Text {
@@ -135,7 +147,8 @@ Rectangle {
 
                 Image {
                     anchors.fill: parent
-                    source: modelData.source
+                    // Diner van de dag: foto die bij het eten van vandaag past (eigen foto of een passende standaardfoto)
+                    source: parent.fromMenu && agenda.todayMenu.photoUrl ? agenda.todayMenu.photoUrl : modelData.source
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
                     sourceSize.width: 1920
@@ -183,20 +196,20 @@ Rectangle {
             onTriggered: page.step(1)
         }
 
-        // Tikken links/rechts = vorige/volgende, vegen ook; midden = bediening tonen
-        TapHandler {
-            onTapped: (point) => {
-                const x = point.position.x
-                if (x < parent.width * 0.25) page.step(-1)
-                else if (x > parent.width * 0.75) page.step(1)
+        // Tikken links/rechts = vorige/volgende, vegen ook; midden = bediening tonen.
+        // Een MouseArea vangt de tik helemaal op: de lijst met presentaties en het startscherm
+        // eronder reageren dan niet mee (eerder startte een tik soms een andere presentatie).
+        MouseArea {
+            anchors.fill: parent
+            property real pressX: 0
+            onPressed: (mouse) => pressX = mouse.x
+            onReleased: (mouse) => {
+                const dx = mouse.x - pressX
+                if (Math.abs(dx) > 120 * page.s) page.step(dx < 0 ? 1 : -1)
+                else if (mouse.x < width * 0.25) page.step(-1)
+                else if (mouse.x > width * 0.75) page.step(1)
                 else controls.shown = !controls.shown
             }
-        }
-        DragHandler {
-            target: null
-            xAxis.enabled: true; yAxis.enabled: false
-            onActiveChanged: if (!active && Math.abs(centroid.position.x - centroid.pressPosition.x) > 120 * page.s)
-                                 page.step(centroid.position.x < centroid.pressPosition.x ? 1 : -1)
         }
 
         Rectangle {
@@ -230,6 +243,7 @@ Rectangle {
                         color: ctlTap.pressed ? "#55FFFFFF" : "#22FFFFFF"
                         Text { anchors.centerIn: parent; text: modelData.label; font.pixelSize: 40 * page.s; font.bold: true; color: "#FFFFFF" }
                         TapHandler {
+                            gesturePolicy: TapHandler.ReleaseWithinBounds   // knop: tik gaat niet door naar wat eronder ligt
                             id: ctlTap
                             onTapped: {
                                 hide.restart()
