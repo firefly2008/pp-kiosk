@@ -32,6 +32,18 @@ Rectangle {
         console.info("Presentation started: " + item.title + " slides " + slides.length)
     }
     function stop() { show = null; slides = [] }
+    // Map veranderd terwijl de presentatie loopt (bijvoorbeeld nieuw menu ingevuld): nieuwe dia's laden
+    Connections {
+        target: presentations
+        function onChanged() {
+            if (!page.show) return
+            const now = presentations.slides(page.show.folder)
+            if (now.length === 0) { page.stop(); return }
+            page.slides = now
+            if (page.slide >= now.length) page.slide = 0
+            console.info("Presentation reloaded: " + page.show.title + " slides " + now.length)
+        }
+    }
     // Screensaver: presentatie op naam starten (leeg of onbekend: de eerste)
     function startNamed(name) {
         const list = presentations.list
