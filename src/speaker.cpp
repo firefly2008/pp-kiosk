@@ -47,6 +47,7 @@ void Speaker::announce(const QString &text, bool chime)
 void Speaker::say(const QString &text)
 {
     if (m_tts && !text.isEmpty()) {
+        qInfo().noquote() << "Speaker: say" << text;
         m_tts->stop();
         m_tts->say(text);
     }

@@ -40,6 +40,7 @@ Rectangle {
     function startMemory(pairs) {
         const pick = shuffle(symbols.slice()).slice(0, pairs)
         cards = shuffle(pick.concat(pick)).map(x => ({ sym: x, open: false, found: false }))
+        checkTimer.stop()   // een nog lopende controle van het vorige spel mag niet meer afgaan
         first = -1; second = -1; turns = 0; done = false
         game = "memory"
         console.info("Game started: memory " + pairs + " pairs")
@@ -59,6 +60,7 @@ Rectangle {
         id: checkTimer
         interval: 1100
         onTriggered: {
+            if (page.game !== "memory" || page.first < 0 || page.second < 0) return
             const c = page.cards.slice()
             const same = c[page.first].sym === c[page.second].sym
             for (const k of [page.first, page.second])
@@ -111,7 +113,7 @@ Rectangle {
             color: backTap.pressed ? page.pressBg : page.cardBg
             border.color: page.lineColor; border.width: 2
             Text { anchors.centerIn: parent; text: "‹  Terug"; font.pixelSize: 40 * page.s; font.bold: true; color: page.ink }
-            TapHandler { id: backTap; onTapped: { if (page.game !== "") page.game = ""; else page.back() } }
+            TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; id: backTap; onTapped: { if (page.game !== "") page.game = ""; else page.back() } }
         }
         Text { text: "🧩"; font.family: page.emojiFont; font.pixelSize: 56 * page.s }
         Text {
@@ -144,7 +146,7 @@ Rectangle {
             Text { anchors.horizontalCenter: parent.horizontalCenter; text: choice.title; font.pixelSize: 64 * page.s; font.bold: true; color: "#FFFFFF" }
             Text { anchors.horizontalCenter: parent.horizontalCenter; text: choice.sub; font.pixelSize: 36 * page.s; color: "#F0FFFFFF" }
         }
-        TapHandler { id: choiceTap; onTapped: choice.chosen() }
+        TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; id: choiceTap; onTapped: choice.chosen() }
     }
     GridLayout {
         visible: page.game === ""
@@ -191,7 +193,7 @@ Rectangle {
                             text: "?"
                             font.pixelSize: parent.height * 0.4; font.bold: true; color: "#FFFFFF"
                         }
-                        TapHandler { id: cardTap; onTapped: page.flip(index) }
+                        TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; id: cardTap; onTapped: page.flip(index) }
                     }
                 }
             }
@@ -241,7 +243,7 @@ Rectangle {
                         border.color: page.picked === index ? "#F2B33D" : "transparent"
                         border.width: 10 * page.s
                     }
-                    TapHandler { onTapped: page.pick(index) }
+                    TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; onTapped: page.pick(index) }
                 }
             }
         }
@@ -266,13 +268,13 @@ Rectangle {
                     width: 380 * page.s; height: 110 * page.s; radius: 28 * page.s
                     color: againTap.pressed ? "#3E9A63" : "#6CC28B"
                     Text { anchors.centerIn: parent; text: "Nog een keer"; font.pixelSize: 44 * page.s; font.bold: true; color: "#FFFFFF" }
-                    TapHandler { id: againTap; onTapped: page.game === "memory" ? page.startMemory(page.cards.length / 2) : page.startPuzzle(page.size) }
+                    TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; id: againTap; onTapped: page.game === "memory" ? page.startMemory(page.cards.length / 2) : page.startPuzzle(page.size) }
                 }
                 Rectangle {
                     width: 320 * page.s; height: 110 * page.s; radius: 28 * page.s
                     color: stopTap.pressed ? page.pressBg : (page.glass ? "#26FFFFFF" : "#EEF1F5")
                     Text { anchors.centerIn: parent; text: "Stoppen"; font.pixelSize: 44 * page.s; font.bold: true; color: page.ink }
-                    TapHandler { id: stopTap; onTapped: { page.done = false; page.game = "" } }
+                    TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; id: stopTap; onTapped: { page.done = false; page.game = "" } }
                 }
             }
         }

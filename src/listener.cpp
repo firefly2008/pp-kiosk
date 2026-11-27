@@ -30,7 +30,6 @@ QStringList Listener::phrases()
         QStringLiteral("wat doen we straks"), QStringLiteral("wat is het volgende"),
         QStringLiteral("wat eten we vandaag"), QStringLiteral("wat eten we"), QStringLiteral("wat is het eten"),
         QStringLiteral("hoe laat is het"), QStringLiteral("welke dag is het"), QStringLiteral("wat voor dag is het"), QStringLiteral("welke datum is het"),
-        QStringLiteral("mijn week"), QStringLiteral("laat de week zien"), QStringLiteral("wat doen we deze week"),
         QStringLiteral("spelletjes"), QStringLiteral("ik wil een spelletje"), QStringLiteral("speel memory"), QStringLiteral("speel puzzel"),
         QStringLiteral("presentaties"), QStringLiteral("kijk en luister"),
         QStringLiteral("terug"), QStringLiteral("naar het begin"), QStringLiteral("startscherm"),

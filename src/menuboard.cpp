@@ -74,6 +74,13 @@ MenuBoard::MenuBoard(Agenda *agenda, const QString &presentationsRoot, QObject *
     update(true);
 }
 
+QStringList MenuBoard::photoNames()
+{
+    return {QStringLiteral("aardappel-vlees"), QStringLiteral("stamppot"), QStringLiteral("vis"), QStringLiteral("kip-rijst"), QStringLiteral("nasi"),
+            QStringLiteral("pasta"), QStringLiteral("pizza"), QStringLiteral("friet"), QStringLiteral("burger"), QStringLiteral("salade"),
+            QStringLiteral("soep"), QStringLiteral("pannenkoek")};
+}
+
 QString MenuBoard::photoFor(const QString &dish, const QString &note)
 {
     // Volgorde telt: "Vis met friet" is vis, "Hutspot met gehaktbal" is stamppot
@@ -329,6 +336,11 @@ void MenuBoard::update(bool force)
         QImage photo;
         if (!own.isEmpty()) {
             photo.load(m_agenda->pictoDir() + QLatin1Char('/') + own);
+        }
+        // Zelf gekozen standaardfoto, anders een foto die bij het gerecht past
+        const QString food = o.value(QStringLiteral("food")).toString();
+        if (photo.isNull() && photoNames().contains(food)) {
+            photo.load(QStringLiteral(":/food/") + food + QStringLiteral(".jpg"));
         }
         if (photo.isNull()) {
             photo.load(QStringLiteral(":/food/") + photoFor(dish, note) + QStringLiteral(".jpg"));
