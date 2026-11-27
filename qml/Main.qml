@@ -80,6 +80,16 @@ Rectangle {
         return "over " + h + " uur" + (m ? " en " + m + " min" : "")
     }
 
+    // Ronde knop voor het radiovolume (- en +)
+    component VolButton: Rectangle {
+        property string label
+        signal hit()
+        width: 100 * root.s; height: 100 * root.s; radius: width / 2
+        color: vt.pressed ? Qt.darker("#2E8B57", 1.2) : "#2E8B57"
+        Text { anchors.centerIn: parent; text: parent.label; font.pixelSize: 60 * root.s; font.bold: true; color: "#FFFFFF" }
+        TapHandler { id: vt; gesturePolicy: TapHandler.ReleaseWithinBounds; onTapped: parent.hit() }
+    }
+
     // Pictogram van een activiteit: eigen plaatje (picto) of anders de emoji
     component Picto: Item {
         property var it: null
@@ -128,6 +138,13 @@ Rectangle {
         visible: bgImage.visible
         color: root.glass ? "#0A0F1E" : root.part.bg
         opacity: root.glass ? 0.62 : 0.72
+    }
+    // Naam van de fotograaf bij een Unsplash-foto (zo vraagt Unsplash het)
+    Text {
+        anchors { right: parent.right; bottom: parent.bottom; rightMargin: 16 * root.s; bottomMargin: 4 * root.s }
+        visible: bgImage.visible && !!root.bg.credit
+        text: "Foto: " + (root.bg.credit || "") + (root.bg.credit === "Unsplash" ? "" : " / Unsplash")
+        font.pixelSize: 18 * root.s; color: root.glass ? "#B0FFFFFF" : "#99000000"
     }
     // Glas-thema: zachte, lichtgevende kleurvlekken die heel langzaam bewegen
     GlassBackground {
@@ -247,6 +264,28 @@ Rectangle {
                     }
                 }
             }
+            // Volume van de radio: tik en kies harder of zachter
+            Rectangle {
+                id: volumeButton
+                anchors.verticalCenter: parent.verticalCenter
+                visible: root.radioRow >= 0
+                width: 88 * root.f; height: width
+                radius: width / 2
+                color: root.contrast ? "#000000" : (volumeTap.pressed || volumePanel.visible) ? (root.glass ? "#40FFFFFF" : "#DDE3EA") : root.glass ? "#26FFFFFF" : "#FFFFFF"
+                border.color: root.contrast ? "#FFE14D" : root.glass ? "#55FFFFFF" : "#2E8B57"
+                border.width: 3 * root.s
+                Text {
+                    anchors.centerIn: parent
+                    text: root.radioVolume <= 0 ? "🔇" : root.radioVolume < 0.5 ? "🔉" : "🔊"
+                    font.family: root.emojiFont
+                    font.pixelSize: 42 * root.f
+                }
+                TapHandler {
+                    gesturePolicy: TapHandler.ReleaseWithinBounds
+                    id: volumeTap
+                    onTapped: { volumePanel.visible = !volumePanel.visible; volumeHide.restart() }
+                }
+            }
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: weather.available ? weather.icon : root.part.icon
@@ -277,6 +316,13 @@ Rectangle {
         return out
     }
     property int tickerIndex: 0
+    property int newsIndex: 0
+    function openNews(it) {
+        const i = it ? news.headlines.findIndex(h => h.title === it.title) : 0
+        newsIndex = Math.max(0, i)
+        stats.count("tile", "Nieuws")
+        root.page = "news"
+    }
     readonly property var tickerItem: tickerItems.length > 0 ? tickerItems[tickerIndex % tickerItems.length] : null
     Timer {
         interval: 9000; repeat: true; running: root.tickerItems.length > 1
@@ -298,6 +344,12 @@ Rectangle {
         color: root.contrast ? "#000000" : root.glass ? (isNews ? "#33000000" : "#33FFD970") : isNews ? "#1F2A44" : root.adult ? "#E8DFC8" : "#FFF4CC"
         border.color: root.contrast ? "#FFE14D" : "transparent"; border.width: root.lineWidth
         Behavior on color { ColorAnimation { duration: 300 } }
+        // Tik op een nieuwsbericht: het hele bericht lezen op de nieuwspagina
+        TapHandler {
+            gesturePolicy: TapHandler.ReleaseWithinBounds
+            enabled: messageBar.isNews
+            onTapped: root.openNews(root.tickerItem)
+        }
         RowLayout {
             id: tickerRow
             anchors { fill: parent; leftMargin: 20 * root.s; rightMargin: 28 * root.s }
@@ -329,6 +381,11 @@ Rectangle {
                 font.bold: messageBar.isNews
                 color: root.contrast ? "#FFFFFF" : messageBar.isNews ? "#FFFFFF" : root.ink
                 elide: Text.ElideRight
+            }
+            Text {
+                visible: messageBar.isNews
+                text: "Lees ›"
+                font.pixelSize: 30 * root.f; font.bold: true; color: "#8BE9C0"
             }
             Text {
                 visible: messageBar.isNews && root.tickerItem.time !== ""
@@ -729,46 +786,72 @@ Rectangle {
         // Tikken naast de kaart sluit; de tik komt niet bij het startscherm eronder
         MouseArea { anchors.fill: parent; onClicked: adminPanel.visible = false }
 
+        // Altijd een witte kaart met donkere tekst (ook bij Glas en volwassen thema), zodat alles leesbaar is
         Rectangle {
+            id: adminCard
             anchors.centerIn: parent
-            width: 1100 * root.s; height: 620 * root.s
-            radius: root.r(32)
+            width: Math.min(parent.width - 80 * root.s, 1240 * root.s)
+            height: adminRow.implicitHeight + 96 * root.s
+            radius: 32 * root.s
             color: "#FFFFFF"
+            readonly property color ink: "#1F2A44"
+            readonly property color soft: "#5B6478"
+            readonly property color green: "#2E8B57"
             MouseArea { anchors.fill: parent }   // tikken op de kaart sluit niet
 
             RowLayout {
-                anchors { fill: parent; margins: 48 * root.s }
+                id: adminRow
+                anchors { left: parent.left; right: parent.right; top: parent.top; margins: 48 * root.s }
                 spacing: 48 * root.s
                 ColumnLayout {
                     Layout.fillWidth: true
-                    spacing: 16 * root.s
-                    Text { text: "Beheerpagina"; font.pixelSize: 56 * root.s; font.bold: true; color: root.ink }
+                    Layout.alignment: Qt.AlignTop
+                    spacing: 14 * root.s
+                    Text { text: "Beheerpagina"; font.pixelSize: 56 * root.s; font.bold: true; color: adminCard.ink }
                     Text {
                         Layout.fillWidth: true; wrapMode: Text.WordWrap
                         text: "Op deze pc: open de browser en ga naar"
-                        font.pixelSize: 32 * root.s; color: root.soft
+                        font.pixelSize: 30 * root.s; color: adminCard.soft
                     }
-                    Text { text: "localhost:" + admin.address.split(":").pop(); font.pixelSize: 40 * root.s; font.bold: true; color: root.ink }
+                    Text {
+                        Layout.fillWidth: true; wrapMode: Text.WrapAnywhere
+                        text: "http://localhost:" + (admin.address.split(":").pop() || "8642")
+                        font.pixelSize: 40 * root.s; font.bold: true; color: adminCard.ink
+                    }
+                    Text {
+                        Layout.fillWidth: true; Layout.topMargin: 10 * root.s; wrapMode: Text.WordWrap
+                        text: "Op een andere pc, tablet of telefoon (zelfde netwerk): scan de QR-code of ga naar"
+                        font.pixelSize: 30 * root.s; color: adminCard.soft
+                    }
+                    Text {
+                        Layout.fillWidth: true; wrapMode: Text.WrapAnywhere
+                        text: admin.address !== "" ? admin.address : "Geen netwerk gevonden"
+                        font.pixelSize: 40 * root.s; font.bold: true; color: adminCard.ink
+                    }
+                    Text {
+                        Layout.topMargin: 10 * root.s
+                        text: "Code: " + admin.code
+                        font.pixelSize: 48 * root.s; font.bold: true; font.letterSpacing: 6 * root.s; color: adminCard.green
+                    }
                     Text {
                         Layout.fillWidth: true; wrapMode: Text.WordWrap
-                        text: "Op een andere pc, tablet of telefoon (zelfde netwerk): scan de QR-code of ga naar"
-                        font.pixelSize: 32 * root.s; color: root.soft
+                        text: "Of log in met de vaste inlognaam en het wachtwoord (in te stellen op de beheerpagina, tabblad Toegang)."
+                        font.pixelSize: 26 * root.s; color: adminCard.soft
                     }
-                    Text { text: admin.address.replace("http://", ""); font.pixelSize: 40 * root.s; font.bold: true; color: root.ink }
-                    Text { text: "Code: " + admin.code; font.pixelSize: 48 * root.s; font.bold: true; font.letterSpacing: 6 * root.s; color: root.green }
-                    Item { Layout.fillHeight: true }
                     Row {
+                        Layout.topMargin: 16 * root.s
                         spacing: 20 * root.s
                         Rectangle {
-                            width: 300 * root.s; height: 90 * root.s; radius: root.r(20)
+                            width: 300 * root.s; height: 90 * root.s; radius: 20 * root.s
                             color: newCodeTap.pressed ? "#DDE3EA" : "#EEF1F5"
-                            Text { anchors.centerIn: parent; text: "Nieuwe code"; font.pixelSize: 34 * root.s; color: root.ink }
+                            border.color: "#D9DDE5"; border.width: 2
+                            Text { anchors.centerIn: parent; text: "Nieuwe code"; font.pixelSize: 34 * root.s; font.bold: true; color: adminCard.ink }
                             TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; id: newCodeTap; onTapped: admin.newCode() }
                         }
                         Rectangle {
-                            width: 240 * root.s; height: 90 * root.s; radius: root.r(20)
-                            color: closeTap.pressed ? Qt.darker(root.green, 1.2) : root.green
-                            Text { anchors.centerIn: parent; text: "Sluiten"; font.pixelSize: 34 * root.s; color: "#FFFFFF" }
+                            width: 240 * root.s; height: 90 * root.s; radius: 20 * root.s
+                            color: closeTap.pressed ? "#245F3E" : adminCard.green
+                            Text { anchors.centerIn: parent; text: "Sluiten"; font.pixelSize: 34 * root.s; font.bold: true; color: "#FFFFFF" }
                             TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; id: closeTap; onTapped: adminPanel.visible = false }
                         }
                     }
@@ -776,6 +859,7 @@ Rectangle {
                 Image {
                     Layout.preferredWidth: 380 * root.s
                     Layout.preferredHeight: 380 * root.s
+                    Layout.alignment: Qt.AlignVCenter
                     source: admin.qrImage
                     fillMode: Image.PreserveAspectFit
                     cache: false
@@ -796,7 +880,7 @@ Rectangle {
         anchors.fill: parent
         active: root.page !== "home"
         sourceComponent: root.page === "stream" ? streamPage : root.page === "presentations" ? presentationPage
-                         : root.page === "shortcuts" ? shortcutsPage : root.page === "games" ? gamesPage : null
+                         : root.page === "shortcuts" ? shortcutsPage : root.page === "games" ? gamesPage : root.page === "news" ? newsPage : null
         // Zachte overgang: scherm komt iets naar voren en wordt zichtbaar
         onLoaded: pageIn.restart()
         ParallelAnimation {
@@ -807,6 +891,7 @@ Rectangle {
     }
     Component { id: streamPage; StreamScreen { s: root.s; home: root; onBack: root.page = "home" } }
     Component { id: gamesPage; GamesScreen { s: root.s; onBack: root.page = "home" } }
+    Component { id: newsPage; NewsScreen { s: root.s; current: root.newsIndex; onBack: root.page = "home" } }
     Component { id: presentationPage; PresentationScreen { s: root.s; onBack: root.page = "home" } }
     Component { id: shortcutsPage; ShortcutsScreen { s: root.s; onBack: root.page = "home" } }
 
@@ -866,6 +951,14 @@ Rectangle {
             } else if (selfTest === "news") {
                 news.loadSample()
                 console.info("News ticker: " + root.tickerItems.length + " items, shown " + (root.tickerItem ? root.tickerItem.title : "-"))
+            } else if (selfTest === "newspage") {
+                news.loadSample()
+                root.openNews(news.headlines[0])
+            } else if (selfTest === "volume") {
+                root.radioRow = 0
+                volumePanel.visible = true
+                root.setVolume(0.5)
+                console.info("Volume test: output " + Math.round(radioPlayer.audioOutput.volume * 100))
             } else if (selfTest === "menuboard") {
                 const board = presentations.list.find(x => x.folder === "Menu van de week")
                 console.info("Menu board presentation: " + (board ? board.count : 0) + " slides")
@@ -964,7 +1057,7 @@ Rectangle {
     readonly property string radioName: radioRow >= 0 ? radio.nameAt(radioRow) : ""
     MediaPlayer {
         id: radioPlayer
-        audioOutput: AudioOutput { volume: 0.8 }
+        audioOutput: AudioOutput { volume: root.radioVolume }
         onErrorOccurred: (error, text) => console.warn("Radio error: " + text)
         onPlaybackStateChanged: console.info("Radio state " + playbackState)
     }
@@ -978,7 +1071,56 @@ Rectangle {
         stats.count("radio", radio.nameAt(row))
         return true
     }
-    function stopRadio() { radioPlayer.stop(); radioRow = -1; radioSaver = false }
+    function stopRadio() { radioPlayer.stop(); radioRow = -1; radioSaver = false; volumePanel.visible = false }
+    // Radiovolume (0 tot 1, in stappen van 10%), wordt onthouden
+    property real radioVolume: Math.max(0, Math.min(1, Number(agenda.uiValue("radioVolume", 0.8))))
+    function setVolume(v) {
+        radioVolume = Math.max(0, Math.min(1, Math.round(v * 10) / 10))
+        agenda.setUiValue("radioVolume", radioVolume)
+        volumeHide.restart()
+        console.info("Radio volume " + Math.round(radioVolume * 100))
+    }
+    Timer { id: volumeHide; interval: 6000; onTriggered: volumePanel.visible = false }
+    onPageChanged: volumePanel.visible = false
+    Rectangle {
+        id: volumePanel
+        z: 85
+        visible: false
+        anchors { right: parent.right; top: header.bottom; rightMargin: 48 * root.s; topMargin: 12 * root.s }
+        width: volRow.implicitWidth + 48 * root.s; height: 140 * root.s
+        radius: 70 * root.s
+        color: root.contrast ? "#000000" : root.glass ? "#E61A2036" : "#FFFFFF"
+        border.color: root.contrast ? "#FFE14D" : root.glass ? "#55FFFFFF" : "#2E8B57"; border.width: 3 * root.s
+        MouseArea { anchors.fill: parent; onPressed: volumeHide.restart() }   // tik gaat niet door
+        Row {
+            id: volRow
+            anchors.centerIn: parent
+            spacing: 18 * root.s
+            VolButton { anchors.verticalCenter: parent.verticalCenter; label: "−"; onHit: root.setVolume(root.radioVolume - 0.1) }
+            Row {
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 8 * root.s
+                Repeater {
+                    model: 10
+                    delegate: Rectangle {
+                        required property int index
+                        anchors.bottom: parent.bottom
+                        width: 26 * root.s; height: (30 + index * 6) * root.s; radius: 6 * root.s
+                        color: index < Math.round(root.radioVolume * 10) ? "#2E8B57" : (root.glass ? "#40FFFFFF" : "#DDE3EA")
+                        TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; onTapped: root.setVolume((index + 1) / 10) }
+                    }
+                }
+            }
+            VolButton { anchors.verticalCenter: parent.verticalCenter; label: "+"; onHit: root.setVolume(root.radioVolume + 0.1) }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                width: 110 * root.s
+                horizontalAlignment: Text.AlignRight
+                text: Math.round(root.radioVolume * 100) + "%"
+                font.pixelSize: 40 * root.s; font.bold: true; color: root.glass || root.contrast ? "#FFFFFF" : "#1F2A44"
+            }
+        }
+    }
 
     // ---------- Muziek per dagdeel ----------
     readonly property var music: cfg.music || {}
@@ -1095,9 +1237,10 @@ Rectangle {
     property bool radioSaver: false
     onRadioSaverChanged: console.info(radioSaver ? "Radio screensaver started" : "Radio screensaver stopped")
     Timer {
-        interval: 5000; running: root.radioRow >= 0 && !root.radioSaver && !root.night; repeat: true
+        // Radio aan (vanaf het startscherm of de Radio-pagina): na 1 minuut (instelbaar) zweeft de zender over het scherm
+        interval: 5000; running: root.radioRow >= 0 && !root.radioSaver && !root.night && (root.cfg.radioSaverMinutes ?? 1) > 0; repeat: true
         onTriggered: {
-            const min = agenda.settings.screensaverMinutes || 5
+            const min = root.cfg.radioSaverMinutes ?? 1
             if (activity.idleSeconds() >= min * 60) { root.screensaver = false; root.radioSaver = true }
         }
     }

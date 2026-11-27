@@ -1,5 +1,25 @@
 [
   {
+    "version": "0.10.0",
+    "date": "2026-11-27",
+    "notes": [
+      "Nieuws: tik op een nieuwsbericht in de balk bovenin en lees het hele bericht op een rustige nieuwspagina in glasstijl. Alles past op één scherm, zonder scrollen. Met Vorige en Volgende, of tik rechts op een andere kop.",
+      "Radio: naast de zender op het startscherm zit nu een volumeknop (zachter/harder, wordt onthouden).",
+      "Radio: als de radio speelt, zweeft de zender na 1 minuut zonder aanraken over het scherm (in te stellen bij Scherm).",
+      "Achtergrond: kies een foto van Unsplash. Zoek op een woord (met een gratis Unsplash-sleutel) of plak de link van een foto. De naam van de fotograaf staat klein in de hoek.",
+      "Beheergegevens op het scherm (klok vasthouden): het adres en de knoppen zijn nu altijd goed te lezen, ook bij het Glas-thema.",
+      "De voorbeeldpresentatie Diner van de dag is weggehaald (het menubord laat het eten al zien)."
+    ],
+    "notes_en": [
+      "News: tap a news item in the bar at the top to read the whole story on a calm news page in glass style. Everything fits on one screen, no scrolling. Use Previous and Next, or tap another headline on the right.",
+      "Radio: there is now a volume button next to the station on the home screen (softer/louder, remembered).",
+      "Radio: while the radio plays, the station floats across the screen after 1 minute without touch (configurable under Screen).",
+      "Background: choose a photo from Unsplash. Search by word (with a free Unsplash key) or paste a photo link. The photographer's name is shown small in the corner.",
+      "Admin details on screen (hold the clock): the address and buttons are now always readable, also in the Glass theme.",
+      "The Dinner of the day sample slideshow has been removed (the menu board already shows the meal)."
+    ]
+  },
+  {
     "version": "0.9.0",
     "date": "2026-11-27",
     "notes": [

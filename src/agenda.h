@@ -55,6 +55,9 @@ public:
     // Alleen voor de rooktest: instelling tijdelijk veranderen (wordt niet opgeslagen)
     Q_INVOKABLE void setTestSetting(const QString &key, const QVariant &value);
     Q_INVOKABLE QString testPhoto();
+    // Kleine dingen die het scherm onthoudt (bijvoorbeeld het radiovolume), in settings.ini onder "ui/"
+    Q_INVOKABLE QVariant uiValue(const QString &key, const QVariant &fallback) const;
+    Q_INVOKABLE void setUiValue(const QString &key, const QVariant &value);
 
 Q_SIGNALS:
     void changed();

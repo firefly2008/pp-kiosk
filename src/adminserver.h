@@ -5,6 +5,7 @@
 #pragma once
 
 #include <QHash>
+#include <QNetworkAccessManager>
 #include <QObject>
 #include <QTcpServer>
 #include <QUrl>
@@ -82,6 +83,10 @@ private:
     bool checkLogin(const QString &user, const QString &pass) const;
     void setLogin(const QString &user, const QString &pass);
     bool validToken(const QString &token);
+    // Unsplash: zoeken (met eigen gratis sleutel) en een foto als achtergrond binnenhalen
+    void unsplashSearch(QTcpSocket *socket, const QString &query, int page);
+    void unsplashUse(QTcpSocket *socket, const QString &idOrLink);
+    QString unsplashKey() const;
     void countFailure(const QString &ip);
 
     QString m_dataDir;
@@ -98,6 +103,7 @@ private:
     QUrl m_qr;
     QHash<QString, QList<qint64>> m_failures;   // ip → tijden van foute codes
     QHash<QString, qint64> m_blockedUntil;      // ip → geblokkeerd tot
+    QNetworkAccessManager m_network;
     QHash<QString, qint64> m_tokens;            // sessie na inloggen met naam + wachtwoord → geldig tot
     int m_open = 0;
 };
