@@ -26,6 +26,7 @@ Rectangle {
     Binding { target: news; property: "offline"; value: root.cfg.offline === true }
     Binding { target: weather; property: "offline"; value: root.cfg.offline === true }
     Binding { target: watchdog; property: "enabled"; value: root.cfg.watchdog !== false }
+    Binding { target: radio; property: "region"; value: root.cfg.radioRegion || "" }
     readonly property var season: {
         const md = (now.getMonth() + 1) * 100 + now.getDate()
         if (md >= 321 && md < 621) return { name: "lente", icon: "🌷", key: "lente" }
@@ -38,7 +39,7 @@ Rectangle {
     readonly property var bg: cfg.background || {}
     readonly property string bgType: bg.type || "daypart"
     readonly property color bgColor: bg.color || "#ECE6DA"
-    readonly property string bgPhoto: bgType === "photo" ? (cfg.backgroundUrl || "") : ""
+    readonly property string bgPhoto: bgType === "photo" || bgType === "daily" ? (cfg.backgroundUrl || "") : ""
     readonly property real f: s * (cfg.textScale || 1)          // tekstgrootte (grote-tekst-stand)
     readonly property color ink: contrast ? "#FFFFFF" : glass ? "#FFFFFF" : adult ? "#1E2A3A" : "#1F2A44"
     readonly property color soft: contrast ? "#FFE14D" : glass ? "#C3CAE0" : adult ? "#55606E" : "#5B6478"
@@ -736,8 +737,9 @@ Rectangle {
                         { title: "Kijk & luister", icon: "🎧", line: "stream", tint: "#6CC28B", calm: "#5E7D6A", page: "stream" },
                         { title: "Snelkoppelingen", icon: "⭐", line: "snelkoppelingen", tint: "#E97A6B", calm: "#A0745E", page: "shortcuts" },
                         { title: "Spelletjes", icon: "🧩", line: "spelletjes", tint: "#B48AD6", calm: "#6E6684", page: "games" },
+                        { title: "Ontspanning", icon: "🌿", line: "", tint: "#E9A23B", calm: "#8A7350", page: "relax" },
                         { title: weather.available ? "Weer " + weather.temperature + "°" : "Weer", icon: weather.available ? weather.icon : "⛅", line: "", tint: "#4FB3C9", calm: "#4F7A86", page: "weather" }
-                    ].filter(t => (t.page !== "games" || root.cfg.games !== false) && (t.page !== "weather" || root.cfg.weatherTile === true))
+                    ].filter(t => (t.page !== "games" || root.cfg.games !== false) && (t.page !== "weather" || root.cfg.weatherTile === true) && (t.page !== "relax" || root.cfg.relax !== false))
                     delegate: Rectangle {
                         id: tileBox
                         required property var modelData
@@ -987,7 +989,7 @@ Rectangle {
         anchors.fill: parent
         active: root.page !== "home"
         sourceComponent: root.page === "stream" ? streamPage : root.page === "presentations" ? presentationPage
-                         : root.page === "shortcuts" ? shortcutsPage : root.page === "games" ? gamesPage : root.page === "news" ? newsPage : root.page === "weather" ? weatherPage : null
+                         : root.page === "shortcuts" ? shortcutsPage : root.page === "games" ? gamesPage : root.page === "news" ? newsPage : root.page === "weather" ? weatherPage : root.page === "relax" ? relaxPage : null
         // Zachte overgang: scherm komt iets naar voren en wordt zichtbaar
         onLoaded: pageIn.restart()
         ParallelAnimation {
@@ -998,6 +1000,7 @@ Rectangle {
     }
     Component { id: streamPage; StreamScreen { s: root.s; home: root; onBack: root.page = "home" } }
     Component { id: gamesPage; GamesScreen { s: root.s; onBack: root.page = "home" } }
+    Component { id: relaxPage; RelaxScreen { s: root.s; home: root; onBack: root.page = "home" } }
     Component { id: weatherPage; WeatherScreen { s: root.s; onBack: root.page = "home" } }
     Component { id: newsPage; NewsScreen { s: root.s; current: root.newsIndex; onBack: root.page = "home" } }
     Component { id: presentationPage; PresentationScreen { s: root.s; onBack: root.page = "home" } }
@@ -1021,6 +1024,19 @@ Rectangle {
         else if (selfTest !== "") Qt.quit()
     }
 
+    // Rooktest ontspanning: alle onderdelen langs, natuurgeluid starten
+    Timer {
+        id: relaxTest
+        interval: 800
+        property int n: 0
+        repeat: true
+        onTriggered: {
+            const keys = ["natuur", "gym", "muziek", "zingen", "verhalen", "dieren", "adem"]
+            const it = pageLoader.item
+            if (!it || n >= keys.length) { stop(); console.info("Relax test done: " + n + " sections"); return }
+            it.choose(keys[n++])
+        }
+    }
     // ---------- Rooktest ----------
     Timer {
         running: selfTest !== ""
@@ -1078,6 +1094,9 @@ Rectangle {
                 // Alleen handmatig: hoofdthread 15 s vastzetten om de waakhond te testen
                 const until = Date.now() + 15000
                 while (Date.now() < until) {}
+            } else if (selfTest === "relax") {
+                root.page = "relax"
+                relaxTest.start()
             } else if (selfTest === "weatherpage") {
                 root.page = "weather"
             } else if (selfTest === "newspage") {
@@ -1247,6 +1266,7 @@ Rectangle {
             if (min > 0 && !root.screensaver && !root.night && !busy && !adminPanel.visible
                     && activity.idleSeconds() >= min * 60 && presentations.list.length > 0) {
                 root.page = "presentations"
+                if (pageLoader.item) pageLoader.item.kenBurns = root.cfg.saverFade !== false
                 if (pageLoader.item && pageLoader.item.startNamed(root.cfg.screensaverPresentation || "")) {
                     root.screensaver = true
                     console.info("Screensaver started")

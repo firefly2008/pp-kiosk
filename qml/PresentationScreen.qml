@@ -23,6 +23,8 @@ Rectangle {
     property var slides: []
     property int slide: 0
     property bool paused: false
+    // Screensaver als fotoalbum: zacht in elkaar overvloeien en langzaam inzoomen (beheer: Screensaver)
+    property bool kenBurns: false
 
     function start(item) {
         slides = presentations.slides(item.folder)
@@ -143,10 +145,18 @@ Rectangle {
                 required property int index
                 anchors.fill: parent
                 opacity: index === page.slide ? 1 : 0
-                Behavior on opacity { NumberAnimation { duration: 700 } }
+                Behavior on opacity { NumberAnimation { duration: page.kenBurns ? 1800 : 700 } }
+                clip: true
 
                 Image {
+                    id: slideImage
                     anchors.fill: parent
+                    transformOrigin: index % 3 === 0 ? Item.TopLeft : index % 3 === 1 ? Item.BottomRight : Item.Center
+                    NumberAnimation on scale {
+                        running: page.kenBurns && index === page.slide
+                        from: 1.0; to: 1.12
+                        duration: (page.show ? page.show.interval : 10) * 1000 + 2000
+                    }
                     // Diner van de dag: foto die bij het eten van vandaag past (eigen foto of een passende standaardfoto)
                     source: parent.fromMenu && agenda.todayMenu.photoUrl ? agenda.todayMenu.photoUrl : modelData.source
                     fillMode: Image.PreserveAspectCrop

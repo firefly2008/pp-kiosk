@@ -20,6 +20,8 @@ class RadioModel : public QAbstractListModel
     Q_PROPERTY(int hiddenCount READ hiddenCount NOTIFY countChanged)
     // Programma-info van NPO-zenders (nporadioX.nl/api/broadcasts): nu en straks
     Q_PROPERTY(QVariantMap programme READ programme NOTIFY programmeChanged)
+    // Lokale radio: deze regionale zender staat altijd vooraan (beheer: Media > Muziek)
+    Q_PROPERTY(QString region READ region WRITE setRegion NOTIFY countChanged)
 
 public:
     enum Roles { NameRole = Qt::UserRole + 1, IconRole, AccentRole, PathRole };
@@ -37,6 +39,10 @@ public:
     int revision() const { return m_revision; }
     QVariantMap programme() const { return m_programme; }
     Q_INVOKABLE void requestProgramme(int row);
+    QString region() const { return m_region; }
+    void setRegion(const QString &name);
+    // Namen van de regionale zenders (voor het beheer)
+    static QStringList regionalNames();
 
     Q_INVOKABLE QString nameAt(int row) const;
     Q_INVOKABLE QString iconAt(int row) const;
@@ -72,6 +78,7 @@ Q_SIGNALS:
     void addRequested();
 
 private:
+    QString m_region;
     struct Station {
         QString name;
         QString slogan;

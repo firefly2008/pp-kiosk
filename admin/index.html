@@ -112,12 +112,19 @@ progress{width:100%;height:16px}
 .media label{display:flex;gap:8px;align-items:center;background:#fff;border:1px solid var(--lijn);border-radius:10px;padding:8px 10px;color:var(--tekst);font-size:16px;cursor:pointer}
 .media input{width:20px;height:20px}
 .krow{display:grid;grid-template-columns:1fr 1.3fr 120px auto auto;gap:8px;align-items:center;margin-bottom:8px}
+.frow{display:grid;grid-template-columns:64px 1fr 1fr 1.2fr auto auto;gap:8px;align-items:center;margin-bottom:8px}
+.frow .cover{width:64px;height:64px;border-radius:8px;background:var(--groen-licht);display:flex;align-items:center;justify-content:center;font-size:30px;overflow:hidden}
+.frow .cover img{width:100%;height:100%;object-fit:cover}
+.rrow{display:grid;grid-template-columns:60px 190px 1fr 1.4fr auto auto;gap:8px;align-items:center;margin-bottom:8px}
+.rrow input.icon{text-align:center;font-size:22px}
 .remote{background:#FFF4CC;border:1px solid #F6C85F;border-radius:12px;padding:10px 14px;margin-bottom:12px}
 @media (max-width:900px){.week{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}}
 @media (max-width:700px){.lrow{grid-template-columns:56px 1fr}.lrow>*:nth-child(n+3){grid-column:1/-1}.pres{grid-template-columns:1fr}
   .fields{grid-template-columns:1fr 1fr}.fields>div:nth-child(3){grid-column:1/-1}.row{grid-template-columns:48px 1fr}.tools{grid-column:1/-1;flex-direction:row;flex-wrap:wrap}
   .set{grid-template-columns:1fr}.mrow{grid-template-columns:90px 56px 1fr}.mrow>*:nth-child(4){grid-column:1/-1}
-  .krow,.srow,.brow{grid-template-columns:1fr 1fr}.week{grid-template-columns:1fr}
+  .krow,.srow,.brow{grid-template-columns:1fr 1fr}
+  .frow{grid-template-columns:64px 1fr 1fr}.frow>input[data-k=url]{grid-column:1/-1}
+  .rrow{grid-template-columns:60px 1fr}.rrow>input[data-k=url]{grid-column:1/-1}.week{grid-template-columns:1fr}
   nav.cats,nav.tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
   nav.cats button,nav.tabs button{flex:0 0 auto;min-height:48px}
   header h1{font-size:18px}main{padding:10px 10px 120px}.card{padding:14px}
@@ -164,6 +171,7 @@ progress{width:100%;height:16px}
   <button data-tab="media" data-cat="media">Kijk &amp; luister</button>
   <button data-tab="music" data-cat="media">Muziek</button>
   <button data-tab="links" data-cat="media">Snelkoppelingen</button>
+  <button data-tab="relax" data-cat="media">Ontspanning</button>
   <button data-tab="play" data-cat="spel">Spellen &amp; ontspanning</button>
   <button data-tab="comm" data-cat="com">Spraak &amp; berichten</button>
   <button data-tab="info" data-cat="info">Nieuws, weer &amp; kalender</button>
@@ -291,6 +299,31 @@ progress{width:100%;height:16px}
       <label class="toggle" style="margin-top:8px"><input type="checkbox" id="sMusAuto"> Vanzelf aanzetten als het dagdeel begint ('s nachts uit)</label>
       <p class="hint">Bovenin het startscherm staat een knop om de zender van nu aan of uit te zetten.</p>
     </div>
+    <label for="sRadioRegion">Lokale radio</label>
+    <div>
+      <select id="sRadioRegion"><option value="">Geen (alleen de gekozen zenders)</option></select>
+      <p class="hint">De regionale omroep staat dan altijd vooraan bij de radio.</p>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Mijn muziek (favorieten met grote hoes)</h3>
+    <p class="hint">Staat op het scherm bij Ontspanning &gt; Mijn muziek. Vul artiest en titel in en tik op 🔍: de kiosk zoekt de albumhoes erbij. Link mag leeg: dan zoekt de kiosk het nummer op YouTube.</p>
+    <div id="favs"></div>
+    <p><button id="addFav">＋ Favoriet toevoegen</button></p>
+  </div>
+ </section>
+
+ <section id="tab-relax" hidden>
+  <h2>Ontspanning</h2>
+  <div class="card set">
+    <span>Tegel</span>
+    <label class="toggle"><input type="checkbox" id="sRelax"> Tegel "Ontspanning" op het startscherm: ademhalen, natuurgeluiden, stoelgym, mijn muziek, meezingen, verhalen en dieren live</label>
+  </div>
+  <div class="card">
+    <h3>Links bij Ontspanning</h3>
+    <p class="hint">Meezingen en karaoke, verhalen en luisterboeken (voor kinderen of volwassenen), dieren-webcams en een stoelgym-video. Tik op het scherm opent de link schermvullend. Ademhalen, natuurgeluiden en de stoelgym-oefeningen werken ook zonder internet.</p>
+    <div id="relaxList"></div>
+    <p><button id="addRelax">＋ Link toevoegen</button> <button id="resetRelax">Standaardlinks terugzetten</button></p>
   </div>
  </section>
 
@@ -340,7 +373,12 @@ progress{width:100%;height:16px}
     </div>
     <label for="sBgType">Achtergrond</label>
     <div>
-      <select id="sBgType"><option value="daypart">Wisselt met het dagdeel</option><option value="color">Eén kleur</option><option value="photo">Eigen foto</option></select>
+      <select id="sBgType"><option value="daypart">Wisselt met het dagdeel</option><option value="color">Eén kleur</option><option value="photo">Eigen foto</option><option value="daily">Foto van de dag (Unsplash, elke dag een nieuwe)</option></select>
+      <div id="bgDailyRow" style="margin-top:8px">
+        <label>Onderwerp <input type="text" id="sBgTopic" maxlength="60" placeholder="bijvoorbeeld natuur, bloemen, zee, bergen"></label>
+        <p class="hint">Elke dag haalt de kiosk zelf een nieuwe foto bij dit onderwerp. Hiervoor is een gratis Unsplash-sleutel nodig (kies even "Eigen foto" om de sleutel in te vullen). <span id="dailyInfo"></span></p>
+        <button id="dailyNow">Nu een nieuwe foto</button>
+      </div>
       <div id="bgColorRow" class="when" style="margin-top:8px"><label>Kleur <input type="color" id="sBgColor" style="width:64px;height:40px;padding:2px"></label></div>
       <div id="bgPhotoRow" style="margin-top:8px">
         <img id="bgPreview" alt="" style="max-width:240px;max-height:135px;border-radius:8px;display:none">
@@ -403,6 +441,8 @@ progress{width:100%;height:16px}
       <label for="sSaverPres" style="margin-top:8px">Presentatie</label>
       <select id="sSaverPres"></select>
       <p class="hint">Na zoveel minuten zonder aanraken start de presentatie. Aanraken = terug naar het startscherm.</p>
+      <label class="toggle" style="margin-top:8px"><input type="checkbox" id="sSaverFade"> Als fotoalbum: foto's vloeien rustig in elkaar over en zoomen langzaam in</label>
+      <p class="hint">Tip: maak bij Media &gt; Presentaties een presentatie "Foto-album" met eigen foto's en kies die hierboven.</p>
       <label for="sRadioSaver" style="margin-top:8px">Als de radio speelt</label>
       <select id="sRadioSaver">
         <option value="0">Geen screensaver</option><option value="1">Zender zweeft over het scherm na 1 minuut</option><option value="2">Na 2 minuten</option>
@@ -800,9 +840,9 @@ $('addSpecial').onclick = () => { data.special.push({title: '', date: '', icon: 
 
 // ---------- Scherm ----------
 const S = {sName: 'name', sSpeak: 'speak', sChime: 'chime', sScale: 'textScale', sContrast: 'contrast', sSaver: 'screensaverMinutes', sRadioSaver: 'radioSaverMinutes',
-           sSaverPres: 'screensaverPresentation', sNightFrom: 'nightFrom', sNightTo: 'nightTo', sNightMode: 'nightMode', sDinner: 'dinnerTime', sNews: 'news', sGames: 'games', sRemind: 'remindMinutes', sRemindSound: 'remindSound', sWeatherTile: 'weatherTile', sHolidays: 'holidays', sBigButtons: 'bigButtons', sSeasonDecor: 'seasonDecor', sClock: 'clockStyle', sDayBig: 'dayBig', sParty: 'party', sNightDim: 'nightDim', sWatchdog: 'watchdog', sOffline: 'offline', sTheme: 'theme', sVoice: 'voice', sGlass: 'glassTransparency'};
+           sSaverPres: 'screensaverPresentation', sNightFrom: 'nightFrom', sNightTo: 'nightTo', sNightMode: 'nightMode', sDinner: 'dinnerTime', sNews: 'news', sGames: 'games', sRemind: 'remindMinutes', sRemindSound: 'remindSound', sWeatherTile: 'weatherTile', sHolidays: 'holidays', sBigButtons: 'bigButtons', sSeasonDecor: 'seasonDecor', sClock: 'clockStyle', sDayBig: 'dayBig', sParty: 'party', sNightDim: 'nightDim', sWatchdog: 'watchdog', sOffline: 'offline', sRelax: 'relax', sSaverFade: 'saverFade', sRadioRegion: 'radioRegion', sTheme: 'theme', sVoice: 'voice', sGlass: 'glassTransparency'};
 async function renderScreen(){
-  const s = data.settings = Object.assign({speak: false, chime: true, textScale: 1, contrast: false, screensaverMinutes: 5, radioSaverMinutes: 1, screensaverPresentation: 'Menu van de week', dinnerTime: '17:00', news: true, games: true, voice: false, remindMinutes: 0, remindSound: true, weatherTile: false, holidays: true, bigButtons: false, seasonDecor: false, clockStyle: 'digitaal', dayBig: false, party: true, nightDim: 88, watchdog: true, offline: false, glassTransparency: 80, theme: 'standaard', nightFrom: '', nightTo: '', nightMode: 'dim', name: ''}, data.settings || {});
+  const s = data.settings = Object.assign({speak: false, chime: true, textScale: 1, contrast: false, screensaverMinutes: 5, radioSaverMinutes: 1, screensaverPresentation: 'Menu van de week', dinnerTime: '17:00', news: true, games: true, voice: false, remindMinutes: 0, remindSound: true, weatherTile: false, holidays: true, bigButtons: false, seasonDecor: false, clockStyle: 'digitaal', dayBig: false, party: true, nightDim: 88, watchdog: true, offline: false, relax: true, saverFade: true, radioRegion: '', glassTransparency: 80, theme: 'standaard', nightFrom: '', nightTo: '', nightMode: 'dim', name: ''}, data.settings || {});
   try {
     const p = await api('GET', null, '/api/presentations');
     $('sSaverPres').innerHTML = '<option value="">De eerste presentatie</option>' + p.items.map(x => `<option value="${esc(x.name)}">${esc(x.title)}</option>`).join('');
@@ -840,7 +880,55 @@ async function renderLook(){
     $(id).value = cur || '';
   }
   $('sMusAuto').checked = !!s.music.auto;
+  renderFavs(); renderRelax();
 }
+const REGIONS = [['Omrop Fryslân Radio', 'Friesland'], ['Radio Noord', 'Groningen'], ['Radio Drenthe', 'Drenthe'], ['Radio Oost', 'Overijssel'], ['Radio Gelderland', 'Gelderland'],
+  ['Radio M Utrecht', 'Utrecht'], ['NH Radio', 'Noord-Holland'], ['Radio Rijnmond', 'Zuid-Holland (Rijnmond)'], ['Omroep Zeeland Radio', 'Zeeland'], ['Omroep Brabant Radio', 'Brabant'], ['L1 Radio', 'Limburg']];
+$('sRadioRegion').insertAdjacentHTML('beforeend', REGIONS.map(r => `<option value="${esc(r[0])}">${esc(r[1])}: ${esc(r[0])}</option>`).join(''));
+// ---------- Mijn muziek ----------
+function renderFavs(){
+  data.favorites = data.favorites || [];
+  $('favs').innerHTML = data.favorites.map((f, k) => `
+    <div class="frow" data-f="${k}">
+      <div class="cover">${f.cover ? `<img src="${pictoUrl(f.cover)}" alt="">` : '💿'}</div>
+      <input type="text" data-k="artist" value="${esc(f.artist)}" maxlength="80" placeholder="Artiest" aria-label="Artiest">
+      <input type="text" data-k="title" value="${esc(f.title)}" maxlength="80" placeholder="Titel (album of nummer)" aria-label="Titel">
+      <input type="text" data-k="url" value="${esc(f.url)}" maxlength="600" placeholder="Link (mag leeg)" aria-label="Link">
+      <button data-act="cover" title="Hoes zoeken" aria-label="Hoes zoeken">🔍</button>
+      <button class="danger" data-act="del" aria-label="Verwijderen">✕</button>
+    </div>`).join('') || '<p class="hint">Nog geen favorieten.</p>';
+}
+$('favs').addEventListener('input', e => { const r = e.target.closest('[data-f]'); if (r && e.target.dataset.k) { data.favorites[r.dataset.f][e.target.dataset.k] = e.target.value; changed(); } });
+$('favs').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  const k = +b.closest('[data-f]').dataset.f, f = data.favorites[k];
+  if (b.dataset.act === 'del') { data.favorites.splice(k, 1); changed(); renderFavs(); return; }
+  b.textContent = '…';
+  try {
+    const j = await api('GET', null, '/api/cover?q=' + encodeURIComponent(((f.artist || '') + ' ' + (f.title || '')).trim()));
+    f.cover = j.name; if (!f.artist) f.artist = j.artist; if (!f.title) f.title = j.album;
+    changed(); renderFavs();
+  } catch (err) { alert(err.message); b.textContent = '🔍'; }
+});
+$('addFav').onclick = () => { data.favorites.push({artist: '', title: '', url: '', cover: ''}); changed(); renderFavs(); };
+// ---------- Ontspanning: links ----------
+const RELAX_GROUPS = [['zingen', 'Meezingen / karaoke'], ['verhalen', 'Verhalen / luisterboeken'], ['dieren', 'Dieren live'], ['gym', 'Stoelgym-video']];
+function renderRelax(){
+  data.relax = data.relax || [];
+  $('relaxList').innerHTML = data.relax.map((l, k) => `
+    <div class="rrow" data-r="${k}">
+      <input class="icon" type="text" data-k="icon" value="${esc(l.icon)}" maxlength="8" placeholder="🎵" aria-label="Pictogram">
+      <select data-k="group" aria-label="Soort">${RELAX_GROUPS.map(g => `<option value="${g[0]}"${g[0] === l.group ? ' selected' : ''}>${g[1]}</option>`).join('')}</select>
+      <input type="text" data-k="title" value="${esc(l.title)}" maxlength="80" placeholder="Naam op het scherm" aria-label="Naam">
+      <input type="text" data-k="url" value="${esc(l.url)}" maxlength="600" placeholder="https://..." aria-label="Link">
+      <label class="toggle" title="Bij verhalen: voor kinderen"><input type="checkbox" data-k="kids"${l.kids ? ' checked' : ''}> kind</label>
+      <button class="danger" data-act="del" aria-label="Verwijderen">✕</button>
+    </div>`).join('') || '<p class="hint">Nog geen links.</p>';
+}
+$('relaxList').addEventListener('input', e => { const r = e.target.closest('[data-r]'); const k = e.target.dataset.k; if (r && k) { data.relax[r.dataset.r][k] = e.target.type === 'checkbox' ? e.target.checked : e.target.value; changed(); } });
+$('relaxList').addEventListener('click', e => { const b = e.target.closest('button[data-act=del]'); if (!b) return; data.relax.splice(+b.closest('[data-r]').dataset.r, 1); changed(); renderRelax(); });
+$('addRelax').onclick = () => { data.relax.push({group: 'zingen', icon: '🎵', title: '', url: '', kids: false}); changed(); renderRelax(); };
+$('resetRelax').onclick = () => { if (!confirm('De standaardlinks terugzetten? Eigen links blijven staan.')) return; delete data.relax; api('PUT', {...data, relax: undefined}).then(() => api('GET')).then(j => { data = j; renderRelax(); dirty = false; $('status').textContent = 'Opgeslagen'; }).catch(e => alert(e.message)); };
 function showGlass(){
   $('glassRow').hidden = $('sTheme').value !== 'glas';
   $('glassVal').textContent = $('sGlass').value + '%';
@@ -891,11 +979,19 @@ function showBg(){
   const b = data.settings.background;
   $('bgColorRow').hidden = b.type !== 'color';
   $('bgPhotoRow').hidden = b.type !== 'photo';
+  $('bgDailyRow').hidden = b.type !== 'daily';
+  $('sBgTopic').value = b.topic || '';
   if (b.type === 'photo') uKeyState();
+  if (b.type === 'daily') api('GET', null, '/api/unsplash/key').then(j => { $('dailyInfo').textContent = j.set ? 'Er is een sleutel ingesteld.' : 'Let op: nog geen sleutel ingesteld.'; }).catch(() => {});
   $('bgPreview').style.display = b.photo ? 'block' : 'none';
   if (b.photo) $('bgPreview').src = pictoUrl(b.photo);
 }
 $('sBgType').addEventListener('input', () => { data.settings.background.type = $('sBgType').value; showBg(); changed(); });
+$('sBgTopic').addEventListener('input', () => { data.settings.background.topic = $('sBgTopic').value; changed(); });
+$('dailyNow').onclick = async () => {
+  if (dirty) { alert('Druk eerst op Opslaan.'); return; }
+  try { await api('POST', {}, '/api/daily'); $('dailyInfo').textContent = 'Nieuwe foto wordt opgehaald; over een paar tellen staat hij op het scherm.'; } catch (e) { alert(e.message); }
+};
 $('sBgColor').addEventListener('input', () => { data.settings.background.color = $('sBgColor').value; changed(); });
 $('bgFile').addEventListener('change', async () => {
   const f = $('bgFile').files[0]; if (!f) return;
@@ -1260,7 +1356,7 @@ $('copyAll').onclick = async () => {
     try {
       const h = {'X-Code': kc, 'Content-Type': 'application/json'};
       const cur = await (await fetch(kb + '/api/agenda', {headers: h})).json();
-      const r = await fetch(kb + '/api/agenda', {method: 'PUT', headers: h, body: JSON.stringify({...src, settings: cur.settings || {}})});
+      const r = await fetch(kb + '/api/agenda', {method: 'PUT', headers: h, body: JSON.stringify({...cur, ...src, settings: cur.settings || {}})});
       out.push(k.name + (r.ok ? ': ✓' : ': mislukt'));
     } catch (e) { out.push(k.name + ': niet bereikbaar'); }
   }

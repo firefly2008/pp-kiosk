@@ -146,7 +146,7 @@ void RadioModel::rebuild()
     QList<int> rows;
     for (int i = 0; i < m_stations.size(); ++i) {
         const Station &st = m_stations.at(i);
-        const bool visible = st.extra ? shown.contains(st.name) : !hidden.contains(st.name);
+        const bool visible = st.name == m_region || (st.extra ? shown.contains(st.name) : !hidden.contains(st.name));
         if (visible) {
             rows.append(i);
         }
@@ -157,6 +157,7 @@ void RadioModel::rebuild()
     const int addPos = order.indexOf(QStringLiteral("+add"));
     auto rank = [&](int i) -> double {
         const int pos = order.indexOf(keyOf(i));
+        if (i >= 0 && m_stations.at(i).name == m_region) return -1;
         if (pos >= 0) return pos;
         if (i < 0) return 100000;
         return addPos >= 0 ? addPos - 0.5 : 99999;
@@ -295,6 +296,26 @@ void RadioModel::remove(int row)
     Q_EMIT countChanged();
     ++m_revision;
     Q_EMIT revisionChanged();
+}
+
+void RadioModel::setRegion(const QString &name)
+{
+    if (name == m_region) {
+        return;
+    }
+    beginResetModel();
+    m_region = name;
+    rebuild();
+    endResetModel();
+    qInfo() << "Radio region" << name;
+    Q_EMIT countChanged();
+}
+
+QStringList RadioModel::regionalNames()
+{
+    return {QStringLiteral("Omrop Fryslân Radio"), QStringLiteral("Radio Noord"), QStringLiteral("Radio Drenthe"), QStringLiteral("Radio Oost"),
+            QStringLiteral("Radio Gelderland"), QStringLiteral("Radio M Utrecht"), QStringLiteral("NH Radio"), QStringLiteral("Radio Rijnmond"),
+            QStringLiteral("Omroep Zeeland Radio"), QStringLiteral("Omroep Brabant Radio"), QStringLiteral("L1 Radio")};
 }
 
 void RadioModel::restoreHidden()
