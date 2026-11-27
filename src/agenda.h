@@ -45,6 +45,8 @@ public:
     QJsonArray weekMenu() const { return m_data.value(QStringLiteral("menu")).toArray(); }
     // Activiteiten van een andere dag (weekoverzicht op de beheerpagina)
     QVariantList itemsFor(const QDate &date) const;
+    // Weekoverzicht op de kiosk: vandaag en de 6 dagen erna. Per dag: date, items, dish, feest
+    Q_INVOKABLE QVariantList week() const;
 
     // Voor de beheerpagina: hele agenda als JSON lezen en vervangen
     QByteArray toJson() const;

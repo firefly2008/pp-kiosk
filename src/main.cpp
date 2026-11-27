@@ -41,6 +41,8 @@
 #include "presentations.h"
 #include "shortcuts.h"
 #include "menuboard.h"
+#include "stats.h"
+#include "listener.h"
 #include "speaker.h"
 #include "activity.h"
 
@@ -303,6 +305,12 @@ int main(int argc, char *argv[])
     AdminServer admin(appDataDir(), &agenda, &presentations, &shortcuts);
     admin.setMedia({&webVideo, &webMusic, &webPodcasts}, &radio);
     admin.setWindow(&view);
+    Stats stats(appDataDir());
+    ctx->setContextProperty(QStringLiteral("stats"), &stats);
+    admin.setStats(&stats);
+    QObject::connect(&app, &QCoreApplication::aboutToQuit, &stats, &Stats::flush);
+    Listener listener;
+    ctx->setContextProperty(QStringLiteral("listener"), &listener);
     Speaker speaker;
     ctx->setContextProperty(QStringLiteral("speaker"), &speaker);
     Activity activity;

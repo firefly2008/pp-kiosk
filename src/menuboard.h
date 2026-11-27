@@ -21,6 +21,9 @@ public:
     // Eén dia tekenen (1920 x 1080)
     static QImage render(const QString &dayLabel, const QString &dateText, const QString &dish, const QString &note,
                          const QString &time, const QImage &photo);
+    // Zelfde dia in de stijl van het Glas-thema: donker, gloed en doorschijnende glaskaart
+    static QImage renderGlass(const QString &dayLabel, const QString &dateText, const QString &dish, const QString &note,
+                              const QString &time, const QImage &photo);
 
 public Q_SLOTS:
     void update(bool force = false);

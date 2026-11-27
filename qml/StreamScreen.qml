@@ -5,12 +5,20 @@ import QtQuick.Layouts
 
 Rectangle {
     id: page
-    color: "#F7F4EE"
+    color: glass ? "#0A0F1E" : "#F7F4EE"
     required property real s
     signal back()
 
-    readonly property color ink: "#1F2A44"
-    readonly property color soft: "#5B6478"
+    // Glas-thema (gekozen op de beheerpagina): donker met gloed en doorschijnende kaarten
+    readonly property bool glass: agenda.settings.theme === "glas" && agenda.settings.contrast !== true
+    readonly property real glassAlpha: 1 - Math.max(50, Math.min(95, agenda.settings.glassTransparency || 80)) / 100
+    readonly property color cardBg: glass ? Qt.rgba(1, 1, 1, glassAlpha) : "#FFFFFF"
+    readonly property color pressBg: glass ? "#40FFFFFF" : "#DDE3EA"
+    readonly property color lineColor: glass ? "#40FFFFFF" : "#14000000"
+    GlassBackground { anchors.fill: parent; visible: page.glass }
+
+    readonly property color ink: glass ? "#FFFFFF" : "#1F2A44"
+    readonly property color soft: glass ? "#C3CAE0" : "#5B6478"
     property string section: "video"
 
     readonly property var sections: [
@@ -36,6 +44,7 @@ Rectangle {
         model.launch(row)
         homeBridge.externalLaunched()
         console.info("Stream opened: " + model.nameAt(row))
+        stats.count("stream", model.nameAt(row))
     }
 
     // ---------- Kop ----------
@@ -48,8 +57,8 @@ Rectangle {
         Rectangle {
             Layout.preferredWidth: 220 * page.s; Layout.preferredHeight: 100 * page.s
             radius: 24 * page.s
-            color: backTap.pressed ? "#DDE3EA" : "#FFFFFF"
-            border.color: "#14000000"; border.width: 2
+            color: backTap.pressed ? page.pressBg : page.cardBg
+            border.color: page.lineColor; border.width: 2
             Text { anchors.centerIn: parent; text: "‹  Terug"; font.pixelSize: 40 * page.s; font.bold: true; color: page.ink }
             TapHandler { id: backTap; onTapped: page.back() }
         }
@@ -72,8 +81,8 @@ Rectangle {
                 readonly property bool on: page.section === modelData.key
                 width: 380 * page.s; height: 110 * page.s
                 radius: 28 * page.s
-                color: on ? "#2E8B57" : (tabTap.pressed ? "#DDE3EA" : "#FFFFFF")
-                border.color: "#14000000"; border.width: on ? 0 : 2
+                color: on ? (page.glass ? "#B32E8B57" : "#2E8B57") : (tabTap.pressed ? page.pressBg : page.cardBg)
+                border.color: page.lineColor; border.width: on ? 0 : 2
                 Row {
                     anchors.centerIn: parent
                     spacing: 16 * page.s

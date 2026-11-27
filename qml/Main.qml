@@ -7,7 +7,7 @@ import QtMultimedia
 
 Rectangle {
     id: root
-    color: contrast ? "#000000" : bgType === "color" ? bgColor : part.bg
+    color: contrast ? "#000000" : bgType === "color" ? bgColor : glass ? "#0A0F1E" : part.bg
     Behavior on color { ColorAnimation { duration: 2000 } }
     focus: true
 
@@ -17,23 +17,28 @@ Rectangle {
     readonly property bool contrast: cfg.contrast === true
     // Volwassen thema: rustige kleuren (donkerblauw, zand, salie), minder ronde hoeken, lijn-pictogrammen
     readonly property bool adult: cfg.theme === "volwassen" && !contrast
+    // Glas-thema: donker, doorschijnende glaskaarten, zachte gloed, grote letters en pill-knoppen
+    readonly property bool glass: cfg.theme === "glas" && !contrast
+    // Hoe doorzichtig de glaskaarten zijn (beheer: 50-95%, standaard 80%)
+    readonly property real glassAlpha: 1 - Math.max(50, Math.min(95, cfg.glassTransparency || 80)) / 100
     readonly property var bg: cfg.background || {}
     readonly property string bgType: bg.type || "daypart"
     readonly property color bgColor: bg.color || "#ECE6DA"
     readonly property string bgPhoto: bgType === "photo" ? (cfg.backgroundUrl || "") : ""
     readonly property real f: s * (cfg.textScale || 1)          // tekstgrootte (grote-tekst-stand)
-    readonly property color ink: contrast ? "#FFFFFF" : adult ? "#1E2A3A" : "#1F2A44"
-    readonly property color soft: contrast ? "#FFE14D" : adult ? "#55606E" : "#5B6478"
-    readonly property color green: contrast ? "#7CFC9A" : adult ? "#4F6E5B" : "#2E8B57"
-    readonly property color card: contrast ? "#000000" : adult ? "#FBF9F5" : "#FFFFFF"
-    readonly property color line: contrast ? "#FFFFFF" : adult ? "#22000000" : "#14000000"
+    readonly property color ink: contrast ? "#FFFFFF" : glass ? "#FFFFFF" : adult ? "#1E2A3A" : "#1F2A44"
+    readonly property color soft: contrast ? "#FFE14D" : glass ? "#C3CAE0" : adult ? "#55606E" : "#5B6478"
+    readonly property color green: contrast ? "#7CFC9A" : glass ? "#8BE9C0" : adult ? "#4F6E5B" : "#2E8B57"
+    readonly property color card: contrast ? "#000000" : glass ? Qt.rgba(1, 1, 1, glassAlpha) : adult ? "#FBF9F5" : "#FFFFFF"
+    readonly property color line: contrast ? "#FFFFFF" : glass ? "#40FFFFFF" : adult ? "#22000000" : "#14000000"
     readonly property int lineWidth: contrast ? 4 : 2
     // Hoekafronding: in het volwassen thema strakker
-    function r(px) { return px * s * (adult ? 0.35 : 1) }
+    function r(px) { return px * s * (adult ? 0.35 : glass ? 1.15 : 1) }
     // Kleur van een activiteit; in het volwassen thema gedempt
     function tone(c) {
-        if (!adult || !c) return c
+        if ((!adult && !glass) || !c) return c
         const k = Qt.darker(c, 1.0)
+        if (glass) return Qt.rgba(k.r, k.g, k.b, glassAlpha + 0.14)       // gekleurd glas
         return Qt.hsla(k.hslHue, k.hslSaturation * 0.4, Math.min(0.9, k.hslLightness * 0.92 + 0.06), k.a)
     }
     function fill(c) { return contrast ? "#000000" : tone(c) }
@@ -102,7 +107,10 @@ Rectangle {
         onTriggered: root.now = new Date()
     }
 
-    Component.onCompleted: console.info("Home screen ready; agenda items " + items.length + " now " + agenda.currentIndex + " next " + agenda.nextIndex)
+    Component.onCompleted: {
+        console.info("Home screen ready; agenda items " + items.length + " now " + agenda.currentIndex + " next " + agenda.nextIndex)
+        if (cfg.voice === true && selfTest === "") listener.prepare()
+    }
 
     // ---------- Eigen achtergrondfoto (met een lichte laag erover, zodat de tekst leesbaar blijft) ----------
     Image {
@@ -118,8 +126,15 @@ Rectangle {
     Rectangle {
         anchors.fill: parent
         visible: bgImage.visible
-        color: root.part.bg
-        opacity: 0.72
+        color: root.glass ? "#0A0F1E" : root.part.bg
+        opacity: root.glass ? 0.62 : 0.72
+    }
+    // Glas-thema: zachte, lichtgevende kleurvlekken die heel langzaam bewegen
+    GlassBackground {
+        id: glow
+        anchors.fill: parent
+        visible: root.glass && root.bgType === "daypart"
+        animate: visible && root.page === "home"
     }
 
     // ---------- Bovenbalk ----------
@@ -134,7 +149,8 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             Text {
                 text: Qt.formatTime(root.now, "HH:mm")
-                font.pixelSize: 120 * root.f; font.bold: true; color: root.ink
+                font.pixelSize: (root.glass ? 136 : 120) * root.f; font.bold: true; color: root.ink
+                font.letterSpacing: root.glass ? -3 * root.s : 0
             }
             Column {
                 anchors.verticalCenter: parent.verticalCenter
@@ -157,6 +173,39 @@ Rectangle {
         Row {
             anchors { right: parent.right; verticalCenter: parent.verticalCenter }
             spacing: 20 * root.s
+            // Spraakbediening: tik en zeg een opdracht
+            Rectangle {
+                id: micButton
+                anchors.verticalCenter: parent.verticalCenter
+                visible: root.cfg.voice === true
+                width: 88 * root.f; height: width
+                radius: width / 2
+                readonly property bool busy: listener.state === "listening" || listener.state === "starting"
+                color: root.contrast ? "#000000" : busy ? "#E74C3C" : (micTap.pressed ? "#DDE3EA" : root.glass ? "#26FFFFFF" : "#FFFFFF")
+                border.color: root.contrast ? "#FFE14D" : root.glass ? "#55FFFFFF" : busy ? "transparent" : "#2E8B57"
+                border.width: 3 * root.s
+                SequentialAnimation on scale {
+                    running: micButton.busy; loops: Animation.Infinite
+                    NumberAnimation { to: 1.1; duration: 500; easing.type: Easing.InOutQuad }
+                    NumberAnimation { to: 1.0; duration: 500; easing.type: Easing.InOutQuad }
+                    onRunningChanged: if (!running) micButton.scale = 1
+                }
+                Text {
+                    anchors.centerIn: parent
+                    text: "🎤"
+                    font.family: root.emojiFont
+                    font.pixelSize: 44 * root.f
+                }
+                TapHandler {
+                    id: micTap
+                    onTapped: {
+                        root.voiceAsked = true
+                        if (listener.state === "error" && listener.message !== "") root.voiceReply(listener.message, false)
+                        else root.voiceReply(micButton.busy ? "" : "Ik luister…", false)
+                        listener.listen()
+                    }
+                }
+            }
             // Muziek: zender van dit dagdeel aanzetten, of de radio die speelt stoppen
             Rectangle {
                 id: musicChip
@@ -165,8 +214,8 @@ Rectangle {
                 width: musicRow.implicitWidth + 48 * root.s
                 height: 88 * root.f
                 radius: height / 2
-                color: root.contrast ? "#000000" : root.radioRow >= 0 ? (musicTap.pressed ? "#245F3E" : "#2E8B57") : (musicTap.pressed ? "#DDE3EA" : "#FFFFFF")
-                border.color: root.contrast ? "#FFE14D" : root.radioRow >= 0 ? "transparent" : "#2E8B57"
+                color: root.contrast ? "#000000" : root.radioRow >= 0 ? (musicTap.pressed ? "#245F3E" : "#2E8B57") : (musicTap.pressed ? "#DDE3EA" : root.glass ? "#26FFFFFF" : "#FFFFFF")
+                border.color: root.contrast ? "#FFE14D" : root.glass ? "#55FFFFFF" : root.radioRow >= 0 ? "transparent" : "#2E8B57"
                 border.width: 3 * root.s
                 Row {
                     id: musicRow
@@ -244,7 +293,7 @@ Rectangle {
         readonly property bool isNews: visible && root.tickerItem.kind === "news"
         height: visible ? 84 * root.f : 0
         radius: root.r(20)
-        color: root.contrast ? "#000000" : isNews ? "#1F2A44" : root.adult ? "#E8DFC8" : "#FFF4CC"
+        color: root.contrast ? "#000000" : root.glass ? (isNews ? "#33000000" : "#33FFD970") : isNews ? "#1F2A44" : root.adult ? "#E8DFC8" : "#FFF4CC"
         border.color: root.contrast ? "#FFE14D" : "transparent"; border.width: root.lineWidth
         Behavior on color { ColorAnimation { duration: 300 } }
         RowLayout {
@@ -520,29 +569,40 @@ Rectangle {
                         { title: "Presentaties", icon: "🖼️", line: "presentaties", tint: "#5DA9E9", calm: "#4D6A86", page: "presentations" },
                         { title: "Kijk & luister", icon: "🎧", line: "stream", tint: "#6CC28B", calm: "#5E7D6A", page: "stream" },
                         { title: "Snelkoppelingen", icon: "⭐", line: "snelkoppelingen", tint: "#E97A6B", calm: "#A0745E", page: "shortcuts" },
+                        { title: "Mijn week", icon: "🗓️", line: "week", tint: "#F2A93B", calm: "#8C7A55", page: "week" },
                         { title: "Spelletjes", icon: "🧩", line: "spelletjes", tint: "#B48AD6", calm: "#6E6684", page: "games" }
-                    ].filter(t => t.page !== "games" || root.cfg.games !== false)
+                    ].filter(t => (t.page !== "games" || root.cfg.games !== false) && (t.page !== "week" || root.cfg.week !== false))
                     delegate: Rectangle {
                         id: tileBox
                         required property var modelData
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         radius: root.r(28)
-                        readonly property color tint: root.adult ? modelData.calm : modelData.tint
-                        color: tap.pressed ? Qt.darker(tint, 1.15) : tint
+                        readonly property color tint: root.adult ? modelData.calm : root.glass ? root.tone(modelData.tint) : modelData.tint
+                        color: tap.pressed ? (root.glass ? Qt.rgba(1, 1, 1, 0.3) : Qt.darker(tint, 1.15)) : tint
+                        border.color: root.glass ? "#55FFFFFF" : "transparent"
+                        border.width: root.glass ? 2 : 0
+                        // Glas: lichte rand bovenaan (lichtbreking)
+                        Rectangle {
+                            visible: root.glass
+                            anchors { left: parent.left; right: parent.right; top: parent.top; margins: parent.radius * 0.6 }
+                            anchors.topMargin: 3 * root.s
+                            height: 2 * root.s
+                            color: "#80FFFFFF"
+                        }
                         Column {
                             anchors.centerIn: parent
                             spacing: 4 * root.s
                             Image {
                                 anchors.horizontalCenter: parent.horizontalCenter
-                                visible: root.adult
+                                visible: root.adult || root.glass
                                 width: (root.f > root.s ? 48 : 60) * root.s; height: width
-                                source: root.adult ? "qrc:/icons/" + modelData.line + ".png" : ""
+                                source: root.adult || root.glass ? "qrc:/icons/" + modelData.line + ".png" : ""
                                 smooth: true; mipmap: true
                             }
                             Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
-                                visible: !root.adult
+                                visible: !root.adult && !root.glass
                                 text: modelData.icon
                                 font.family: root.emojiFont
                                 font.pixelSize: (root.f > root.s ? 44 : 56) * root.s
@@ -560,6 +620,7 @@ Rectangle {
                             id: tap
                             onTapped: {
                                 console.info("Tile tapped: " + modelData.title)
+                                stats.count("tile", modelData.title)
                                 if (modelData.page !== "") root.page = modelData.page
                             }
                         }
@@ -725,10 +786,18 @@ Rectangle {
         anchors.fill: parent
         active: root.page !== "home"
         sourceComponent: root.page === "stream" ? streamPage : root.page === "presentations" ? presentationPage
-                         : root.page === "shortcuts" ? shortcutsPage : root.page === "games" ? gamesPage : null
+                         : root.page === "shortcuts" ? shortcutsPage : root.page === "games" ? gamesPage : root.page === "week" ? weekPage : null
+        // Zachte overgang: scherm komt iets naar voren en wordt zichtbaar
+        onLoaded: pageIn.restart()
+        ParallelAnimation {
+            id: pageIn
+            NumberAnimation { target: pageLoader.item; property: "opacity"; from: 0; to: 1; duration: 320; easing.type: Easing.OutCubic }
+            NumberAnimation { target: pageLoader.item; property: "scale"; from: 0.965; to: 1; duration: 380; easing.type: Easing.OutCubic }
+        }
     }
     Component { id: streamPage; StreamScreen { s: root.s; home: root; onBack: root.page = "home" } }
     Component { id: gamesPage; GamesScreen { s: root.s; onBack: root.page = "home" } }
+    Component { id: weekPage; WeekScreen { s: root.s; onBack: root.page = "home" } }
     Component { id: presentationPage; PresentationScreen { s: root.s; onBack: root.page = "home" } }
     Component { id: shortcutsPage; ShortcutsScreen { s: root.s; onBack: root.page = "home" } }
 
@@ -799,6 +868,34 @@ Rectangle {
             } else if (selfTest === "screensaver") {
                 root.page = "presentations"
                 if (pageLoader.item.startNamed("")) { root.screensaver = true; console.info("Screensaver started") }
+            } else if (selfTest === "week") {
+                root.page = "week"
+            } else if (selfTest === "voice") {
+                root.voiceCommand("Wat doen we nu?")
+                root.voiceCommand("hoe laat is het")
+                root.voiceCommand("zet de radio uit")
+                console.info("Voice phrases understood: " + ["wat doen we nu", "wat eten we vandaag", "zet de radio aan", "hoe laat is het", "mijn week"].filter(x => root.voiceCommand(x).indexOf("begrijp ik niet") < 0).length + "/5")
+                root.page = "home"
+            } else if (selfTest === "stats") {
+                stats.count("tile", "Rooktest")
+                stats.count("tile", "Rooktest")
+                console.info("Stats test: Rooktest " + stats.countOf("tile", "Rooktest"))
+            } else if (selfTest === "backup") {
+                admin.backupTest()
+            } else if (selfTest === "glassboard") {
+                agenda.setTestSetting("theme", "glas")
+                root.page = "presentations"
+                pageLoader.item.startNamed("Menu van de week")
+            } else if (selfTest === "glassweek") {
+                agenda.setTestSetting("theme", "glas")
+                root.page = "week"
+            } else if (selfTest === "glasssaver") {
+                agenda.setTestSetting("theme", "glas")
+                root.radioRow = 0
+                root.radioSaver = true
+            } else if (selfTest === "glass") {
+                agenda.setTestSetting("theme", "glas")
+                console.info("Theme: " + (root.glass ? "glas" : "anders") + " ink " + root.ink + " card alpha " + root.glassAlpha.toFixed(2))
             } else if (selfTest === "theme") {
                 agenda.setTestSetting("theme", "volwassen")
                 console.info("Theme: " + (root.adult ? "volwassen" : "standaard") + " radius " + root.r(28).toFixed(1))
@@ -872,6 +969,7 @@ Rectangle {
         radioPlayer.source = streams[0]
         radioPlayer.play()
         console.info("Radio playing: " + radio.nameAt(row))
+        stats.count("radio", radio.nameAt(row))
         return true
     }
     function stopRadio() { radioPlayer.stop(); radioRow = -1; radioSaver = false }
@@ -891,6 +989,102 @@ Rectangle {
         console.info("Daypart music: " + daypartNow + " " + daypartStation)
         if (daypartNow === "nacht" || daypartStation === "") stopRadio()
         else if (radioName !== daypartStation) playDaypart()
+    }
+
+    // ---------- Spraakbediening ----------
+    property string voiceText: ""
+    property bool voiceAsked: false      // meldingen van de spraakherkenning pas tonen na een tik op de microfoon
+    function voiceReply(text, speak) {
+        voiceText = text
+        voiceHide.restart()
+        if (speak && text !== "") speaker.say(text)
+    }
+    Timer { id: voiceHide; interval: 7000; onTriggered: root.voiceText = "" }
+    Connections {
+        target: listener
+        function onHeard(text) { root.voiceCommand(text) }
+        function onNothingHeard() { root.voiceReply("Ik heb niets verstaan. Tik nog eens op de microfoon.", false) }
+        function onStateChanged() { if (root.voiceAsked && listener.state === "error" && listener.message !== "") root.voiceReply(listener.message, false) }
+    }
+    // Zin -> opdracht; geeft het antwoord terug (en voert het uit)
+    function voiceCommand(text) {
+        const t = String(text).toLowerCase().replace(/[?!.,]/g, "").trim()
+        const has = (...words) => words.some(w => t.indexOf(w) >= 0)
+        let key = "", answer = ""
+        if (has("radio aan", "muziek aan")) {
+            key = "radio-aan"
+            if (root.radioRow >= 0) answer = "De radio staat al aan: " + root.radioName
+            else if (root.playDaypart() || root.playRadio(0)) answer = "Ik zet " + root.radioName + " aan."
+            else answer = "Er is geen radiozender ingesteld."
+        } else if (has("radio uit", "muziek uit", "stop")) {
+            key = "radio-uit"; root.stopRadio(); answer = "De muziek is uit."
+        } else if (has("volgende zender")) {
+            key = "volgende-zender"
+            let row = root.radioRow + 1
+            while (row < radio.count && !radio.isStation(row)) row++
+            if (row >= radio.count) row = 0
+            answer = root.playRadio(row) ? "Nu speelt " + root.radioName + "." : "Dat lukt niet."
+        } else if (has("straks", "volgende")) {
+            key = "straks"
+            answer = root.next ? "Straks, om " + root.next.start + ": " + root.next.title + "." : "Vandaag staat er niets meer op de planning."
+        } else if (has("deze week", "week")) {
+            key = "week"; root.page = "week"; answer = "Hier is je week."
+        } else if (has("doen we nu", "gaan we doen", "is er nu")) {
+            key = "nu"
+            answer = root.current ? "Nu: " + root.current.title + (root.current.note ? ". " + root.current.note : "") + "."
+                                  : (root.next ? "Nu even niets. Straks, om " + root.next.start + ": " + root.next.title + "." : "Nu staat er niets op de planning.")
+        } else if (has("eten")) {
+            key = "eten"
+            answer = agenda.todayMenu.dish ? "Vandaag eten we " + agenda.todayMenu.dish + "." : "Er staat vandaag geen eten in het weekmenu."
+        } else if (has("hoe laat")) {
+            key = "tijd"
+            const n = new Date()
+            answer = "Het is " + n.getHours() + " uur " + (n.getMinutes() ? n.getMinutes() : "") + "."
+        } else if (has("welke dag", "voor dag", "datum")) {
+            key = "dag"
+            answer = "Het is " + new Date().toLocaleDateString(Qt.locale("nl_NL"), "dddd d MMMM") + "."
+        } else if (has("spelletje", "memory", "puzzel")) {
+            key = "spelletjes"; root.page = "games"; answer = "Veel plezier met de spelletjes!"
+        } else if (has("presentaties")) {
+            key = "presentaties"; root.page = "presentations"; answer = "Hier zijn de presentaties."
+        } else if (has("kijk en luister")) {
+            key = "kijk-en-luister"; root.page = "stream"; answer = "Kijk en luister."
+        } else if (has("terug", "begin", "startscherm")) {
+            key = "startscherm"; root.page = "home"; answer = "Terug naar het begin."
+        } else {
+            answer = "Dat begrijp ik niet. Zeg bijvoorbeeld: wat doen we nu?"
+        }
+        console.info("Voice command: " + (key || "unknown") + " (" + t + ")")
+        if (key !== "") stats.count("voice", key)
+        root.voiceReply(answer, true)
+        return answer
+    }
+    // Ballon met wat de kiosk verstond / antwoordt
+    Rectangle {
+        id: voiceBubble
+        z: 90
+        visible: root.voiceText !== ""
+        anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 60 * root.s }
+        width: Math.min(parent.width - 200 * root.s, voiceRow.implicitWidth + 100 * root.s)
+        height: voiceRow.implicitHeight + 60 * root.s
+        radius: root.r(36)
+        color: root.contrast ? "#000000" : root.glass ? "#D91A2036" : "#1F2A44"
+        border.color: root.contrast ? "#FFE14D" : root.glass ? "#55FFFFFF" : "transparent"; border.width: root.lineWidth
+        Row {
+            id: voiceRow
+            anchors.centerIn: parent
+            spacing: 20 * root.s
+            Text { anchors.verticalCenter: parent.verticalCenter; text: "🎤"; font.family: root.emojiFont; font.pixelSize: 44 * root.f }
+            Text {
+                id: voiceLabel
+                anchors.verticalCenter: parent.verticalCenter
+                width: Math.min(implicitWidth, root.width - 400 * root.s)
+                text: root.voiceText
+                font.pixelSize: 44 * root.f; font.bold: true; color: "#FFFFFF"
+                wrapMode: Text.WordWrap
+            }
+        }
+        TapHandler { onTapped: root.voiceText = "" }
     }
 
     // ---------- Radio-screensaver: de zender zweeft over het scherm ----------
@@ -916,6 +1110,7 @@ Rectangle {
             GradientStop { position: 0; color: "#0E1630" }
             GradientStop { position: 1; color: "#05070F" }
         }
+        GlassBackground { anchors.fill: parent; visible: root.glass; animate: saverLayer.visible }
         // Tik ergens: screensaver weg, radio speelt door
         MouseArea { anchors.fill: parent; onPressed: root.radioSaver = false }
 
@@ -929,9 +1124,9 @@ Rectangle {
             id: floater
             width: 720 * root.s; height: 300 * root.s
             radius: root.r(48)
-            color: "#1B2547"
-            border.color: saverLayer.bounce > 0 ? saverLayer.accents[saverLayer.bounce % saverLayer.accents.length] : saverLayer.accent
-            border.width: 8 * root.s
+            color: root.glass ? Qt.rgba(1, 1, 1, root.glassAlpha) : "#1B2547"
+            border.color: root.glass ? "#66FFFFFF" : saverLayer.bounce > 0 ? saverLayer.accents[saverLayer.bounce % saverLayer.accents.length] : saverLayer.accent
+            border.width: (root.glass ? 2 : 8) * root.s
             x: (saverLayer.width - width) / 2; y: (saverLayer.height - height) / 2
             RowLayout {
                 anchors { fill: parent; margins: 36 * root.s }

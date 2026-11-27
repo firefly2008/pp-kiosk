@@ -74,6 +74,10 @@ progress{width:100%;height:16px}
 .brow{display:grid;grid-template-columns:1fr 160px auto;gap:8px;align-items:center;margin-bottom:8px}
 .srow{display:grid;grid-template-columns:70px 1fr 160px auto;gap:8px;align-items:center;margin-bottom:8px}
 .srow input.icon{text-align:center;font-size:24px}
+.stat{display:grid;grid-template-columns:minmax(120px,260px) 1fr 60px;gap:10px;align-items:center;margin:6px 0}
+.stat b{display:block;height:18px;border-radius:9px;background:var(--groen)}.stat em{font-style:normal;color:var(--grijs);text-align:right}
+.days{display:flex;gap:6px;align-items:flex-end;height:140px}.days div{flex:1;max-width:56px;display:flex;flex-direction:column;justify-content:flex-end;height:100%;text-align:center}
+.days i{display:block;background:var(--groen);border-radius:4px 4px 0 0;min-height:2px}.days span{font-size:12px;color:var(--grijs)}
 .set{display:grid;grid-template-columns:260px 1fr;gap:10px 16px;align-items:center}
 .set .full{grid-column:1/-1}
 .set>span,.set>label{font-size:15px;color:var(--grijs);font-weight:600}
@@ -114,6 +118,8 @@ progress{width:100%;height:16px}
   <button data-tab="links">⭐ Snelkoppelingen</button>
   <button data-tab="screen">🖥️ Scherm</button>
   <button data-tab="live">📺 Live</button>
+  <button data-tab="stats">📊 Gebruik</button>
+  <button data-tab="backup">💾 Back-up</button>
   <button data-tab="kiosks">🏠 Kiosken</button>
 </nav>
 
@@ -215,13 +221,25 @@ progress{width:100%;height:16px}
 
     <span>Nieuws</span>
     <label class="toggle"><input type="checkbox" id="sNews"> Laatste nieuws van de NOS op het startscherm (wisselt met de mededelingen)</label>
+    <span>Mijn week</span>
+    <label class="toggle"><input type="checkbox" id="sWeek"> Tegel "Mijn week" op het startscherm (hele week in één oogopslag)</label>
+
+    <span>Spraakbediening</span>
+    <div>
+      <label class="toggle"><input type="checkbox" id="sVoice"> Microfoonknop bovenin: tik en zeg bijvoorbeeld "wat doen we nu?" of "zet de radio aan"</label>
+      <p class="hint">Werkt zonder internet, met de Nederlandse spraakherkenning van Windows. Nodig: een microfoon, en in Windows bij Tijd en taal &gt; Taal de taal Nederlands met spraak. Ook: Privacy &gt; Microfoon &gt; bureaublad-apps toestaan.<br>
+      Zinnen: zet de radio aan/uit · volgende zender · wat doen we nu · wat doen we straks · wat eten we vandaag · hoe laat is het · welke dag is het · mijn week · spelletjes · presentaties · terug.</p>
+    </div>
+
     <span>Spelletjes</span>
     <label class="toggle"><input type="checkbox" id="sGames"> Tegel "Spelletjes" op het startscherm (memory en puzzel)</label>
 
     <label for="sTheme">Thema</label>
     <div>
-      <select id="sTheme"><option value="standaard">Vrolijk (standaard)</option><option value="volwassen">Volwassen: rustige kleuren, strakke vormen</option></select>
-      <p class="hint">Volwassen: donkerblauw, zand en salie, minder ronde hoeken en lijn-pictogrammen op de tegels.</p>
+      <select id="sTheme"><option value="standaard">Vrolijk (standaard)</option><option value="volwassen">Volwassen: rustige kleuren, strakke vormen</option><option value="glas">Glas: donker, doorschijnend glas en zachte gloed</option></select>
+      <p class="hint">Volwassen: donkerblauw, zand en salie, minder ronde hoeken en lijn-pictogrammen op de tegels.<br>Glas: donkere achtergrond met langzaam bewegende kleurgloed, doorschijnende kaarten, grote klok en ronde zwevende knoppen.</p>
+      <label id="glassRow" style="margin-top:8px">Doorzichtigheid van de glaskaarten: <b id="glassVal">80%</b>
+        <input type="range" id="sGlass" min="50" max="95" step="5" style="width:100%"></label>
     </div>
 
     <label for="sBgType">Achtergrond</label>
@@ -277,6 +295,29 @@ progress{width:100%;height:16px}
   <div class="card">
     <img id="liveImg" alt="Kioskscherm" style="width:100%;display:block;border-radius:8px;background:#222;aspect-ratio:16/9">
     <p class="hint" id="liveInfo">Laden…</p>
+  </div>
+ </section>
+
+ <section id="tab-stats" hidden>
+  <h2>Gebruik van deze kiosk</h2>
+  <p class="hint" id="statsSince"></p>
+  <div id="statsLists"></div>
+  <button id="statsReset">Teller op nul zetten</button>
+ </section>
+
+ <section id="tab-backup" hidden>
+  <h2>Back-up en herstel</h2>
+  <div class="card">
+    <h3>Back-up maken</h3>
+    <p class="hint">Eén bestand met de dagplanning, het weekmenu, verjaardagen, alle instellingen, snelkoppelingen, eigen picto's en foto's, presentaties en de gebruiksteller. De beheercode gaat niet mee.</p>
+    <button id="backupMake">⬇️ Back-up downloaden</button>
+    <p class="hint" id="backupInfo"></p>
+  </div>
+  <div class="card">
+    <h3>Back-up terugzetten</h3>
+    <p class="hint">Kies een .ppkiosk-bestand. Wat erin staat vervangt wat nu op deze kiosk staat. Daarna start PP Kiosk opnieuw.</p>
+    <input type="file" id="restoreFile" accept=".ppkiosk">
+    <p class="hint" id="restoreInfo"></p>
   </div>
  </section>
 
@@ -533,9 +574,9 @@ $('addSpecial').onclick = () => { data.special.push({title: '', date: '', icon: 
 
 // ---------- Scherm ----------
 const S = {sName: 'name', sSpeak: 'speak', sChime: 'chime', sScale: 'textScale', sContrast: 'contrast', sSaver: 'screensaverMinutes',
-           sSaverPres: 'screensaverPresentation', sNightFrom: 'nightFrom', sNightTo: 'nightTo', sNightMode: 'nightMode', sDinner: 'dinnerTime', sNews: 'news', sGames: 'games', sTheme: 'theme'};
+           sSaverPres: 'screensaverPresentation', sNightFrom: 'nightFrom', sNightTo: 'nightTo', sNightMode: 'nightMode', sDinner: 'dinnerTime', sNews: 'news', sGames: 'games', sTheme: 'theme', sWeek: 'week', sVoice: 'voice', sGlass: 'glassTransparency'};
 async function renderScreen(){
-  const s = data.settings = Object.assign({speak: false, chime: true, textScale: 1, contrast: false, screensaverMinutes: 5, screensaverPresentation: 'Menu van de week', dinnerTime: '17:00', news: true, games: true, theme: 'standaard', nightFrom: '', nightTo: '', nightMode: 'dim', name: ''}, data.settings || {});
+  const s = data.settings = Object.assign({speak: false, chime: true, textScale: 1, contrast: false, screensaverMinutes: 5, screensaverPresentation: 'Menu van de week', dinnerTime: '17:00', news: true, games: true, week: true, voice: false, glassTransparency: 80, theme: 'standaard', nightFrom: '', nightTo: '', nightMode: 'dim', name: ''}, data.settings || {});
   try {
     const p = await api('GET', null, '/api/presentations');
     $('sSaverPres').innerHTML = '<option value="">De eerste presentatie</option>' + p.items.map(x => `<option value="${esc(x.name)}">${esc(x.title)}</option>`).join('');
@@ -545,15 +586,15 @@ async function renderScreen(){
     if (el.type === 'checkbox') el.checked = !!s[k];
     else el.value = String(s[k] ?? '');
   }
-  renderLook();
+  renderLook(); showGlass();
   $('sScale').value = [1, 1.2, 1.4].reduce((a, b) => Math.abs(b - s.textScale) < Math.abs(a - s.textScale) ? b : a, 1);
   showName();
 }
 for (const [id, k] of Object.entries(S)) {
   $(id).addEventListener('input', () => {
     const el = $(id);
-    data.settings[k] = el.type === 'checkbox' ? el.checked : (k === 'textScale' || k === 'screensaverMinutes') ? +el.value : el.value;
-    changed(); if (k === 'name') showName();
+    data.settings[k] = el.type === 'checkbox' ? el.checked : (k === 'textScale' || k === 'screensaverMinutes' || k === 'glassTransparency') ? +el.value : el.value;
+    changed(); if (k === 'name') showName(); showGlass();
   });
 }
 // Achtergrond en muziek per dagdeel
@@ -573,6 +614,10 @@ async function renderLook(){
     $(id).value = cur || '';
   }
   $('sMusAuto').checked = !!s.music.auto;
+}
+function showGlass(){
+  $('glassRow').hidden = $('sTheme').value !== 'glas';
+  $('glassVal').textContent = $('sGlass').value + '%';
 }
 function showBg(){
   const b = data.settings.background;
@@ -596,6 +641,60 @@ $('bgFile').addEventListener('change', async () => {
 });
 for (const [id, k] of Object.entries(MUS)) $(id).addEventListener('input', () => { data.settings.music[k] = $(id).value; changed(); });
 $('sMusAuto').addEventListener('input', () => { data.settings.music.auto = $('sMusAuto').checked; changed(); });
+
+// ---------- Gebruik ----------
+const STAT_GROUPS = {tile: 'Tegels op het startscherm', radio: 'Radiozenders', stream: 'Tv, video, podcasts en muziek', game: 'Spelletjes', voice: 'Spraakopdrachten'};
+async function loadStats(){
+  try {
+    const st = await api('GET', null, '/api/stats');
+    $('statsSince').textContent = 'Geteld sinds ' + new Date(st.since + 'T12:00').toLocaleDateString('nl-NL', {day: 'numeric', month: 'long', year: 'numeric'}) + '. Alleen op deze kiosk bewaard.';
+    const days = Object.entries(st.days || {}).sort((a, b) => a[0].localeCompare(b[0])).slice(-14);
+    const dmax = Math.max(1, ...days.map(d => d[1]));
+    let html = days.length ? `<div class="card"><h3>Laatste 14 dagen (keer gebruikt per dag)</h3><div class="days">${days.map(([d, n]) =>
+      `<div title="${esc(d)}: ${n}"><i style="height:${Math.round(n / dmax * 100)}%"></i><span>${+d.slice(8)}</span></div>`).join('')}</div></div>` : '';
+    for (const [k, title] of Object.entries(STAT_GROUPS)) {
+      const rows = Object.entries(st[k] || {}).sort((a, b) => b[1] - a[1]).slice(0, 10);
+      if (!rows.length) continue;
+      const max = rows[0][1];
+      html += `<div class="card"><h3>${title}</h3>${rows.map(([n, c]) =>
+        `<div class="stat"><span>${esc(n)}</span><b style="width:${Math.max(4, Math.round(c / max * 100))}%"></b><em>${c}×</em></div>`).join('')}</div>`;
+    }
+    $('statsLists').innerHTML = html || '<p class="hint">Nog niets geteld. Tik op de kiosk op een tegel, zender of spelletje.</p>';
+  } catch (e) { $('statsLists').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+}
+$('statsReset').onclick = async () => {
+  if (!confirm('Alle tellingen wissen?')) return;
+  try { await api('DELETE', null, '/api/stats'); loadStats(); } catch (e) { alert(e.message); }
+};
+
+// ---------- Back-up ----------
+$('backupMake').onclick = async () => {
+  $('backupInfo').textContent = 'Back-up maken…';
+  try {
+    const r = await fetch(base + '/api/backup', {headers: {'X-Code': code}});
+    if (!r.ok) throw new Error('Back-up maken mislukt');
+    const blob = await r.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'PP Kiosk-backup ' + new Date().toISOString().slice(0, 10) + '.ppkiosk';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    $('backupInfo').textContent = 'Klaar (' + (blob.size / 1048576).toFixed(1) + ' MB). Bewaar het bestand op een veilige plek.';
+  } catch (e) { $('backupInfo').textContent = e.message; }
+};
+$('restoreFile').addEventListener('change', async () => {
+  const f = $('restoreFile').files[0]; if (!f) return;
+  if (!confirm('Back-up "' + f.name + '" terugzetten? Wat nu op de kiosk staat wordt vervangen.')) { $('restoreFile').value = ''; return; }
+  $('restoreInfo').textContent = 'Terugzetten…';
+  try {
+    const r = await fetch(base + '/api/restore', {method: 'POST', headers: {'X-Code': code}, body: f});
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || 'Terugzetten mislukt');
+    $('restoreInfo').textContent = j.files + ' bestanden teruggezet. PP Kiosk start opnieuw; deze pagina laadt over 10 seconden opnieuw.';
+    setTimeout(() => location.reload(), 10000);
+  } catch (e) { $('restoreInfo').textContent = e.message; }
+  $('restoreFile').value = '';
+});
 
 // ---------- Live ----------
 let liveTimer = null, liveUrl = '';
@@ -641,7 +740,8 @@ function showTab(t){
   tab = t;
   for (const b of $('tabs').querySelectorAll('button')) b.classList.toggle('on', b.dataset.tab === t);
   for (const s of document.querySelectorAll('main > section')) s.hidden = s.id !== 'tab-' + t;
-  $('bar').hidden = t === 'pres' || t === 'live';
+  $('bar').hidden = ['pres', 'live', 'stats', 'backup'].includes(t);
+  if (t === 'stats') loadStats();
   clearInterval(liveTimer); liveTimer = null;
   if (t === 'live') { liveShot(); liveTimer = setInterval(liveShot, 3000); }
   if (t === 'pres') loadPres();
